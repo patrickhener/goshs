@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/patrickhener/goshs/internal/myca"
 	"github.com/patrickhener/goshs/internal/myhtml"
 	"github.com/patrickhener/goshs/internal/mylog"
 )
@@ -30,6 +32,7 @@ type item struct {
 type FileServer struct {
 	Port    int
 	Webroot string
+	SSL     bool
 }
 
 // router will hook up the webroot with our fileserver
@@ -42,11 +45,23 @@ func (fs *FileServer) Start() {
 	// init router
 	fs.router()
 
-	// Print to console
-	log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v\n", fs.Port, fs.Webroot)
-
+	// construct server
 	add := fmt.Sprintf(":%+v", fs.Port)
-	log.Panic(http.ListenAndServe(add, nil))
+	server := http.Server{Addr: add}
+
+	// Print to console
+	if fs.SSL {
+		serverTLSConf, err := myca.Setup()
+		if err != nil {
+			log.Fatalf("Unable to start SSL enabled server: %+v", err)
+		}
+		server.TLSConfig = serverTLSConf
+		log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled\n", fs.Port, fs.Webroot)
+		log.Panic(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v\n", fs.Port, fs.Webroot)
+		log.Panic(server.ListenAndServe())
+	}
 }
 
 // ServeHTTP will serve the response by leveraging our handler
@@ -57,7 +72,12 @@ func (fs *FileServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	fs.handler(w, req)
+	switch req.Method {
+	case "GET":
+		fs.handler(w, req)
+	case "POST":
+		fs.upload(w, req)
+	}
 }
 
 // handler is the function which actually handles dir or file retrieval
@@ -102,7 +122,53 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		fs.sendFile(w, file)
 	}
+}
 
+// upload handles the POST request to upload files
+func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
+	req.ParseMultipartForm(10 << 20)
+
+	file, handler, err := req.FormFile("file")
+	if err != nil {
+		log.Printf("Error retrieving the file: %+v\n", err)
+	}
+	defer file.Close()
+
+	// Get url so you can extract Headline and title
+	upath := req.URL.Path
+
+	// construct target path
+	targetpath := strings.Split(upath, "/")
+	targetpath = targetpath[:len(targetpath)-1]
+	target := strings.Join(targetpath, "/")
+
+	// Construct absolute savepath
+	savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, handler.Filename)
+
+	// Create file to write to
+	if _, err := os.Create(savepath); err != nil {
+		log.Println("ERROR:   Not able to create file on disk")
+		fs.handle500(w, req)
+	}
+
+	// Read file from post body
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Println("ERROR:   Not able to read file from request")
+		fs.handle500(w, req)
+	}
+
+	// Write file to disk
+	if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
+		log.Println("ERROR:   Not able to write file to disk")
+		fs.handle500(w, req)
+	}
+
+	// Log request
+	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "200")
+
+	// Redirect back from where we came from
+	http.Redirect(w, req, target, http.StatusSeeOther)
 }
 
 func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string) {

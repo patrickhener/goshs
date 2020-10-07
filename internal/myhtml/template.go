@@ -8,13 +8,27 @@ const dispTmpl = `
     <title>Directory listing for {{.Path}}</title>
   </head>
   <body>
+    <div>
+    <h1>Upload File</h1>
+    {{ if (eq .Path "/") }}
+    <form id="upload" name="upload" enctype="multipart/form-data" autocomplete="off" action="/upload" method="POST">
+    {{ else }}
+    <form id="upload" name="upload" enctype="multipart/form-data" autocomplete="off" action="{{.Path}}/upload" method="POST">
+    {{ end }}
+    <input name="file" type="file" id="upload" />
+    <input type="submit" value="upload">
+    </form>
+    </div>
+    <hr />
+    <div>
     <h1>Directory listing for {{.Path}}</h1>
     <hr />
 	<ul>
 	  {{range .Content}}
 		<li><a href="/{{.URI}}">{{.Name}}</a></li>
 	  {{ end }}
-	</ul>
+  </ul>
+  </div>
     <hr />
   </body>
 </html>
