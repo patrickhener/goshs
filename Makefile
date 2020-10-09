@@ -1,6 +1,12 @@
 .PHONY: build
 
-build: clean
+
+generate:
+	@echo "[*] Embedding via parcello"
+	@PARCELLO_RESOURCE_DIR=./static go generate ./...
+	@echo "[OK] Done bundeling things"
+
+build: clean generate
 	@echo "[*] Building for linux"
 	@GOOS=linux go build -ldflags="-s -w" -o build/goshs
 	@echo "[*] Building for windows"

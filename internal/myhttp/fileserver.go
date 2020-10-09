@@ -14,8 +14,12 @@ import (
 	"strings"
 
 	"github.com/patrickhener/goshs/internal/myca"
-	"github.com/patrickhener/goshs/internal/myhtml"
 	"github.com/patrickhener/goshs/internal/mylog"
+
+	"github.com/phogolabs/parcello"
+
+	// This will import for bundling with parcello
+	_ "github.com/patrickhener/goshs/static"
 )
 
 type directory struct {
@@ -264,8 +268,16 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	})
 
 	// Template parsing and writing to browser
+	indexFile, err := parcello.Open("index.html")
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
+	fileContent, err := ioutil.ReadAll(indexFile)
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
 	t := template.New("index")
-	t.Parse(myhtml.GetTemplate("display"))
+	t.Parse(string(fileContent))
 	d := &directory{Path: relpath, Content: items}
 	t.Execute(w, d)
 }
@@ -278,15 +290,31 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, file *os.File) {
 func (fs *FileServer) handle404(w http.ResponseWriter, req *http.Request) {
 	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "404")
 	mylog.LogMessage("404:   File not found")
+	file, err := parcello.Open("404.html")
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
+	fileContent, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
 	t := template.New("404")
-	t.Parse(myhtml.GetTemplate("404"))
+	t.Parse(string(fileContent))
 	t.Execute(w, nil)
 }
 
 func (fs *FileServer) handle500(w http.ResponseWriter, req *http.Request) {
 	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "500")
 	mylog.LogMessage("500:   No permission to access the file")
+	file, err := parcello.Open("500.html")
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
+	fileContent, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Printf("Error opening embedded file: %+v", err)
+	}
 	t := template.New("500")
-	t.Parse(myhtml.GetTemplate("500"))
+	t.Parse(string(fileContent))
 	t.Execute(w, nil)
 }
