@@ -30,9 +30,13 @@ type item struct {
 
 // FileServer holds the fileserver information
 type FileServer struct {
-	Port    int
-	Webroot string
-	SSL     bool
+	Port       int
+	Webroot    string
+	SSL        bool
+	SelfSigned bool
+	MyKey      string
+	MyCert     string
+	BasicAuth  string
 }
 
 // router will hook up the webroot with our fileserver
@@ -40,24 +44,79 @@ func (fs *FileServer) router() {
 	http.Handle("/", fs)
 }
 
+// authRouter will hook up the webroot with the fileserver using basic auth
+func (fs *FileServer) authRouter() {
+	http.HandleFunc("/", fs.basicAuth(fs.ServeHTTP))
+}
+
+// basicAuth is a wrapper to handle the basic auth
+func (fs *FileServer) basicAuth(handler http.HandlerFunc) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+		username, password, authOK := req.BasicAuth()
+		if authOK == false {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		if username != "gopher" || password != fs.BasicAuth {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		fs.ServeHTTP(w, req)
+	}
+}
+
 // Start will start the file server
 func (fs *FileServer) Start() {
-	// init router
-	fs.router()
+	// init router with or without auth
+	if fs.BasicAuth != "" {
+		if !fs.SSL {
+			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transfered in cleartext. Consider using -s, too.\n")
+		}
+		log.Printf("Using 'gopher:%+v' as basic auth\n", fs.BasicAuth)
+		fs.authRouter()
+	} else {
+		fs.router()
+	}
 
 	// construct server
 	add := fmt.Sprintf(":%+v", fs.Port)
 	server := http.Server{Addr: add}
 
-	// Print to console
+	// Check if ssl
 	if fs.SSL {
-		serverTLSConf, err := myca.Setup()
-		if err != nil {
-			log.Fatalf("Unable to start SSL enabled server: %+v", err)
+		// Check if selfsigned
+		if fs.SelfSigned {
+			serverTLSConf, fingerprint256, fingerprint1, err := myca.Setup()
+			if err != nil {
+				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
+			}
+			server.TLSConfig = serverTLSConf
+			log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled and self-signed certificate\n", fs.Port, fs.Webroot)
+			log.Println("WARNING! Be sure to check the fingerprint of certificate")
+			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
+			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
+			log.Panic(server.ListenAndServeTLS("", ""))
+		} else {
+			if fs.MyCert == "" || fs.MyKey == "" {
+				log.Fatalln("You need to provide server.key and server.crt if -s and not -ss")
+			}
+
+			fingerprint256, fingerprint1, err := myca.ParseAndSum(fs.MyCert)
+			if err != nil {
+				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
+			}
+
+			log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
+			log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
+			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
+			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
+
+			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
-		server.TLSConfig = serverTLSConf
-		log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled\n", fs.Port, fs.Webroot)
-		log.Panic(server.ListenAndServeTLS("", ""))
 	} else {
 		log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v\n", fs.Port, fs.Webroot)
 		log.Panic(server.ListenAndServe())

@@ -1,7 +1,10 @@
 .PHONY: build
 
 build: clean
-	@go build -o build/goshs
+	@echo "[*] Building for linux"
+	@GOOS=linux go build -ldflags="-s -w" -o build/goshs
+	@echo "[*] Building for windows"
+	@GOOS=windows go build -ldflags="-s -w" -o build/goshs.exe
 	@echo "[OK] App binary was created!"
 
 run:
