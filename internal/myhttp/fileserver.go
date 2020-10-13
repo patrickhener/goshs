@@ -242,14 +242,6 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 
 // upload handles the POST request to upload files
 func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
-	req.ParseMultipartForm(10 << 20)
-
-	file, handler, err := req.FormFile("file")
-	if err != nil {
-		log.Printf("Error retrieving the file: %+v\n", err)
-	}
-	defer file.Close()
-
 	// Get url so you can extract Headline and title
 	upath := req.URL.Path
 
@@ -258,27 +250,48 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	targetpath = targetpath[:len(targetpath)-1]
 	target := strings.Join(targetpath, "/")
 
-	// Construct absolute savepath
-	savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, handler.Filename)
-	log.Printf("DEBUG: savepath is supposed to be: %+v", savepath)
-
-	// Create file to write to
-	if _, err := os.Create(savepath); err != nil {
-		log.Println("ERROR: Not able to create file on disk")
-		fs.handle500(w, req)
+	// Parse request
+	if err := req.ParseMultipartForm(10 << 20); err != nil {
+		log.Printf("Error parsing multipart request: %+v", err)
+		return
 	}
 
-	// Read file from post body
-	fileBytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println("ERROR: Not able to read file from request")
-		fs.handle500(w, req)
-	}
+	// Get ref to the parsed multipart form
+	m := req.MultipartForm
 
-	// Write file to disk
-	if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
-		log.Println("ERROR: Not able to write file to disk")
-		fs.handle500(w, req)
+	// Get the File Headers
+	files := m.File["files"]
+
+	for i := range files {
+		file, err := files[i].Open()
+		defer file.Close()
+		if err != nil {
+			log.Printf("Error retrieving the file: %+v\n", err)
+		}
+
+		// Construct absolute savepath
+		savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, files[i].Filename)
+		log.Printf("DEBUG: savepath is supposed to be: %+v", savepath)
+
+		// Create file to write to
+		if _, err := os.Create(savepath); err != nil {
+			log.Println("ERROR: Not able to create file on disk")
+			fs.handle500(w, req)
+		}
+
+		// Read file from post body
+		fileBytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Println("ERROR: Not able to read file from request")
+			fs.handle500(w, req)
+		}
+
+		// Write file to disk
+		if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
+			log.Println("ERROR: Not able to write file to disk")
+			fs.handle500(w, req)
+		}
+
 	}
 
 	// Log request
