@@ -2,6 +2,10 @@
 
 
 generate:
+	@echo "[*] Minifying css and js"
+	@find static/ -type f -name "*.js" ! -name "*.min.*" -exec echo {} \; -exec uglifyjs -o {}.min.js {} \;
+	@find static/ -type f -name "*.css" ! -name "*.min.*" -exec echo {} \; -exec uglifycss --output {}.min.css {} \;
+	@echo "[OK] Done minifying things"
 	@echo "[*] Embedding via parcello"
 	@PARCELLO_RESOURCE_DIR=./static go generate ./...
 	@echo "[OK] Done bundeling things"

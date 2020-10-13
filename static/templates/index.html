@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>goshs - {{.AbsPath}}</title>
+  <!-- stylesheets -->
+  <link rel="icon" type="image/gif" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/favicon.gif" />
+  <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css.min.css" />
+  <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/fontawesome-5.15.1/css/all.min.css" />
+  <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.css" />
+</head>
+
+<body>
+  <div class="conn">
+    <!-- Header -->
+    <header id="header" class="d-flex align_item_center">
+      <div onclick="document.location='/'" class="logo_p">
+        <img src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/goshs-logo.png" alt="goshs" />
+      </div>
+      <div class="heading_title_p">
+        <h2>Directory: {{.AbsPath}}</h2>
+      </div>
+    </header>
+
+
+  <!-- ----- Upload Form ----- -->
+    <div class="inputUploadP">
+        {{ if (eq .RelPath "/") }}
+        <form method="post" action="/upload" enctype="multipart/form-data" class="uploadForm">
+        {{ else }}
+        <form method="post" action="{{.RelPath}}/upload" enctype="multipart/form-data" class="uploadForm">
+        {{ end }}
+            <!-- -- Upload File -- -->
+            <div class="uploadFile_P">
+                <input type="file" name="file" id="file" class="uploadFile" />
+                <label for="file">
+                    <i class="fa fa-upload"></i>
+                    <span>Choose a file…</span>
+                </label>
+            </div>
+            <!-- -- Upload Btn -- -->
+            <p class="uploadBtn_P">
+                <button type="submit" class="uploadBtn btn btn-primary">
+                    Upload
+                </button>
+            </p>
+        </form>
+    </div>
+
+    {{if .IsSubdirectory}}
+    <section class="backBtn_p">
+        <a href="{{ .Back }}">
+            <i class="fas fa-level-up-alt"></i>
+            <span>Back</span>
+        </a>
+    </section>
+    {{end}}
+
+    <!-- Table -->
+    <section class="table_p table-responsive">
+        <table id="tableData" class="table table-hover compact">
+            <thead>
+            <tr>
+                <th width="4%"><!--Type (Directory or File)--></th>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Last Modified</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{range .Content}}
+            <tr>
+                <td> <!-- Icon -->
+                    {{ if .IsDir }}
+                    <button class="file_ic"><i class="far fa-folder"></i></button><!-- Directory icon -->
+                    {{ else }}
+                    <button class="file_ic"><i class="far fa-file"></i></button><!-- File icon -->
+                    {{ end }}
+                </td>
+                <td> <!-- Name -->
+                    <a href="/{{.URI}}">{{.Name}}</a>
+                </td>
+                <td data-order="{{.SortSize}}"> <!-- File size -->
+                    {{ if .IsDir }}
+                    --
+                    {{ else }}
+                    {{.DisplaySize}}
+                    {{ end }}
+                </td>
+                <td data-order="{{.SortLastModified}}"> <!-- File last modified -->
+                    {{ .DisplayLastModified }}
+                </td>
+            </tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </section>
+
+    <footer>
+        <p>
+            goshs v{{ .Goshs.Version }}
+        </p>
+    </footer>
+  </div> <!-- end class conn-->
+
+  <!-- Scripts -->
+  <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/jquery-3.5.1.min.js"></script>
+  <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.js"></script>
+  <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/main.js.min.js"></script>
+</body>
+
+</html>

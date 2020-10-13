@@ -6,15 +6,18 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/patrickhener/goshs/internal/myca"
 	"github.com/patrickhener/goshs/internal/mylog"
+	"github.com/patrickhener/goshs/internal/myutils"
 
 	"github.com/phogolabs/parcello"
 
@@ -22,14 +25,29 @@ import (
 	_ "github.com/patrickhener/goshs/static"
 )
 
+const goshsVersion string = "0.0.4"
+
+type goshs struct {
+	Version string
+}
+
 type directory struct {
-	Path    string
-	Content []item
+	RelPath        string
+	AbsPath        string
+	IsSubdirectory bool
+	Back           string
+	Content        []item
+	Goshs          goshs
 }
 
 type item struct {
-	URI  string
-	Name string
+	URI                 string
+	Name                string
+	IsDir               bool
+	DisplaySize         string
+	SortSize            int64
+	DisplayLastModified string
+	SortLastModified    time.Time
 }
 
 // FileServer holds the fileserver information
@@ -135,12 +153,47 @@ func (fs *FileServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	switch req.Method {
-	case "GET":
-		fs.handler(w, req)
-	case "POST":
-		fs.upload(w, req)
+	// Check if special path, then serve static
+	// Realise that you will not be able to deliver content of folder
+	// called 425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c on disk
+	if strings.Contains(req.URL.Path, "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c") {
+		fs.static(w, req)
+	} else {
+		// serve files / dirs or upload
+		switch req.Method {
+		case "GET":
+			fs.handler(w, req)
+		case "POST":
+			fs.upload(w, req)
+		}
 	}
+}
+
+// static will give static content for style and function
+func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
+	// Check which file to serve
+	upath := req.URL.Path
+	staticPath := strings.SplitAfterN(upath, "/", 3)[2]
+	// Load file with parcello
+	staticFile, err := parcello.Open(staticPath)
+	if err != nil {
+		log.Printf("ERROR: static file: %+v cannot be loaded: %+v", staticPath, err)
+	}
+
+	// Read file
+	staticContent, err := ioutil.ReadAll(staticFile)
+	if err != nil {
+		log.Printf("ERROR: static file: %+v cannot be read: %+v", staticPath, err)
+	}
+
+	// Get mimetype from extension
+	extSlice := strings.Split(staticPath, ".")
+	ext := "." + extSlice[len(extSlice)-1]
+	contentType := mime.TypeByExtension(ext)
+
+	// Set mimetype and deliver to browser
+	w.Header().Add("Content-Type", contentType)
+	w.Write(staticContent)
 }
 
 // handler is the function which actually handles dir or file retrieval
@@ -207,23 +260,24 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 	// Construct absolute savepath
 	savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, handler.Filename)
+	log.Printf("DEBUG: savepath is supposed to be: %+v", savepath)
 
 	// Create file to write to
 	if _, err := os.Create(savepath); err != nil {
-		log.Println("ERROR:   Not able to create file on disk")
+		log.Println("ERROR: Not able to create file on disk")
 		fs.handle500(w, req)
 	}
 
 	// Read file from post body
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Println("ERROR:   Not able to read file from request")
+		log.Println("ERROR: Not able to read file from request")
 		fs.handle500(w, req)
 	}
 
 	// Write file to disk
 	if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
-		log.Println("ERROR:   Not able to write file to disk")
+		log.Println("ERROR: Not able to write file to disk")
 		fs.handle500(w, req)
 	}
 
@@ -246,18 +300,30 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	items := make([]item, 0, len(fis))
 	// Iterate over FileInfo of dir
 	for _, fi := range fis {
+		var item = item{}
 		// Set name and uri
 		itemname := fi.Name()
 		itemuri := url.PathEscape(path.Join(relpath, itemname))
+		itemsize := myutils.ByteCountDecimal(fi.Size())
+		itemsortsize := fi.Size()
+		itemmod := fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
+		itemsortmod := fi.ModTime()
 		// Add / to name if dir
 		if fi.IsDir() {
+			// Check if special path exists as dir on disk and do not add
+			if fi.Name() == "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c" {
+				continue
+			}
 			itemname += "/"
+			item.IsDir = true
 		}
 		// define item struct
-		item := item{
-			Name: itemname,
-			URI:  itemuri,
-		}
+		item.Name = itemname
+		item.URI = itemuri
+		item.DisplaySize = itemsize
+		item.SortSize = itemsortsize
+		item.DisplayLastModified = itemmod
+		item.SortLastModified = itemsortmod
 		// Add to items slice
 		items = append(items, item)
 	}
@@ -268,7 +334,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	})
 
 	// Template parsing and writing to browser
-	indexFile, err := parcello.Open("index.html")
+	indexFile, err := parcello.Open("templates/index.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
@@ -276,10 +342,40 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
+
+	// Construct directory for template
+	d := &directory{
+		RelPath: relpath,
+		AbsPath: path.Join(fs.Webroot, relpath),
+		Content: items,
+		Goshs: goshs{
+			Version: goshsVersion,
+		},
+	}
+	if relpath != "/" {
+		d.IsSubdirectory = true
+		pathSlice := strings.Split(relpath, "/")
+		if len(pathSlice) > 2 {
+			pathSlice = pathSlice[1 : len(pathSlice)-1]
+
+			var backString string = ""
+			for _, part := range pathSlice {
+				backString += "/" + part
+			}
+			d.Back = backString
+
+		} else {
+			d.Back = "/"
+		}
+	} else {
+		d.IsSubdirectory = false
+	}
+
 	t := template.New("index")
 	t.Parse(string(fileContent))
-	d := &directory{Path: relpath, Content: items}
-	t.Execute(w, d)
+	if err := t.Execute(w, d); err != nil {
+		log.Printf("ERROR: Error parsing template: %+v", err)
+	}
 }
 
 func (fs *FileServer) sendFile(w http.ResponseWriter, file *os.File) {
@@ -290,7 +386,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, file *os.File) {
 func (fs *FileServer) handle404(w http.ResponseWriter, req *http.Request) {
 	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "404")
 	mylog.LogMessage("404:   File not found")
-	file, err := parcello.Open("404.html")
+	file, err := parcello.Open("templates/404.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
@@ -306,7 +402,7 @@ func (fs *FileServer) handle404(w http.ResponseWriter, req *http.Request) {
 func (fs *FileServer) handle500(w http.ResponseWriter, req *http.Request) {
 	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "500")
 	mylog.LogMessage("500:   No permission to access the file")
-	file, err := parcello.Open("500.html")
+	file, err := parcello.Open("templates/500.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
