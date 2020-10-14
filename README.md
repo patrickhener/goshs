@@ -4,7 +4,7 @@
 
 goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
 
-<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot" style="max-width:100%; box-shadow: inset 3px 3px 10px 0 #000000; border-radius: 0px;">
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot"></kbd>
 
 # goshs
 
