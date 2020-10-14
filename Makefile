@@ -11,19 +11,25 @@ generate:
 	@echo "[OK] Done bundeling things"
 
 build: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
 	@echo "[*] Building for linux"
-	@GOOS=linux go build -ldflags="-s -w" -o build/goshs
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux_amd64/goshs
+	@GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/linux_386/goshs
 	@echo "[*] Building for windows"
-	@GOOS=windows go build -ldflags="-s -w" -o build/goshs.exe
+	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows_amd64/goshs.exe
+	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
+	@echo "[*] Building for mac"
+	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
 	@echo "[OK] App binary was created!"
 
 run:
-	@./build/goshs
+	@go run main.go
 
 install:
 	@go install ./...
 	@echo "[OK] Application was installed to go binary directory!"
 
 clean:
-	@rm -rf ./build
+	@rm -rf ./dist
 	@echo "[OK] Cleaned up!"
