@@ -2,6 +2,10 @@
 
 <img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-logo-github.png" alt="goshs-logo" width="85">
 
+goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
+
+<imr src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot" width=100%>
+
 # goshs
 
 `goshs` (go SimpleHTTPServer) will replicate the function of pythons `SimpleHTTPServer` and more ...
