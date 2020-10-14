@@ -13,17 +13,18 @@ You can download the executable from the [release section](https://github.com/pa
 
 ## Go
 
-`go get -u github.com/patrickhener/goshs`
-
-`go install github.com/patrickhener/goshs`
+```bash
+go get -u github.com/patrickhener/goshs
+go install github.com/patrickhener/goshs
+```
 
 ## Build yourself
 
-`git clone https://github.com/patrickhener/goshs.git`
-
-`cd goshs`
-
-`make build`
+```bash
+git clone https://github.com/patrickhener/goshs.git
+cd goshs
+make build
+```
 
 # Usage
 
@@ -49,7 +50,7 @@ Usage of goshs:
 
 **Serve from your current directory**
 
-`goshs*
+`goshs`
 
 **Serve from another directory**
 
