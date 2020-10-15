@@ -47,6 +47,7 @@ Authentication options:
 Misc options:
 	-v	Print the current goshs version
 # Examples
+```
 
 **Serve from your current directory**
 
