@@ -24,19 +24,13 @@ import (
 	_ "github.com/patrickhener/goshs/static"
 )
 
-const goshsVersion string = "0.0.5"
-
-type goshs struct {
-	Version string
-}
-
 type directory struct {
 	RelPath        string
 	AbsPath        string
 	IsSubdirectory bool
 	Back           string
 	Content        []item
-	Goshs          goshs
+	GoshsVersion   string
 }
 
 type item struct {
@@ -61,13 +55,14 @@ type FileServer struct {
 	MyKey      string
 	MyCert     string
 	BasicAuth  string
+	Version    string
 }
 
 type httperror struct {
 	ErrorCode    int
 	ErrorMessage string
 	AbsPath      string
-	Goshs        goshs
+	GoshsVersion string
 }
 
 // router will hook up the webroot with our fileserver
@@ -367,12 +362,10 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 
 	// Construct directory for template
 	d := &directory{
-		RelPath: relpath,
-		AbsPath: path.Join(fs.Webroot, relpath),
-		Content: items,
-		Goshs: goshs{
-			Version: goshsVersion,
-		},
+		RelPath:      relpath,
+		AbsPath:      path.Join(fs.Webroot, relpath),
+		Content:      items,
+		GoshsVersion: fs.Version,
 	}
 	if relpath != "/" {
 		d.IsSubdirectory = true
@@ -419,7 +412,7 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	e.ErrorCode = status
 	e.ErrorMessage = err.Error()
 	e.AbsPath = path.Join(fs.Webroot, req.URL.Path)
-	e.Goshs.Version = goshsVersion
+	e.GoshsVersion = fs.Version
 
 	// Template handling
 	file, err := parcello.Open("templates/error.html")
