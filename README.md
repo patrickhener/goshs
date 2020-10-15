@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.0.4-green) [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs) [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues) ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
+![Version](https://img.shields.io/badge/Version-v0.0.5-green) [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs) [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues) ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
 
 <img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-logo-github.png" alt="goshs-logo" width="85">
 
