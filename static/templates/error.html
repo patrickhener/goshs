@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
+    />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>goshs ERROR - {{.AbsPath}}</title>
+    <!-- stylesheets -->
+    <link
+      rel="icon"
+      type="image/gif"
+      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/favicon.gif"
+    />
+    <link
+      rel="stylesheet"
+      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/fontawesome-5.15.1/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="conn">
+      <!-- Header -->
+      <header id="header" class="d-flex align_item_center">
+        <div onclick="document.location='/'" class="logo_p">
+          <img
+            src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/error-gopher.gif"
+            alt="goshs"
+          />
+        </div>
+        <div class="heading_title_p">
+          {{ if (eq .ErrorCode 404) }}
+          <h2>404 Not found - Requested path: {{.AbsPath}}</h2>
+          {{ else if (eq .ErrorCode 500) }}
+          <h2>500 Internal Server Error - Requested path: {{.AbsPath}}</h2>
+          {{ else }}
+          <h2>Error</h2>
+          {{ end }}
+        </div>
+      </header>
+      <div class="d-flex align_item_center">
+        <section class="error">
+          <h3>Error message from goshs:</h3>
+          <code>{{.ErrorMessage}}</code>
+        </section>
+        <section class="backBtn_p">
+          <button onclick="window.history.back()">
+            <i class="fas fa-level-up-alt"></i> Back
+          </button>
+        </section>
+      </div>
+      <footer>
+        <p>goshs v{{ .Goshs.Version }}</p>
+      </footer>
+    </div>
+  </body>
+</html>

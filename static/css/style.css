@@ -38,9 +38,6 @@ button {
   border: #3d7892;
 }
 
-.uploadBtn_P > button:hover {
-}
-
 img {
   max-width: 100%;
   height: auto;
@@ -292,4 +289,42 @@ footer {
   font-weight: bold;
   margin: 30px 0;
   margin-bottom: 0;
+}
+
+.error {
+  margin-left: 20px;
+  margin-top: 20px;
+  display: block;
+}
+
+.error > h3 {
+  padding-bottom: 5px;
+  margin: 20px;
+}
+
+.error > code {
+  font-family: "Fira Code VF", monospace;
+  font-size: 100%;
+  font-weight: 600;
+  line-height: 1.625;
+  color: #3d7892;
+  background-color: #ccc;
+  padding: 5px;
+  border-radius: 6px;
+  margin: 20px;
+  filter: drop-shadow(5px 5px 4px #333)
+}
+
+.backBtn_p button {
+  display: block;
+  font-size: 1.3em;
+  display: flex;
+  align-items: center;
+  transition: 0.2s ease;
+  width: 150px;
+  color: #3d7892;
+}
+
+.backBtn_p > button > i {
+  margin-right: 5px;
 }

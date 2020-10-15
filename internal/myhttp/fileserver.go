@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,7 +24,7 @@ import (
 	_ "github.com/patrickhener/goshs/static"
 )
 
-const goshsVersion string = "0.0.4"
+const goshsVersion string = "0.0.5"
 
 type goshs struct {
 	Version string
@@ -44,6 +43,9 @@ type item struct {
 	URI                 string
 	Name                string
 	IsDir               bool
+	IsSymlink           bool
+	SymlinkTarget       string
+	Ext                 string
 	DisplaySize         string
 	SortSize            int64
 	DisplayLastModified string
@@ -59,6 +61,13 @@ type FileServer struct {
 	MyKey      string
 	MyCert     string
 	BasicAuth  string
+}
+
+type httperror struct {
+	ErrorCode    int
+	ErrorMessage string
+	AbsPath      string
+	Goshs        goshs
 }
 
 // router will hook up the webroot with our fileserver
@@ -187,9 +196,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get mimetype from extension
-	extSlice := strings.Split(staticPath, ".")
-	ext := "." + extSlice[len(extSlice)-1]
-	contentType := mime.TypeByExtension(ext)
+	contentType := myutils.MimeByExtension(staticPath)
 
 	// Set mimetype and deliver to browser
 	w.Header().Add("Content-Type", contentType)
@@ -212,13 +219,11 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// Check if you are in a dir
 	file, err := os.Open(open)
 	if os.IsNotExist(err) {
-		// Handle as 404
-		fs.handle404(w, req)
+		fs.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
 	if os.IsPermission(err) {
-		// Handle as 500
-		fs.handle500(w, req)
+		fs.handleError(w, req, err, http.StatusInternalServerError)
 		return
 	}
 	if err != nil {
@@ -229,7 +234,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// Log request
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "200")
+	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, http.StatusOK)
 
 	// Switch and check if dir
 	stat, _ := file.Stat()
@@ -276,26 +281,26 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		// Create file to write to
 		if _, err := os.Create(savepath); err != nil {
 			log.Println("ERROR: Not able to create file on disk")
-			fs.handle500(w, req)
+			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
 		// Read file from post body
 		fileBytes, err := ioutil.ReadAll(file)
 		if err != nil {
 			log.Println("ERROR: Not able to read file from request")
-			fs.handle500(w, req)
+			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
 		// Write file to disk
 		if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
 			log.Println("ERROR: Not able to write file to disk")
-			fs.handle500(w, req)
+			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
 	}
 
 	// Log request
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "200")
+	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, http.StatusOK)
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, target, http.StatusSeeOther)
@@ -305,7 +310,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
-		fs.handle404(w, req)
+		fs.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
 
@@ -314,29 +319,33 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Iterate over FileInfo of dir
 	for _, fi := range fis {
 		var item = item{}
-		// Set name and uri
-		itemname := fi.Name()
-		itemuri := url.PathEscape(path.Join(relpath, itemname))
-		itemsize := myutils.ByteCountDecimal(fi.Size())
-		itemsortsize := fi.Size()
-		itemmod := fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
-		itemsortmod := fi.ModTime()
+		// Need to set this up here for directories to work
+		item.Name = fi.Name()
+		item.Ext = strings.ToLower(myutils.ReturnExt(fi.Name()))
 		// Add / to name if dir
 		if fi.IsDir() {
 			// Check if special path exists as dir on disk and do not add
 			if fi.Name() == "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c" {
 				continue
 			}
-			itemname += "/"
+			item.Name += "/"
 			item.IsDir = true
+			item.Ext = ""
 		}
-		// define item struct
-		item.Name = itemname
-		item.URI = itemuri
-		item.DisplaySize = itemsize
-		item.SortSize = itemsortsize
-		item.DisplayLastModified = itemmod
-		item.SortLastModified = itemsortmod
+		// Set item fields
+		item.URI = url.PathEscape(path.Join(relpath, fi.Name()))
+		item.DisplaySize = myutils.ByteCountDecimal(fi.Size())
+		item.SortSize = fi.Size()
+		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
+		item.SortLastModified = fi.ModTime()
+		// Check and resolve symlink
+		if fi.Mode()&os.ModeSymlink != 0 {
+			item.IsSymlink = true
+			item.SymlinkTarget, err = os.Readlink(path.Join(fs.Webroot, relpath, fi.Name()))
+			if err != nil {
+				log.Printf("Error resolving symlink: %+v", err)
+			}
+		}
 		// Add to items slice
 		items = append(items, item)
 	}
@@ -396,26 +405,24 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, file *os.File) {
 	io.Copy(w, file)
 }
 
-func (fs *FileServer) handle404(w http.ResponseWriter, req *http.Request) {
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "404")
-	mylog.LogMessage("404:   File not found")
-	file, err := parcello.Open("templates/404.html")
-	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
-	}
-	fileContent, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
-	}
-	t := template.New("404")
-	t.Parse(string(fileContent))
-	t.Execute(w, nil)
-}
+func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err error, status int) {
+	// Set header to status
+	w.WriteHeader(status)
 
-func (fs *FileServer) handle500(w http.ResponseWriter, req *http.Request) {
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, "500")
-	mylog.LogMessage("500:   No permission to access the file")
-	file, err := parcello.Open("templates/500.html")
+	// Define empty error
+	var e httperror
+
+	// Log to console
+	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, status)
+
+	// Construct error for template filling
+	e.ErrorCode = status
+	e.ErrorMessage = err.Error()
+	e.AbsPath = path.Join(fs.Webroot, req.URL.Path)
+	e.Goshs.Version = goshsVersion
+
+	// Template handling
+	file, err := parcello.Open("templates/error.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
@@ -423,7 +430,9 @@ func (fs *FileServer) handle500(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
-	t := template.New("500")
+	t := template.New("error")
 	t.Parse(string(fileContent))
-	t.Execute(w, nil)
+	if err := t.Execute(w, e); err != nil {
+		log.Printf("Error parsing the template: %+v", err)
+	}
 }

@@ -1,6 +1,5 @@
 .PHONY: build
 
-
 generate:
 	@echo "[*] Minifying css and js"
 	@find static/ -type f -name "*.js" ! -name "*.min.*" -exec echo {} \; -exec uglifyjs -o {}.min.js {} \;
@@ -9,6 +8,7 @@ generate:
 	@echo "[*] Embedding via parcello"
 	@PARCELLO_RESOURCE_DIR=./static go generate ./...
 	@echo "[OK] Done bundeling things"
+
 
 build: clean generate
 	@echo "[*] go mod dowload"
@@ -21,6 +21,11 @@ build: clean generate
 	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
 	@echo "[*] Building for mac"
 	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
+	@echo "[*] Building for arm"
+	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/arm_5/goshs
+	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/arm_6/goshs
+	@GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/arm_7/goshs
+	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
 run:

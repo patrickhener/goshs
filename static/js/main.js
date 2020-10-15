@@ -4,12 +4,6 @@ $(document).ready(function () {
     language: {
       info: '_TOTAL_ items',
     },
-    // columnDefs: [
-    //   { targets: 0, orderable: false },
-    //   { targets: 4, orderable: false },
-    //   { orderSequence: ['desc', 'asc'], targets: [1] },
-    // ],
-    // order: [[1, 'asc']],
   });
 });
 

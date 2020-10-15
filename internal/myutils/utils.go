@@ -1,6 +1,10 @@
 package myutils
 
-import "fmt"
+import (
+	"fmt"
+	"mime"
+	"strings"
+)
 
 // ByteCountDecimal generates human readable file sizes and returns a string
 func ByteCountDecimal(b int64) string {
@@ -14,4 +18,15 @@ func ByteCountDecimal(b int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGTPE"[exp])
+}
+
+// MimeByExtension returns the mimetype string depending on the filename and its extension
+func MimeByExtension(n string) string {
+	return mime.TypeByExtension(ReturnExt(n))
+}
+
+// ReturnExt returns the extension without from a filename
+func ReturnExt(n string) string {
+	extSlice := strings.Split(n, ".")
+	return "." + extSlice[len(extSlice)-1]
 }
