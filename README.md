@@ -29,23 +29,23 @@ make build
 # Usage
 
 ```bash
-goshs -h
-Usage of goshs:
-  -P string
-    	Use basic auth password (user: gopher)
-  -d string
-    	Web root directory (default "")
-  -p int
-    	The port (default 8000)
-  -s	Use self-signed TLS
-  -sc string
-    	Path to own server cert
-  -sk string
-    	Path to own server key
-  -ss
-    	Use self-signed certificate
-```
+Usage: goshs [options]
 
+Web server options:
+	-p	The port to listen on	(default: 8000)
+	-d	The web root directory	(default: current working path)
+
+TLS options:
+	-s	Use TLS
+	-ss	Use a self-signed certificate
+	-sk	Path to server key
+	-sc	Path to server certificate
+
+Authentication options:
+	-P	Use basic authentication password (user: gopher)
+
+Misc options:
+	-v	Print the current goshs version
 # Examples
 
 **Serve from your current directory**

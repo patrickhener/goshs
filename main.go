@@ -33,6 +33,25 @@ func init() {
 	flag.StringVar(&basicAuth, "P", basicAuth, "Use basic auth password (user: gopher)")
 	version := flag.Bool("v", false, "Prints the current goshs version")
 
+	flag.Usage = func() {
+		fmt.Printf("Usage: %s [options]\n\n", os.Args[0])
+		fmt.Println("Web server options:")
+		fmt.Println("\t-p\tThe port to listen on\t(default: 8000)")
+		fmt.Println("\t-d\tThe web root directory\t(default: current working path)")
+		fmt.Println("")
+		fmt.Println("TLS options:")
+		fmt.Println("\t-s\tUse TLS")
+		fmt.Println("\t-ss\tUse a self-signed certificate")
+		fmt.Println("\t-sk\tPath to server key")
+		fmt.Println("\t-sc\tPath to server certificate")
+		fmt.Println("")
+		fmt.Println("Authentication options:")
+		fmt.Println("\t-P\tUse basic authentication password (user: gopher)")
+		fmt.Println("")
+		fmt.Println("Misc options:")
+		fmt.Println("\t-v\tPrint the current goshs version")
+	}
+
 	flag.Parse()
 
 	if *version {
