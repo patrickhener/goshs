@@ -48,6 +48,7 @@ type item struct {
 
 // FileServer holds the fileserver information
 type FileServer struct {
+	IP         string
 	Port       int
 	Webroot    string
 	SSL        bool
@@ -109,7 +110,7 @@ func (fs *FileServer) Start() {
 	}
 
 	// construct server
-	add := fmt.Sprintf(":%+v", fs.Port)
+	add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	server := http.Server{Addr: add}
 
 	// Check if ssl
@@ -121,7 +122,7 @@ func (fs *FileServer) Start() {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			server.TLSConfig = serverTLSConf
-			log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled and self-signed certificate\n", fs.Port, fs.Webroot)
+			log.Printf("Serving HTTP on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
 			log.Println("WARNING! Be sure to check the fingerprint of certificate")
 			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
 			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
@@ -136,7 +137,7 @@ func (fs *FileServer) Start() {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 
-			log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
+			log.Printf("Serving HTTP on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
 			log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
 			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
 			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
@@ -144,7 +145,7 @@ func (fs *FileServer) Start() {
 			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
 	} else {
-		log.Printf("Serving HTTP on 0.0.0.0 port %+v from %+v\n", fs.Port, fs.Webroot)
+		log.Printf("Serving HTTP on %+v port %+v from %+v\n", fs.IP, fs.Port, fs.Webroot)
 		log.Panic(server.ListenAndServe())
 	}
 }

@@ -12,6 +12,7 @@ const goshsVersion = "v0.0.5"
 
 var (
 	port       = 8000
+	ip         = "0.0.0.0"
 	webroot    = "."
 	ssl        = false
 	selfsigned = false
@@ -24,18 +25,20 @@ func init() {
 	wd, _ := os.Getwd()
 
 	// flags
-	flag.IntVar(&port, "p", port, "The port")
-	flag.StringVar(&webroot, "d", wd, "Web root directory")
-	flag.BoolVar(&ssl, "s", ssl, "Use TLS")
-	flag.BoolVar(&selfsigned, "ss", selfsigned, "Use self-signed certificate")
-	flag.StringVar(&myKey, "sk", myKey, "Path to server key")
-	flag.StringVar(&myCert, "sc", myCert, "Path to server cert")
-	flag.StringVar(&basicAuth, "P", basicAuth, "Use basic auth password (user: gopher)")
-	version := flag.Bool("v", false, "Prints the current goshs version")
+	flag.StringVar(&ip, "i", ip, "ip")
+	flag.IntVar(&port, "p", port, "port")
+	flag.StringVar(&webroot, "d", wd, "web root")
+	flag.BoolVar(&ssl, "s", ssl, "tls")
+	flag.BoolVar(&selfsigned, "ss", selfsigned, "self-signed")
+	flag.StringVar(&myKey, "sk", myKey, "server key")
+	flag.StringVar(&myCert, "sc", myCert, "server cert")
+	flag.StringVar(&basicAuth, "P", basicAuth, "basic auth")
+	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [options]\n\n", os.Args[0])
 		fmt.Println("Web server options:")
+		fmt.Println("\t-i\tThe ip to listen on\t(default: 0.0.0.0)")
 		fmt.Println("\t-p\tThe port to listen on\t(default: 8000)")
 		fmt.Println("\t-d\tThe web root directory\t(default: current working path)")
 		fmt.Println("")
@@ -63,6 +66,7 @@ func init() {
 func main() {
 	// Setup the custom file server
 	server := &myhttp.FileServer{
+		IP:         ip,
 		Port:       port,
 		Webroot:    webroot,
 		SSL:        ssl,

@@ -32,6 +32,7 @@ make build
 Usage: goshs [options]
 
 Web server options:
+	-i	The ip to listen on		(default: 0.0.0.0)
 	-p	The port to listen on	(default: 8000)
 	-d	The web root directory	(default: current working path)
 
