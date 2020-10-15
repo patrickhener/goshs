@@ -122,7 +122,7 @@ func (fs *FileServer) Start() {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			server.TLSConfig = serverTLSConf
-			log.Printf("Serving HTTP on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
+			log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
 			log.Println("WARNING! Be sure to check the fingerprint of certificate")
 			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
 			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
@@ -137,7 +137,7 @@ func (fs *FileServer) Start() {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 
-			log.Printf("Serving HTTP on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
+			log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
 			log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
 			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
 			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
