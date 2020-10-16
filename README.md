@@ -85,4 +85,4 @@ A special thank you goes to *sc0tfree* for inspiring this project with his proje
 
 # Tutorial Series
 
-I wrote several blog posts how and why I implemented all of this. You can find it [here](https://hesec.de/tags/goshs/) if you are intereseted about the technical background.
+I wrote several blog posts how and why I implemented all of this. You can find it [here](https://hesec.de/tags/goshs/) if you are interested about the technical background.
