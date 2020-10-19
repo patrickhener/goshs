@@ -101,7 +101,7 @@ func (fs *FileServer) Start() {
 	// init router with or without auth
 	if fs.BasicAuth != "" {
 		if !fs.SSL {
-			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transfered in cleartext. Consider using -s, too.\n")
+			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
 		}
 		log.Printf("Using 'gopher:%+v' as basic auth\n", fs.BasicAuth)
 		fs.authRouter()
