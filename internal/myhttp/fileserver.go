@@ -270,9 +270,14 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			log.Printf("Error retrieving the file: %+v\n", err)
 		}
 
+		filename := files[i].Filename
+
+		// Sanitize filename (No path traversal)
+		filenameSlice := strings.Split(filename, "/")
+		filenameClean := filenameSlice[len(filenameSlice)-1]
+
 		// Construct absolute savepath
-		savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, files[i].Filename)
-		log.Printf("DEBUG: savepath is supposed to be: %+v", savepath)
+		savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, filenameClean)
 
 		// Create file to write to
 		if _, err := os.Create(savepath); err != nil {
