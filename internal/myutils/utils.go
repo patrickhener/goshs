@@ -2,6 +2,7 @@ package myutils
 
 import (
 	"fmt"
+	"math/rand"
 	"mime"
 	"strings"
 )
@@ -29,4 +30,9 @@ func MimeByExtension(n string) string {
 func ReturnExt(n string) string {
 	extSlice := strings.Split(n, ".")
 	return "." + extSlice[len(extSlice)-1]
+}
+
+// RandomNumber returns a random int64
+func RandomNumber() int64 {
+	return rand.Int63()
 }

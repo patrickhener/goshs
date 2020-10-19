@@ -19,6 +19,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/patrickhener/goshs/internal/myutils"
 )
 
 // Sum will give the sha256 and sha1 sum of the certificate
@@ -83,7 +85,7 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 // Setup will deliver a fully initialized CA and server cert
 func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(2019),
+		SerialNumber: big.NewInt(myutils.RandomNumber()),
 		Subject: pkix.Name{
 			Organization:       []string{"hesec.de"},
 			OrganizationalUnit: []string{"hesec.de"},
@@ -129,7 +131,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 
 	// set up our server certificate
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(2019),
+		SerialNumber: big.NewInt(myutils.RandomNumber()),
 		Subject: pkix.Name{
 			Organization:       []string{"hesec.de"},
 			OrganizationalUnit: []string{"hesec.de"},

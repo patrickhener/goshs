@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/patrickhener/goshs/internal/myhttp"
 )
@@ -64,6 +66,8 @@ func init() {
 }
 
 func main() {
+	// Random Seed generation (used for CA serial)
+	rand.Seed(time.Now().UnixNano())
 	// Setup the custom file server
 	server := &myhttp.FileServer{
 		IP:         ip,
