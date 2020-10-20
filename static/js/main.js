@@ -4,6 +4,13 @@ $(document).ready(function () {
     language: {
       info: '_TOTAL_ items',
     },
+    order: [[2, 'asc']],
+    columnDefs: [
+      {
+        targets: [0, 1, 5],
+        orderable: false,
+      },
+    ],
   });
 });
 
@@ -28,3 +35,31 @@ Array.prototype.forEach.call(inputs, function (input) {
     else label.innerHTML = labelVal;
   });
 });
+
+var checkboxes = document.querySelectorAll('.downloadBulkCheckbox');
+
+Array.prototype.forEach.call(checkboxes, function (cb) {
+  cb.addEventListener('change', function () {
+    checkedBoxes = document.querySelectorAll('input[type=checkbox]:checked')
+      .length;
+    if (checkedBoxes >= 1) {
+      document.getElementById('downloadBulkButton').style.display = 'block';
+    } else {
+      document.getElementById('downloadBulkButton').style.display = 'none';
+    }
+  });
+});
+
+function selectAll() {
+  Array.prototype.forEach.call(checkboxes, function (cb) {
+    cb.checked = true;
+  });
+  document.getElementById('downloadBulkButton').style.display = 'block';
+}
+
+function selectNone() {
+  Array.prototype.forEach.call(checkboxes, function (cb) {
+    cb.checked = false;
+  });
+  document.getElementById('downloadBulkButton').style.display = 'none';
+}

@@ -8,11 +8,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>goshs - {{.AbsPath}}</title>
     <!-- stylesheets -->
-     <link rel="icon" type="image/gif" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/favicon.gif" />
-    <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css.min.css" />
-    <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/fontawesome-5.15.1/css/all.min.css" />
-    <link rel="stylesheet" href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.css" />
+    <link rel="icon" type="image/gif"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/favicon.gif" />
+    <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/bootstrap.min.css" />
+    <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/fontawesome-5.15.1/css/all.min.css" />
+    <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.css" />
+    <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css.min.css" />
 </head>
 
 <body>
@@ -29,7 +34,7 @@
         </header>
 
 
-        <!-- ----- Upload Form ----- -->
+        <!-- Upload Form -->
         <div class="inputUploadP">
             {{ if (eq .RelPath "/") }}
             <form method="post" action="/upload" enctype="multipart/form-data" class="uploadForm">
@@ -54,6 +59,13 @@
                 </form>
         </div>
 
+        <!-- Control Checkboxes -->
+            <div class="checkboxControlP">
+                <input type="button" class="checkboxBtn" value="Select All" onclick=selectAll()>
+                <input type="button" class="checkboxBtn" value="Select None" onclick=selectNone()>
+            </div>
+
+        <!-- Back Button -->
         {{if .IsSubdirectory}}
         <section class="backBtn_p">
             <a href="{{ .Back }}">
@@ -63,104 +75,125 @@
         </section>
         {{end}}
 
+
         <!-- Table -->
         <section class="table_p table-responsive">
-            <table id="tableData" class="table table-hover compact">
-                <thead>
-                    <tr>
-                        <th width="4%">
-                            <!--Type (Directory or File)-->
-                        </th>
-                        <th>Name</th>
-                        <th>Size</th>
-                        <th>Last Modified</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .Content}}
-                    <tr>
-                        <td>
-                            <!-- Icon -->
-                            {{ if .IsDir }}
-                            <button class="file_ic"><i class="fas fa-folder"></i></button><!-- Directory icon -->
-                            {{ else }}
-                            {{ if .IsSymlink }}
-                            <button class="file_ic"><i class="fas fa-file"></i></button><!-- File icon -->
+            <form method="GET" action="/cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390/bulk-file">
+                <table id="tableData" class="table table-hover compact">
+                    <thead>
+                        <tr>
+                            <th width="4%">
+                                <!--Checkbox multiple downloads -->
+                            </th>
+                            <th width="4%">
+                                <!--Type (Directory or File)-->
+                            </th>
+                            <th>Name</th>
+                            <th>Size</th>
+                            <th>Last Modified</th>
+                            <th width="4%">
+                                <!--Direct Download button-->
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Content}}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="downloadBulkCheckbox" name="file" value="{{.URI}}" />
+                            </td>
+                            <td>
+                                <!-- Icon -->
+                                {{ if .IsDir }}
+                                <button class="file_ic"><i class="fas fa-folder"></i></button><!-- Directory icon -->
+                                {{ else }}
+                                {{ if .IsSymlink }}
+                                <button class="file_ic"><i class="fas fa-file"></i></button><!-- File icon -->
 
-                            {{ else if or (eq .Ext ".gz") (eq .Ext ".zip") (eq .Ext ".tar") (eq .Ext ".rar") (eq .Ext ".7z") }}
-                            <button class="file_ic"><i class="fas fa-file-archive"></i></button><!-- Archive icon -->
+                                {{ else if or (eq .Ext ".gz") (eq .Ext ".zip") (eq .Ext ".tar") (eq .Ext ".rar") (eq .Ext ".7z") }}
+                                <button class="file_ic"><i class="fas fa-file-archive"></i></button>
+                                <!-- Archive icon -->
 
-                            {{ else if (eq .Ext ".pdf") }}
-                            <button class="file_ic"><i class="fas fa-file-pdf"></i></button><!-- PDF icon -->
+                                {{ else if (eq .Ext ".pdf") }}
+                                <button class="file_ic"><i class="fas fa-file-pdf"></i></button><!-- PDF icon -->
 
-                            {{ else if or (eq .Ext ".pptx") (eq .Ext ".ppt")  (eq .Ext ".pps") (eq .Ext ".odp") }}
-                            <button class="file_ic"><i class="fas fa-file-powerpoint"></i></button>
-                            <!-- Powerpoint icon -->
+                                {{ else if or (eq .Ext ".pptx") (eq .Ext ".ppt")  (eq .Ext ".pps") (eq .Ext ".odp") }}
+                                <button class="file_ic"><i class="fas fa-file-powerpoint"></i></button>
+                                <!-- Powerpoint icon -->
 
-                            {{ else if or (eq .Ext ".docx") (eq .Ext ".doc") (eq .Ext ".odt") }}
-                            <button class="file_ic"><i class="fas fa-file-word"></i></button><!-- Word icon -->
+                                {{ else if or (eq .Ext ".docx") (eq .Ext ".doc") (eq .Ext ".odt") }}
+                                <button class="file_ic"><i class="fas fa-file-word"></i></button><!-- Word icon -->
 
-                            {{ else if or (eq .Ext ".xlsx") (eq .Ext ".xls") (eq .Ext ".ods") }}
-                            <button class="file_ic"><i class="fas fa-file-excel"></i></button><!-- Excel icon -->
+                                {{ else if or (eq .Ext ".xlsx") (eq .Ext ".xls") (eq .Ext ".ods") }}
+                                <button class="file_ic"><i class="fas fa-file-excel"></i></button><!-- Excel icon -->
 
-                            {{ else if (eq .Ext ".csv") }}
-                            <button class="file_ic"><i class="fas fa-file-csv"></i></button><!-- CSV icon -->
+                                {{ else if (eq .Ext ".csv") }}
+                                <button class="file_ic"><i class="fas fa-file-csv"></i></button><!-- CSV icon -->
 
-                            {{ else if (eq .Ext ".exe") }}
-                            <button class="file_ic"><i class="fab fa-windows"></i></button><!-- Windows icon -->
+                                {{ else if (eq .Ext ".exe") }}
+                                <button class="file_ic"><i class="fab fa-windows"></i></button><!-- Windows icon -->
 
-                            {{ else if or (eq .Ext ".txt") (eq .Ext ".rtf") (eq .Ext ".md") (eq .Ext ".conf") (eq .Ext ".html") (eq .Ext ".htm") (eq .Ext ".log") (eq .Ext ".ini") (eq .Ext ".cfg") (eq .Ext ".yml") (eq .Ext ".toml") (eq .Ext ".json") (eq .Ext ".asc") (eq .Ext ".xml") }}
-                            <button class="file_ic"><i class="fas fa-file-alt"></i></button><!-- Text icon -->
+                                {{ else if or (eq .Ext ".txt") (eq .Ext ".rtf") (eq .Ext ".md") (eq .Ext ".conf") (eq .Ext ".html") (eq .Ext ".htm") (eq .Ext ".log") (eq .Ext ".ini") (eq .Ext ".cfg") (eq .Ext ".yml") (eq .Ext ".toml") (eq .Ext ".json") (eq .Ext ".asc") (eq .Ext ".xml") }}
+                                <button class="file_ic"><i class="fas fa-file-alt"></i></button><!-- Text icon -->
 
-                            {{ else if or (eq .Ext ".flac") (eq .Ext ".wav") (eq .Ext ".mp3") }}
-                            <button class="file_ic"><i class="fas fa-file-audio"></i></button><!-- Audio icon -->
+                                {{ else if or (eq .Ext ".flac") (eq .Ext ".wav") (eq .Ext ".mp3") }}
+                                <button class="file_ic"><i class="fas fa-file-audio"></i></button><!-- Audio icon -->
 
-                            {{ else if or (eq .Ext ".mpeg") (eq .Ext ".mpg") (eq .Ext ".mp4") (eq .Ext ".wmv") (eq .Ext ".avi") (eq .Ext ".flv") (eq .Ext ".mkv") (eq .Ext ".mov") (eq .Ext ".webm") (eq .Ext ".vob") (eq .Ext ".ogg") (eq .Ext ".m4v") (eq .Ext ".h264") }}
-                            <button class="file_ic"><i class="fas fa-file-video"></i></button><!-- Video icon -->
+                                {{ else if or (eq .Ext ".mpeg") (eq .Ext ".mpg") (eq .Ext ".mp4") (eq .Ext ".wmv") (eq .Ext ".avi") (eq .Ext ".flv") (eq .Ext ".mkv") (eq .Ext ".mov") (eq .Ext ".webm") (eq .Ext ".vob") (eq .Ext ".ogg") (eq .Ext ".m4v") (eq .Ext ".h264") }}
+                                <button class="file_ic"><i class="fas fa-file-video"></i></button><!-- Video icon -->
 
-                            {{ else if or (eq .Ext ".bmp") (eq .Ext ".tiff") (eq .Ext ".tif") (eq .Ext ".ai") (eq .Ext ".cdr") (eq .Ext ".xcf") (eq .Ext ".raw") (eq .Ext ".gif") (eq .Ext ".png") (eq .Ext ".jpg") (eq .Ext ".jpeg") (eq .Ext ".psd") (eq .Ext ".svg") ( eq .Ext ".ico") }}
-                            <button class="file_ic"><i class="fas fa-file-image"></i></button><!-- Picture icon -->
+                                {{ else if or (eq .Ext ".bmp") (eq .Ext ".tiff") (eq .Ext ".tif") (eq .Ext ".ai") (eq .Ext ".cdr") (eq .Ext ".xcf") (eq .Ext ".raw") (eq .Ext ".gif") (eq .Ext ".png") (eq .Ext ".jpg") (eq .Ext ".jpeg") (eq .Ext ".psd") (eq .Ext ".svg") ( eq .Ext ".ico") }}
+                                <button class="file_ic"><i class="fas fa-file-image"></i></button><!-- Picture icon -->
 
-                            {{ else if or (eq .Ext ".php") (eq .Ext ".py") (eq .Ext ".go") (eq .Ext ".cs") (eq .Ext ".c") (eq .Ext ".pl") (eq .Ext ".rb") (eq .Ext ".cgi") (eq .Ext ".cpp") (eq .Ext ".java") (eq .Ext ".tex") (eq .Ext ".bat") (eq .Ext ".ps1") }}
-                            <button class="file_ic"><i class="fas fa-file-code"></i></button><!-- Code icon -->
+                                {{ else if or (eq .Ext ".php") (eq .Ext ".py") (eq .Ext ".go") (eq .Ext ".cs") (eq .Ext ".c") (eq .Ext ".pl") (eq .Ext ".rb") (eq .Ext ".cgi") (eq .Ext ".cpp") (eq .Ext ".java") (eq .Ext ".tex") (eq .Ext ".bat") (eq .Ext ".ps1") }}
+                                <button class="file_ic"><i class="fas fa-file-code"></i></button><!-- Code icon -->
 
-                            {{ else if or (eq .Ext ".iso") (eq .Ext ".dmg") (eq .Ext ".bin") (eq .Ext ".vcd") (eq .Ext ".vhd") (eq .Ext ".vhdx") (eq .Ext ".vmdk") (eq .Ext ".qcow2") (eq .Ext ".img") }}
-                            <button class="file_ic"><i class="fas fa-compact-disc"></i></button><!-- ISO icon -->
+                                {{ else if or (eq .Ext ".iso") (eq .Ext ".dmg") (eq .Ext ".bin") (eq .Ext ".vcd") (eq .Ext ".vhd") (eq .Ext ".vhdx") (eq .Ext ".vmdk") (eq .Ext ".qcow2") (eq .Ext ".img") }}
+                                <button class="file_ic"><i class="fas fa-compact-disc"></i></button><!-- ISO icon -->
 
-                            {{ else if or (eq .Ext ".mdb") (eq .Ext ".db") (eq .Ext ".dbf") (eq .Ext ".dat") (eq .Ext ".sql") }}
-                            <button class="file_ic"><i class="fas fa-database"></i></button><!-- Database icon -->
+                                {{ else if or (eq .Ext ".mdb") (eq .Ext ".db") (eq .Ext ".dbf") (eq .Ext ".dat") (eq .Ext ".sql") }}
+                                <button class="file_ic"><i class="fas fa-database"></i></button><!-- Database icon -->
 
-                            {{ else }}
-                            <button class="file_ic"><i class="fas fa-file"></i></button>
-                            <!--File icon -->
+                                {{ else }}
+                                <button class="file_ic"><i class="fas fa-file"></i></button>
+                                <!--File icon -->
 
-                            {{ end }}
-                            {{ end }}
-                        </td>
-                        <td>
-                            <!-- Name -->
-                            {{ if .IsSymlink }}
-                            <a href="/{{.URI}}">{{.Name}} --> {{.SymlinkTarget}}</a>
-                            {{ else }}
-                            <a href="/{{.URI}}">{{.Name}}</a>
-                            {{ end }}
-                        </td>
-                        <td data-order="{{.SortSize}}">
-                            <!-- File size -->
-                            {{ if .IsDir }}
-                            --
-                            {{ else }}
-                            {{.DisplaySize}}
-                            {{ end }}
-                        </td>
-                        <td data-order="{{.SortLastModified}}">
-                            <!-- File last modified -->
-                            {{ .DisplayLastModified }}
-                        </td>
-                    </tr>
-                    {{ end }}
-                </tbody>
-            </table>
+                                {{ end }}
+                                {{ end }}
+                            </td>
+                            <td>
+                                <!-- Name -->
+                                {{ if .IsSymlink }}
+                                <a href="/{{.URI}}">{{.Name}} --> {{.SymlinkTarget}}</a>
+                                {{ else }}
+                                <a href="/{{.URI}}">{{.Name}}</a>
+                                {{ end }}
+                            </td>
+                            <td data-order="{{.SortSize}}">
+                                <!-- File size -->
+                                {{ if .IsDir }}
+                                --
+                                {{ else }}
+                                {{.DisplaySize}}
+                                {{ end }}
+                            </td>
+                            <td data-order="{{.SortLastModified}}">
+                                <!-- File last modified -->
+                                {{ .DisplayLastModified }}
+                            </td>
+                            <td>
+                                {{ if .IsDir }}
+                                <!--No download button-->
+                                {{ else }}
+                                <a href="{{.URI}}?download"><i class="fas fa-download fa-1x"></i></a>
+                                {{ end }}
+                            </td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+                <input type="submit" class="downloadBulkButton" id="downloadBulkButton" value="Download Selected" style="display:none">
+            </form>
         </section>
 
         <footer>
@@ -171,9 +204,10 @@
     </div> <!-- end class conn-->
 
     <!-- Scripts -->
-      <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/jquery-3.5.1.min.js"></script>
-      <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.js"></script>
-      <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/main.js.min.js"></script>
+    <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/jquery-3.5.1.min.js"></script>
+    <script
+        src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/datatable/jquery.dataTables.min.js"></script>
+    <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/main.js.min.js"></script>
 </body>
 
 </html>

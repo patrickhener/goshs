@@ -1,6 +1,8 @@
 package myhttp
 
 import (
+	"archive/zip"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -10,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -167,7 +170,11 @@ func (fs *FileServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// serve files / dirs or upload
 		switch req.Method {
 		case "GET":
-			fs.handler(w, req)
+			if strings.Contains(req.URL.Path, "cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390") {
+				fs.bulkDownload(w, req)
+			} else {
+				fs.handler(w, req)
+			}
 		case "POST":
 			fs.upload(w, req)
 		}
@@ -237,7 +244,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	if stat.IsDir() {
 		fs.processDir(w, req, file, upath)
 	} else {
-		fs.sendFile(w, file)
+		fs.sendFile(w, req, file)
 	}
 }
 
@@ -307,6 +314,83 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, target, http.StatusSeeOther)
 }
 
+// bulkDownload will provide zip archived download bundle of multiple selected files
+func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
+	// make slice and query files from request
+	var filesCleaned []string
+	files := req.URL.Query()["file"]
+
+	// Handle if no files are selected
+	if len(files) <= 0 {
+		fs.handleError(w, req, errors.New("You need to select a file before you can download a zip archive"), 404)
+	}
+
+	// Clean file paths and fill slice
+	for _, file := range files {
+		fileCleaned, _ := url.QueryUnescape(file)
+		filesCleaned = append(filesCleaned, fileCleaned)
+	}
+
+	// Construct filename to download
+	filename := fmt.Sprintf("%+v_goshs_download.zip", int32(time.Now().Unix()))
+
+	// Set header and serve file
+	contentDispo := fmt.Sprintf("attachment; filename=\"%s\"", filename)
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", contentDispo)
+	w.Header().Set("Content-Transfer-Encoding", "binary")
+	w.Header().Set("Expires", "0")
+
+	// Define Zip writer
+	resultZip := zip.NewWriter(w)
+	defer resultZip.Close()
+
+	// Path walker for recursion
+	walker := func(filepath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		file, err := os.Open(filepath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		// filepath is fs.Webroot + file relative path
+		// this would result in a lot of nested folders
+		// so we are stripping fs.Webroot again from the structure of the zip file
+		// Leaving us with the relative path of the file
+		zippath := strings.ReplaceAll(filepath, fs.Webroot, "")
+		f, err := resultZip.Create(zippath[1:])
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(f, file)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Loop over files and add to zip
+	for _, file := range filesCleaned {
+		err := filepath.Walk(path.Join(fs.Webroot, file), walker)
+		if err != nil {
+			log.Printf("Error creating zip file: %+v", err)
+		}
+	}
+
+	// Close Zip Writer and Flush to http.ResponseWriter
+	if err := resultZip.Close(); err != nil {
+		log.Println(err)
+	}
+}
+
 func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string) {
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
@@ -326,7 +410,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		// Add / to name if dir
 		if fi.IsDir() {
 			// Check if special path exists as dir on disk and do not add
-			if fi.Name() == "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c" {
+			if fi.Name() == "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c" || fi.Name() == "cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390" {
 				continue
 			}
 			item.Name += "/"
@@ -399,9 +483,23 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	}
 }
 
-func (fs *FileServer) sendFile(w http.ResponseWriter, file *os.File) {
-	// Write to browser
-	io.Copy(w, file)
+func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *os.File) {
+	// Extract download parameter
+	download := req.URL.Query()
+	if _, ok := download["download"]; ok {
+		stat, err := file.Stat()
+		if err != nil {
+			log.Printf("Error reading file stats for download: %+v", err)
+		}
+		contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"", stat.Name())
+		// Handle as download
+		w.Header().Add("Content-Type", "application/octet-stream")
+		w.Header().Add("Content-Disposition", contentDisposition)
+		io.Copy(w, file)
+	} else {
+		// Write to browser
+		io.Copy(w, file)
+	}
 }
 
 func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err error, status int) {
