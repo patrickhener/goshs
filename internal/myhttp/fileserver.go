@@ -326,8 +326,14 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Clean file paths and fill slice
+	// Also sanitize path (No path traversal)
+	// If .. in single string just skip file
 	for _, file := range files {
 		fileCleaned, _ := url.QueryUnescape(file)
+		if strings.Contains(fileCleaned, "..") {
+			// Just skip this file
+			continue
+		}
 		filesCleaned = append(filesCleaned, fileCleaned)
 	}
 
