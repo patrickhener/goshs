@@ -17,8 +17,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/patrickhener/goshs/internal/myca"
+	"github.com/patrickhener/goshs/internal/myclipboard"
 	"github.com/patrickhener/goshs/internal/mylog"
+	"github.com/patrickhener/goshs/internal/mysock"
 	"github.com/patrickhener/goshs/internal/myutils"
 
 	"github.com/phogolabs/parcello"
@@ -60,6 +63,7 @@ type FileServer struct {
 	MyCert     string
 	BasicAuth  string
 	Version    string
+	Clipboard  *myclipboard.Clipboard
 }
 
 type httperror struct {
@@ -69,22 +73,12 @@ type httperror struct {
 	GoshsVersion string
 }
 
-// router will hook up the webroot with our fileserver
-func (fs *FileServer) router() {
-	http.Handle("/", fs)
-}
-
-// authRouter will hook up the webroot with the fileserver using basic auth
-func (fs *FileServer) authRouter() {
-	http.HandleFunc("/", fs.basicAuth(fs.ServeHTTP))
-}
-
-// basicAuth is a wrapper to handle the basic auth
-func (fs *FileServer) basicAuth(handler http.HandlerFunc) func(w http.ResponseWriter, req *http.Request) {
-	return func(w http.ResponseWriter, req *http.Request) {
+// BasicAuthMiddleware is a middleware to handle the basic auth
+func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
-		username, password, authOK := req.BasicAuth()
+		username, password, authOK := r.BasicAuth()
 		if authOK == false {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
@@ -95,26 +89,44 @@ func (fs *FileServer) basicAuth(handler http.HandlerFunc) func(w http.ResponseWr
 			return
 		}
 
-		fs.ServeHTTP(w, req)
-	}
+		next.ServeHTTP(w, r)
+	})
+
 }
 
 // Start will start the file server
 func (fs *FileServer) Start() {
-	// init router with or without auth
+	// Setup routing with gorilla/mux
+	mux := mux.NewRouter()
+	mux.PathPrefix("/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/").HandlerFunc(fs.static)
+	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/").HandlerFunc(fs.socket)
+	mux.PathPrefix("/cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390/").HandlerFunc(fs.bulkDownload)
+	mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
+	mux.PathPrefix("/").HandlerFunc(fs.handler)
+
+	// construct server
+	add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
+	server := http.Server{
+		Addr:    add,
+		Handler: mux,
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// init clipboard
+	fs.Clipboard = myclipboard.New()
+
+	// Check BasicAuth and use middleware
 	if fs.BasicAuth != "" {
 		if !fs.SSL {
 			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
 		}
 		log.Printf("Using 'gopher:%+v' as basic auth\n", fs.BasicAuth)
-		fs.authRouter()
-	} else {
-		fs.router()
+		// Use middleware
+		mux.Use(fs.BasicAuthMiddleware)
 	}
-
-	// construct server
-	add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
-	server := http.Server{Addr: add}
 
 	// Check if ssl
 	if fs.SSL {
@@ -153,32 +165,13 @@ func (fs *FileServer) Start() {
 	}
 }
 
-// ServeHTTP will serve the response by leveraging our handler
-func (fs *FileServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			http.Error(w, fmt.Sprintf("%+v", err), http.StatusInternalServerError)
-		}
-	}()
-
-	// Check if special path, then serve static
-	// Realise that you will not be able to deliver content of folder
-	// called 425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c on disk
-	if strings.Contains(req.URL.Path, "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c") {
-		fs.static(w, req)
-	} else {
-		// serve files / dirs or upload
-		switch req.Method {
-		case "GET":
-			if strings.Contains(req.URL.Path, "cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390") {
-				fs.bulkDownload(w, req)
-			} else {
-				fs.handler(w, req)
-			}
-		case "POST":
-			fs.upload(w, req)
-		}
-	}
+// socket will handle the socket connection
+func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
+	log.Println("DEBUG: Hitting socket()")
+	hub := mysock.NewHub()
+	go hub.Run()
+	// TODO This part is not working. WS Connection gets no response
+	mysock.ServeWS(hub, w, req)
 }
 
 // static will give static content for style and function
@@ -416,7 +409,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		// Add / to name if dir
 		if fi.IsDir() {
 			// Check if special path exists as dir on disk and do not add
-			if fi.Name() == "425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c" || fi.Name() == "cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390" {
+			if myutils.CheckSpecialPath(fi.Name()) {
 				continue
 			}
 			item.Name += "/"

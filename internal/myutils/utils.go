@@ -36,3 +36,17 @@ func ReturnExt(n string) string {
 func RandomNumber() int64 {
 	return rand.Int63()
 }
+
+// CheckSpecialPath will check a slice of special paths against
+// a folder on disk and return true if it matches
+func CheckSpecialPath(check string) bool {
+	specialPaths := []string{"425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c", "cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390", "14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54"}
+
+	for _, item := range specialPaths {
+		if item == check {
+			return true
+		}
+	}
+
+	return false
+}

@@ -63,3 +63,30 @@ function selectNone() {
   });
   document.getElementById('downloadBulkButton').style.display = 'none';
 }
+
+var wsURL =
+  'ws://' +
+  window.location.host +
+  '/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws';
+var connection = new WebSocket(wsURL);
+
+connection.onopen = function () {
+  console.log('Connected via WebSockets');
+};
+
+connection.onclose = function () {
+  console.log('Connection has been closed by WebSocket Server');
+};
+
+connection.onerror = function (e) {
+  console.log('Websocket error: ', e);
+};
+
+connection.onmessage = function (m) {
+  try {
+    var message = JSON.parse(m.data);
+    console.log(message);
+  } catch (e) {
+    console.log('Error reading message: ', e);
+  }
+};
