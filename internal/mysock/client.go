@@ -3,6 +3,7 @@ package mysock
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -10,8 +11,14 @@ import (
 
 // Packet defines a packet struct
 type Packet struct {
-	Name string `json:"name"`
-	Data json.RawMessage
+	Type    string `json:"type"`
+	Content json.RawMessage
+}
+
+// SendPacket represents a response package from server to browser
+type SendPacket struct {
+	Type    string `json:"type"`
+	Content string `json:"content"`
 }
 
 const (
@@ -32,6 +39,13 @@ var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
 )
+
+var wsupgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// Acceppt Any
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
@@ -60,20 +74,40 @@ func (c *Client) readPump() {
 	for {
 		var packet Packet
 		if err := c.conn.ReadJSON(&packet); err != nil {
-			log.Println("Got an Error reading the message from socket")
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
+			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+				break
+			}
+
 			log.Printf("Error reading message: %v", err)
 			break
 		}
 
 		// Switch here over possible socket events and pull in handlers
-		switch packet.Name {
-		case "refreshClipboard":
-			log.Println("DEBUG: DO SOMETHING HERE")
+		switch packet.Type {
+		case "newEntry":
+			c.hub.cb.AddEntry(string(packet.Content))
+			c.refreshClipboard()
+
+		case "delEntry":
+			type delID struct {
+				Content int
+			}
+			var id delID
+			json.Unmarshal(packet.Content, &id)
+			if err := c.hub.cb.DeleteEntry(id.Content); err != nil {
+				log.Printf("ERROR: Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
+			}
+			c.refreshClipboard()
+
+		case "clearClipboard":
+			c.hub.cb.ClearClipboard()
+			c.refreshClipboard()
+
 		default:
-			log.Printf("The event sent via websocket cannot be handeled: %+v", packet.Name)
+			log.Printf("The event sent via websocket cannot be handeled: %+v", packet.Type)
 		}
 	}
 }
@@ -122,4 +156,31 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+// ServeWS will handle the socket connections
+func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade ws: %+v", err)
+		return
+	}
+
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 1024)}
+	client.hub.register <- client
+
+	go client.writePump()
+	go client.readPump()
+}
+
+func (c *Client) refreshClipboard() {
+	sendPkg := &SendPacket{
+		Type: "refreshClipboard",
+	}
+	broadcastMessage, err := json.Marshal(sendPkg)
+	if err != nil {
+		log.Printf("Error: Unable to marshal json data in redirect: %+v", err)
+	}
+
+	c.hub.broadcast <- broadcastMessage
 }

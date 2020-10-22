@@ -30,13 +30,18 @@ import (
 	_ "github.com/patrickhener/goshs/static"
 )
 
+type indexTemplate struct {
+	Clipboard    *myclipboard.Clipboard
+	GoshsVersion string
+	Directory    *directory
+}
+
 type directory struct {
 	RelPath        string
 	AbsPath        string
 	IsSubdirectory bool
 	Back           string
 	Content        []item
-	GoshsVersion   string
 }
 
 type item struct {
@@ -63,6 +68,7 @@ type FileServer struct {
 	MyCert     string
 	BasicAuth  string
 	Version    string
+	Hub        *mysock.Hub
 	Clipboard  *myclipboard.Clipboard
 }
 
@@ -99,7 +105,10 @@ func (fs *FileServer) Start() {
 	// Setup routing with gorilla/mux
 	mux := mux.NewRouter()
 	mux.PathPrefix("/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/").HandlerFunc(fs.static)
-	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/").HandlerFunc(fs.socket)
+	// Websocket
+	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws").HandlerFunc(fs.socket)
+	// Clipboard
+	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/download").HandlerFunc(fs.cbDown)
 	mux.PathPrefix("/cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390/").HandlerFunc(fs.bulkDownload)
 	mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
 	mux.PathPrefix("/").HandlerFunc(fs.handler)
@@ -117,6 +126,10 @@ func (fs *FileServer) Start() {
 
 	// init clipboard
 	fs.Clipboard = myclipboard.New()
+
+	// init websocket hub
+	fs.Hub = mysock.NewHub(fs.Clipboard)
+	go fs.Hub.Run()
 
 	// Check BasicAuth and use middleware
 	if fs.BasicAuth != "" {
@@ -167,11 +180,22 @@ func (fs *FileServer) Start() {
 
 // socket will handle the socket connection
 func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
-	log.Println("DEBUG: Hitting socket()")
-	hub := mysock.NewHub()
-	go hub.Run()
-	// TODO This part is not working. WS Connection gets no response
-	mysock.ServeWS(hub, w, req)
+	mysock.ServeWS(fs.Hub, w, req)
+}
+
+// clipboardAdd will handle the add request for adding text to the clipboard
+func (fs *FileServer) cbDown(w http.ResponseWriter, req *http.Request) {
+	filename := fmt.Sprintf("%+v-clipboard.json", int32(time.Now().Unix()))
+	contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"", filename)
+	// Handle as download
+	w.Header().Add("Content-Type", "application/octet-stream")
+	w.Header().Add("Content-Disposition", contentDisposition)
+	content, err := fs.Clipboard.Download()
+	if err != nil {
+		fs.handleError(w, req, err, 500)
+	}
+
+	w.Write(content)
 }
 
 // static will give static content for style and function
@@ -451,10 +475,9 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 
 	// Construct directory for template
 	d := &directory{
-		RelPath:      relpath,
-		AbsPath:      path.Join(fs.Webroot, relpath),
-		Content:      items,
-		GoshsVersion: fs.Version,
+		RelPath: relpath,
+		AbsPath: path.Join(fs.Webroot, relpath),
+		Content: items,
 	}
 	if relpath != "/" {
 		d.IsSubdirectory = true
@@ -475,9 +498,16 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		d.IsSubdirectory = false
 	}
 
+	// Construct template
+	tem := &indexTemplate{
+		Directory:    d,
+		GoshsVersion: fs.Version,
+		Clipboard:    fs.Clipboard,
+	}
+
 	t := template.New("index")
 	t.Parse(string(fileContent))
-	if err := t.Execute(w, d); err != nil {
+	if err := t.Execute(w, tem); err != nil {
 		log.Printf("ERROR: Error parsing template: %+v", err)
 	}
 }

@@ -85,8 +85,39 @@ connection.onerror = function (e) {
 connection.onmessage = function (m) {
   try {
     var message = JSON.parse(m.data);
-    console.log(message);
+    if (message['type'] == 'refreshClipboard') {
+      location.reload();
+    }
   } catch (e) {
     console.log('Error reading message: ', e);
   }
 };
+
+function sendEntry(e) {
+  e.preventDefault();
+  entryfield = document.getElementById('cbEntry');
+  var text = entryfield.value;
+  var msg = {
+    type: 'newEntry',
+    content: text,
+  };
+  connection.send(JSON.stringify(msg));
+  entryfield.value = '';
+}
+
+function clearClipboard(e) {
+  e.preventDefault;
+  var msg = {
+    type: 'clearClipboard',
+    content: '',
+  };
+  connection.send(JSON.stringify(msg));
+}
+
+function delClipboard(id) {
+  var msg = {
+    type: 'delEntry',
+    content: id,
+  };
+  connection.send(JSON.stringify(msg));
+}

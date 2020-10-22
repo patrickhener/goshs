@@ -369,3 +369,7 @@ footer {
 .checkboxBtn:hover, .downloadBulkButton:hover {
   background-color: #555;
 }
+
+.cbInputGroup, .clipboardCard {
+  margin-right: 15px;
+}

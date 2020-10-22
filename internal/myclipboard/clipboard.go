@@ -1,6 +1,10 @@
 package myclipboard
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 // Clipboard is the in memory clipboard to hold the copy-pasteable content
 type Clipboard struct {
@@ -9,8 +13,9 @@ type Clipboard struct {
 
 // Entry will represent a single entry in the clipboard
 type Entry struct {
-	id      int
-	content string
+	ID      int
+	Content string
+	Time    string
 }
 
 // New will return an instantiated Clipboard
@@ -24,15 +29,17 @@ func (c *Clipboard) AddEntry(con string) error {
 	entries := c.Entries
 	if len(entries) > 0 {
 		lastEntry := entries[len(entries)-1]
-		newID := lastEntry.id + 1
+		newID := lastEntry.ID + 1
 		entries = append(entries, Entry{
-			id:      newID,
-			content: con,
+			ID:      newID,
+			Content: con,
+			Time:    fmt.Sprintf("%s", time.Now().Format("Mon Jan _2 15:04:05 2006")),
 		})
 	} else {
 		entries = append(entries, Entry{
-			id:      0,
-			content: con,
+			ID:      0,
+			Content: con,
+			Time:    fmt.Sprintf("%s", time.Now().Format("Mon Jan _2 15:04:05 2006")),
 		})
 	}
 	c.Entries = entries
@@ -47,6 +54,12 @@ func (c *Clipboard) DeleteEntry(id int) error {
 	return nil
 }
 
+// ClearClipboard will empty the clipboard
+func (c *Clipboard) ClearClipboard() error {
+	c.Entries = nil
+	return nil
+}
+
 // GetEntries will give the opportunity to receive the entries from the clipboard
 func (c *Clipboard) GetEntries() ([]Entry, error) {
 	entries := c.Entries
@@ -56,7 +69,7 @@ func (c *Clipboard) GetEntries() ([]Entry, error) {
 // Download will return a json encoded representation of the clipboards content for download purposes
 func (c *Clipboard) Download() ([]byte, error) {
 	entries := c.Entries
-	e, err := json.Marshal(entries)
+	e, err := json.MarshalIndent(entries, "", "    ")
 	if err != nil {
 		return nil, err
 	}
