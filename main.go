@@ -10,7 +10,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myhttp"
 )
 
-const goshsVersion = "v0.0.5"
+const goshsVersion = "v0.0.6"
 
 var (
 	port       = 8000
@@ -38,6 +38,7 @@ func init() {
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = func() {
+		fmt.Printf("goshs %s\n", goshsVersion)
 		fmt.Printf("Usage: %s [options]\n\n", os.Args[0])
 		fmt.Println("Web server options:")
 		fmt.Println("\t-i\tThe ip to listen on\t(default: 0.0.0.0)")

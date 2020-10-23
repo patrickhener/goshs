@@ -88,7 +88,9 @@ func (c *Client) readPump() {
 		// Switch here over possible socket events and pull in handlers
 		switch packet.Type {
 		case "newEntry":
-			c.hub.cb.AddEntry(string(packet.Content))
+			entry := string(packet.Content)
+			submitEntry := entry[1 : len(entry)-1]
+			c.hub.cb.AddEntry(submitEntry)
 			c.refreshClipboard()
 
 		case "delEntry":

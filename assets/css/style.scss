@@ -1,0 +1,270 @@
+// style.scss
+
+// -------- Font --------
+@import 'font';
+
+// -------- Variables --------
+$fontLight: 300;
+$fontBold: 600;
+$desktop: 1024px;
+$tablet: 768px;
+$mobile: 576px;
+$primary-color: #3d7892;
+$secondary-color: #fff6bb;
+$light-color: #fff;
+$dark-color: #555;
+$alt-bg-color: #f9f9f9;
+$slider-bg-color: #ccc;
+$tableHoverColor: #bbb;
+
+// -------- Mixins ------------
+@mixin mQ($size) {
+  @media (max-width: $size) {
+    @content;
+  }
+}
+
+// -------- Normalize ----------
+* {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+ul {
+  margin: 0;
+}
+
+button,
+input[type='button'] {
+  cursor: pointer;
+}
+
+button:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+}
+
+input,
+textarea {
+  border: none;
+}
+
+button {
+  border: none;
+  background: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+p {
+  margin: 0;
+}
+
+.align_item_center {
+  align-items: center;
+}
+
+// Overwriting theme colors
+$theme-colors: (
+  'primary': $primary-color,
+);
+
+// import must come after theme overwrite
+// and before element overwrite
+// for it to work
+@import '../vendor/bootstrap/scss/bootstrap.scss';
+
+// -------- Overwriting theme elements --------
+body {
+  font-family: 'Fira Code VF', monospace, sans-serif !important;
+  font-weight: 300;
+  line-height: 1.625;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: $dark-color;
+  background-color: $alt-bg-color;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: -1;
+}
+
+a,
+a:hover,
+a:active,
+a:visited {
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: $dark-color;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 36px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 15px;
+}
+h6 {
+  font-size: 13px;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.open > .dropdown-toggle.btn-primary {
+  color: $dark-color;
+  background-color: $tableHoverColor;
+  border-color: $tableHoverColor;
+}
+
+.card-body {
+  pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+}
+
+// -------- Custom styling --------
+.disable-scrollbars {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
+  &::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* Chrome/Safari/Webkit */
+  }
+}
+
+// ---- header ----
+#header {
+  margin: 0px 0;
+  margin-left: 20px;
+  padding-bottom: 20px;
+  border-bottom: 5px solid $dark-color;
+
+  @include mQ($tablet) {
+    justify-content: center;
+  }
+
+  @include mQ($mobile) {
+    margin-left: 10px;
+    flex-direction: column;
+  }
+
+  // ---- logo -----
+  .logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    img {
+      width: 65px;
+    }
+  }
+
+  // ---- heading ----
+  .heading_title {
+    margin-left: 20px;
+
+    @include mQ($mobile) {
+      margin-left: 0px;
+      margin-top: 20px;
+    }
+
+    h2 {
+      font-size: 22px;
+
+      @include mQ($mobile) {
+        text-align: center;
+      }
+    }
+  }
+}
+
+// ---- Table ----
+.table {
+  color: $primary-color;
+
+  a {
+    color: $primary-color;
+  }
+
+  td {
+    font-size: 0.95em;
+    vertical-align: middle;
+  }
+
+  .file_ic {
+    color: $primary-color;
+    font-size: 1.5em;
+  }
+
+  .thead-dark {
+    th {
+      background-color: $dark-color;
+    }
+  }
+}
+
+.table-hover {
+  tbody {
+    tr:hover {
+      color: $dark-color;
+      background-color: $tableHoverColor;
+      font-weight: bold;
+
+      a,
+      a:hover,
+      a:active,
+      a:visited {
+        color: $dark-color;
+        font-weight: bold;
+      }
+
+      .file_ic {
+        color: $dark-color;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .table-primary:hover {
+    color: $dark-color;
+    background-color: $tableHoverColor;
+  }
+}
+
+// ---- Footer ----
+footer {
+  text-align: center;
+  font-size: 0.8em;
+  font-weight: bold;
+  margin: 30px 0;
+  margin-bottom: 0;
+}

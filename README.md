@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.0.5-green)
+![Version](https://img.shields.io/badge/Version-v0.0.6-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -9,7 +9,18 @@
 
 goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
 
-> <kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot"></kbd>
+
+# Features
+* Download or view files
+  * Bulk download as .zip file
+* Upload files
+* Basic Authentication
+* Transport Layer Security (HTTPS)
+  * self-signed
+  * provide own certificate
+* Non persistent clipboard
+  * Download clipboard entries as .json file
 
 # Installation
 
