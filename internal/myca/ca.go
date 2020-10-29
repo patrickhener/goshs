@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+
+	// disable G505 (CWE-327): Blocklisted import crypto/sha1: weak cryptographic primitive
+	// #nosec G505
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/tls"
@@ -15,7 +18,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"math/big"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -44,6 +47,8 @@ func Sum(cert []byte) (sha256s, sha1s string) {
 
 	// building sha1 sum
 	var f1 [20]byte
+	// disable "G401 (CWE-326): Use of weak cryptographic primitive"
+	// #nosec G401
 	f1 = sha1.Sum(cert)
 	sha1s = fmt.Sprintf("%X", f1)
 
@@ -65,6 +70,9 @@ func Sum(cert []byte) (sha256s, sha1s string) {
 
 // ParseAndSum will take the user provided cert and return the sha256 and sha1 sum
 func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// risk accepted, maybe check if can be used to do malicous things
+	// #nosec G304
 	certBytes, err := ioutil.ReadFile(cert)
 	if err != nil {
 		return "", "", err
@@ -84,8 +92,12 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 
 // Setup will deliver a fully initialized CA and server cert
 func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
+	randInt, err := myutils.RandomNumber()
+	if err != nil {
+		log.Printf("Error when creating certificate: %+v", err)
+	}
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(myutils.RandomNumber()),
+		SerialNumber: &randInt,
 		Subject: pkix.Name{
 			Organization:       []string{"hesec.de"},
 			OrganizationalUnit: []string{"hesec.de"},
@@ -118,20 +130,28 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 
 	// pem encode
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+	if err := pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
-	})
+	}); err != nil {
+		log.Printf("ERROR: Error encoding pem: %+v", err)
+	}
 
 	caPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-	})
+	}); err != nil {
+		log.Printf("ERROR: Error encoding pem: %+v", err)
+	}
 
+	randInt, err = myutils.RandomNumber()
+	if err != nil {
+		log.Printf("Error when creating certificate: %+v", err)
+	}
 	// set up our server certificate
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(myutils.RandomNumber()),
+		SerialNumber: &randInt,
 		Subject: pkix.Name{
 			Organization:       []string{"hesec.de"},
 			OrganizationalUnit: []string{"hesec.de"},
@@ -161,16 +181,20 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 	}
 
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	if err := pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
+	}); err != nil {
+		log.Printf("ERROR: Error encoding pem: %+v", err)
+	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(certPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
+	}); err != nil {
+		log.Printf("ERROR: Error encoding pem: %+v", err)
+	}
 
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())
 	if err != nil {
@@ -179,6 +203,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 
 	serverTLSConf = &tls.Config{
 		Certificates: []tls.Certificate{serverCert},
+		MinVersion:   tls.VersionTLS12,
 	}
 
 	sha256s, sha1s = Sum(certBytes)

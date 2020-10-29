@@ -10,8 +10,13 @@ generate:
 	@PARCELLO_RESOURCE_DIR=./static go generate ./...
 	@echo "[OK] Done bundeling things"
 
+security:
+	@echo "[*] Checking with gosec"
+	@gosec ./...
+	@echo "[OK] No issues detected"
 
-build: clean generate
+
+build: clean generate security
 	@echo "[*] go mod dowload"
 	@go mod download
 	@echo "[*] Building for linux"

@@ -195,7 +195,9 @@ func (fs *FileServer) cbDown(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, err, 500)
 	}
 
-	w.Write(content)
+	if _, err := w.Write(content); err != nil {
+		log.Printf("ERROR: Error writing response to browser: %+v", err)
+	}
 }
 
 // static will give static content for style and function
@@ -220,7 +222,9 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 
 	// Set mimetype and deliver to browser
 	w.Header().Add("Content-Type", contentType)
-	w.Write(staticContent)
+	if _, err := w.Write(staticContent); err != nil {
+		log.Printf("ERROR: Error writing response to browser: %+v", err)
+	}
 }
 
 // handler is the function which actually handles dir or file retrieval
@@ -237,6 +241,9 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	open := fs.Webroot + path.Clean(upath)
 
 	// Check if you are in a dir
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// as we want a file inclusion here
+	// #nosec G304
 	file, err := os.Open(open)
 	if os.IsNotExist(err) {
 		fs.handleError(w, req, err, http.StatusNotFound)
@@ -251,6 +258,8 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 		return
 	}
+	// disable G307 (CWE-703): Deferring unsafe method "Close" on type "*os.File"
+	// #nosec G307
 	defer file.Close()
 
 	// Log request
@@ -376,10 +385,16 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		if info.IsDir() {
 			return nil
 		}
+
+		// disable G304 (CWE-22): Potential file inclusion via variable
+		// as we want a file inclusion here
+		// #nosec G304
 		file, err := os.Open(filepath)
 		if err != nil {
 			return err
 		}
+		// disable G307 (CWE-703): Deferring unsafe method "Close" on type "*os.File"
+		// #nosec G307
 		defer file.Close()
 
 		// filepath is fs.Webroot + file relative path
@@ -506,9 +521,11 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	}
 
 	t := template.New("index")
-	t.Parse(string(fileContent))
-	if err := t.Execute(w, tem); err != nil {
+	if _, err := t.Parse(string(fileContent)); err != nil {
 		log.Printf("ERROR: Error parsing template: %+v", err)
+	}
+	if err := t.Execute(w, tem); err != nil {
+		log.Printf("ERROR: Error executing template: %+v", err)
 	}
 }
 
@@ -524,10 +541,14 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		// Handle as download
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Header().Add("Content-Disposition", contentDisposition)
-		io.Copy(w, file)
+		if _, err := io.Copy(w, file); err != nil {
+			log.Printf("ERROR: Error writing response to browser: %+v", err)
+		}
 	} else {
 		// Write to browser
-		io.Copy(w, file)
+		if _, err := io.Copy(w, file); err != nil {
+			log.Printf("ERROR: Error writing response to browser: %+v", err)
+		}
 	}
 }
 
@@ -557,8 +578,11 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 		log.Printf("Error opening embedded file: %+v", err)
 	}
 	t := template.New("error")
-	t.Parse(string(fileContent))
-	if err := t.Execute(w, e); err != nil {
+	if _, err := t.Parse(string(fileContent)); err != nil {
 		log.Printf("Error parsing the template: %+v", err)
+
+	}
+	if err := t.Execute(w, e); err != nil {
+		log.Printf("Error executing the template: %+v", err)
 	}
 }

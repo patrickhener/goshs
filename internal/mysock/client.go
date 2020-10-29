@@ -66,10 +66,16 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			return
+		}
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		return
+	}
+	// disable G104 (CWE-703): Errors unhandled
+	// #nosec G104
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		var packet Packet
@@ -90,7 +96,9 @@ func (c *Client) readPump() {
 		case "newEntry":
 			entry := string(packet.Content)
 			submitEntry := entry[1 : len(entry)-1]
-			c.hub.cb.AddEntry(submitEntry)
+			if err := c.hub.cb.AddEntry(submitEntry); err != nil {
+				log.Printf("Error: Error creating Clipboard entry: %+v", err)
+			}
 			c.refreshClipboard()
 
 		case "delEntry":
@@ -98,14 +106,18 @@ func (c *Client) readPump() {
 				Content int
 			}
 			var id delID
-			json.Unmarshal(packet.Content, &id)
+			if err := json.Unmarshal(packet.Content, &id); err != nil {
+				log.Printf("ERROR: Error reading json packet: %+v", err)
+			}
 			if err := c.hub.cb.DeleteEntry(id.Content); err != nil {
 				log.Printf("ERROR: Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
 			}
 			c.refreshClipboard()
 
 		case "clearClipboard":
-			c.hub.cb.ClearClipboard()
+			if err := c.hub.cb.ClearClipboard(); err != nil {
+				log.Printf("ERROR: Error clearing clipboard: %+v", err)
+			}
 			c.refreshClipboard()
 
 		default:
@@ -123,15 +135,21 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			return
+		}
 	}()
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return
+			}
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					return
+				}
 				return
 			}
 
@@ -139,20 +157,28 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			if _, err := w.Write(message); err != nil {
+				return
+			}
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
+				if _, err := w.Write(newline); err != nil {
+					return
+				}
+				if _, err := w.Write(<-c.send); err != nil {
+					return
+				}
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return
+			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

@@ -1,8 +1,10 @@
 package myutils
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"log"
+	"math/big"
 	"mime"
 	"strings"
 )
@@ -33,8 +35,13 @@ func ReturnExt(n string) string {
 }
 
 // RandomNumber returns a random int64
-func RandomNumber() int64 {
-	return rand.Int63()
+func RandomNumber() (big.Int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		log.Printf("Error when generating random number: %+v", err)
+		return *big.NewInt(0), err
+	}
+	return *n, err
 }
 
 // CheckSpecialPath will check a slice of special paths against
