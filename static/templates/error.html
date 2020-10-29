@@ -24,40 +24,54 @@
       href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/vendor/fontawesome-5.15.1/css/all.min.css"
     />
   </head>
-  <body>
-    <div class="conn">
+  <body class="disable-scrollbars">
+    <div class="container-fluid p-4">
       <!-- Header -->
-      <header id="header" class="d-flex align_item_center">
-        <div onclick="document.location='/'" class="logo_p">
-          <img
-            src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/error-gopher.gif"
-            alt="goshs"
-          />
+      <div class="row">
+        <div class="col-md-12">
+          <header id="header" class="d-flex align_item_center">
+            <div onclick="document.location='/'" class="logo">
+              <img
+                src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/error-gopher.gif"
+                alt="goshs"
+              />
+            </div>
+            <div class="heading_title">
+              {{ if (eq .ErrorCode 404) }}
+              <h2>404 Not found - Requested path: {{.AbsPath}}</h2>
+              {{ else if (eq .ErrorCode 500) }}
+              <h2>500 Internal Server Error - Requested path: {{.AbsPath}}</h2>
+              {{ else }}
+              <h2>Error</h2>
+              {{ end }}
+            </div>
+          </header>
         </div>
-        <div class="heading_title_p">
-          {{ if (eq .ErrorCode 404) }}
-          <h2>404 Not found - Requested path: {{.AbsPath}}</h2>
-          {{ else if (eq .ErrorCode 500) }}
-          <h2>500 Internal Server Error - Requested path: {{.AbsPath}}</h2>
-          {{ else }}
-          <h2>Error</h2>
-          {{ end }}
-        </div>
-      </header>
-      <div class="d-flex align_item_center">
-        <section class="error">
-          <h3>Error message from goshs:</h3>
-          <code>{{.ErrorMessage}}</code>
-        </section>
-        <section class="backBtn_p">
-          <button onclick="window.history.back()">
-            <i class="fas fa-level-up-alt"></i> Back
-          </button>
-        </section>
       </div>
-      <footer>
-        <p>goshs {{ .GoshsVersion }}</p>
-      </footer>
+      <!-- Content -->
+      <div class="row">
+        <div class="col-md-12 mt-2">
+          <div class="d-flex align_item_center">
+            <h3>Error message from goshs:</h3>
+            <code class="error-code p-3">{{.ErrorMessage}}</code>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 mt-2">
+          <span class="error-back">
+              <i class="fas fa-level-up-alt file_ic"></i>
+              <a href="javascript:window.history.back()">Back</a>
+          </span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 d-flex justify-content-center">
+          <footer>
+            <p>goshs {{ .GoshsVersion }}</p>
+          </footer>
+        </div>
+      </div>
     </div>
   </body>
 </html>
