@@ -2,3 +2,4 @@
 /dist
 /goshs
 *.exe
+*resource.go
