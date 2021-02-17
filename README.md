@@ -63,6 +63,13 @@ Authentication options:
 
 Misc options:
 	-v	Print the current goshs version
+
+Usage examples:
+	Start with default values:		./goshs
+	Start with different port:		./goshs -p 8080
+	Start with self-signed cert:	./goshs -s -ss
+	Start with custom cert:			./goshs -s -sk <path to key> -sc <path to cert>
+	Start with basic auth:			./goshs -P $up3r$3cur3
 ```
 
 # Examples
