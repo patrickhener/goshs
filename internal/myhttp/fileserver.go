@@ -2,6 +2,7 @@ package myhttp
 
 import (
 	"archive/zip"
+	"embed"
 	"errors"
 	"fmt"
 	"html/template"
@@ -23,12 +24,11 @@ import (
 	"github.com/patrickhener/goshs/internal/mylog"
 	"github.com/patrickhener/goshs/internal/mysock"
 	"github.com/patrickhener/goshs/internal/myutils"
-
-	"github.com/phogolabs/parcello"
-
-	// This will import for bundling with parcello
-	_ "github.com/patrickhener/goshs/static"
 )
+
+// Static will provide the embedded files as http.FS
+//go:embed static
+var static embed.FS
 
 type indexTemplate struct {
 	Clipboard    *myclipboard.Clipboard
@@ -205,16 +205,17 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	// Check which file to serve
 	upath := req.URL.Path
 	staticPath := strings.SplitAfterN(upath, "/", 3)[2]
+	path := "static/" + staticPath
 	// Load file with parcello
-	staticFile, err := parcello.Open(staticPath)
+	staticFile, err := static.Open(path)
 	if err != nil {
-		log.Printf("ERROR: static file: %+v cannot be loaded: %+v", staticPath, err)
+		log.Printf("ERROR: static file: %+v cannot be loaded: %+v", path, err)
 	}
 
 	// Read file
 	staticContent, err := ioutil.ReadAll(staticFile)
 	if err != nil {
-		log.Printf("ERROR: static file: %+v cannot be read: %+v", staticPath, err)
+		log.Printf("ERROR: static file: %+v cannot be read: %+v", path, err)
 	}
 
 	// Get mimetype from extension
@@ -479,11 +480,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	})
 
 	// Template parsing and writing to browser
-	indexFile, err := parcello.Open("templates/index.html")
-	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
-	}
-	fileContent, err := ioutil.ReadAll(indexFile)
+	indexFile, err := static.ReadFile("static/templates/index.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
@@ -521,7 +518,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	}
 
 	t := template.New("index")
-	if _, err := t.Parse(string(fileContent)); err != nil {
+	if _, err := t.Parse(string(indexFile)); err != nil {
 		log.Printf("ERROR: Error parsing template: %+v", err)
 	}
 	if err := t.Execute(w, tem); err != nil {
@@ -569,16 +566,12 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	e.GoshsVersion = fs.Version
 
 	// Template handling
-	file, err := parcello.Open("templates/error.html")
-	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
-	}
-	fileContent, err := ioutil.ReadAll(file)
+	file, err := static.ReadFile("static/templates/error.html")
 	if err != nil {
 		log.Printf("Error opening embedded file: %+v", err)
 	}
 	t := template.New("error")
-	if _, err := t.Parse(string(fileContent)); err != nil {
+	if _, err := t.Parse(string(file)); err != nil {
 		log.Printf("Error parsing the template: %+v", err)
 
 	}

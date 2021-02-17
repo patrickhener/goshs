@@ -2,13 +2,10 @@
 
 generate:
 	@echo "[*] Minifying and compiling scss and js"
-	@uglifyjs -o static/js/main.min.js assets/js/main.js
-	@wt compile assets/css/style.scss -s compressed -b static/css
+	@uglifyjs -o internal/myhttp/static/js/main.min.js assets/js/main.js
+	@wt compile assets/css/style.scss -s compressed -b internal/myhttp/static/css
 	# @wt compile assets/css/style.scss -b static/css
 	@echo "[OK] Done minifying and compiling things"
-	@echo "[*] Embedding via parcello"
-	@PARCELLO_RESOURCE_DIR=./static go generate ./...
-	@echo "[OK] Done bundeling things"
 
 security:
 	@echo "[*] Checking with gosec"
