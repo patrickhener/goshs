@@ -10,7 +10,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myhttp"
 )
 
-const goshsVersion = "v0.0.6"
+const goshsVersion = "v0.0.7"
 
 var (
 	port       = 8000
@@ -56,6 +56,13 @@ func init() {
 		fmt.Println("")
 		fmt.Println("Misc options:")
 		fmt.Println("\t-v\tPrint the current goshs version")
+		fmt.Println("")
+		fmt.Println("Usage examples:")
+		fmt.Println("\tStart with default values:\t./goshs")
+		fmt.Println("\tStart with different port:\t./goshs -p 8080")
+		fmt.Println("\tStart with self-signed cert:\t./goshs -s -ss")
+		fmt.Println("\tStart with custom cert:\t\t./goshs -s -sk <path to key> -sc <path to cert>")
+		fmt.Println("\tStart with basic auth:\t\t./goshs -P $up3r$3cur3")
 	}
 
 	flag.Parse()
