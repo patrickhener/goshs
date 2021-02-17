@@ -67,10 +67,16 @@ function selectNone() {
 }
 
 // Everything related to websockets
-var wsURL =
-  'ws://' +
-  window.location.host +
-  '/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws';
+var wsURL = '';
+location.protocol !== 'https:'
+  ? (wsURL =
+      'ws://' +
+      window.location.host +
+      '/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws')
+  : (wsURL =
+      'wss://' +
+      window.location.host +
+      '/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws');
 var connection = new WebSocket(wsURL);
 
 connection.onopen = function () {
