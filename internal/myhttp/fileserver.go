@@ -207,15 +207,9 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	staticPath := strings.SplitAfterN(upath, "/", 3)[2]
 	path := "static/" + staticPath
 	// Load file with parcello
-	staticFile, err := static.Open(path)
+	staticFile, err := static.ReadFile(path)
 	if err != nil {
 		log.Printf("ERROR: static file: %+v cannot be loaded: %+v", path, err)
-	}
-
-	// Read file
-	staticContent, err := ioutil.ReadAll(staticFile)
-	if err != nil {
-		log.Printf("ERROR: static file: %+v cannot be read: %+v", path, err)
 	}
 
 	// Get mimetype from extension
@@ -223,7 +217,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 
 	// Set mimetype and deliver to browser
 	w.Header().Add("Content-Type", contentType)
-	if _, err := w.Write(staticContent); err != nil {
+	if _, err := w.Write(staticFile); err != nil {
 		log.Printf("ERROR: Error writing response to browser: %+v", err)
 	}
 }
