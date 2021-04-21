@@ -10,7 +10,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myhttp"
 )
 
-const goshsVersion = "v0.0.8"
+const goshsVersion = "v0.0.9"
 
 var (
 	port       = 8000

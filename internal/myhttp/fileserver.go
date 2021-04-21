@@ -119,8 +119,8 @@ func (fs *FileServer) Start() {
 		Addr:    add,
 		Handler: mux,
 		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 120 * time.Second,
+		ReadTimeout:  120 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
