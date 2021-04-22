@@ -79,7 +79,7 @@ $theme-colors: (
 // import must come after theme overwrite
 // and before element overwrite
 // for it to work
-@import '../vendor/bootstrap/scss/bootstrap.scss';
+@import '../3rdparty/bootstrap/scss/bootstrap.scss';
 
 // -------- Overwriting theme elements --------
 body {
