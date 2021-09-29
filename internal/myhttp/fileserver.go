@@ -293,10 +293,10 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 	for i := range files {
 		file, err := files[i].Open()
-		defer file.Close()
 		if err != nil {
 			log.Printf("Error retrieving the file: %+v\n", err)
 		}
+		defer file.Close()
 
 		filename := files[i].Filename
 
