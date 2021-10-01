@@ -12,7 +12,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
-const goshsVersion = "v0.1.1"
+const goshsVersion = "v0.1.2"
 
 var (
 	port       = 8000
@@ -43,9 +43,9 @@ func init() {
 		fmt.Printf("goshs %s\n", goshsVersion)
 		fmt.Printf("Usage: %s [options]\n\n", os.Args[0])
 		fmt.Println("Web server options:")
-		fmt.Println("\t-i\tThe ip to listen on\t(default: 0.0.0.0)")
-		fmt.Println("\t-p\tThe port to listen on\t(default: 8000)")
-		fmt.Println("\t-d\tThe web root directory\t(default: current working path)")
+		fmt.Println("\t-i\tThe ip/if-name to listen on\t(default: 0.0.0.0)")
+		fmt.Println("\t-p\tThe port to listen on\t\t(default: 8000)")
+		fmt.Println("\t-d\tThe web root directory\t\t(default: current working path)")
 		fmt.Println("")
 		fmt.Println("TLS options:")
 		fmt.Println("\t-s\tUse TLS")
@@ -74,6 +74,8 @@ func init() {
 		os.Exit(0)
 	}
 
+	// Check if interface name was provided as -i
+	// If so, resolve to ip address of interface
 	if !strings.Contains(ip, ".") {
 		addr, err := myutils.GetInterfaceIpv4Addr(ip)
 		if err != nil {

@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.1-green)
+![Version](https://img.shields.io/badge/Version-v0.1.2-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -48,9 +48,9 @@ make build
 Usage: goshs [options]
 
 Web server options:
-	-i	The ip to listen on	(default: 0.0.0.0)
-	-p	The port to listen on	(default: 8000)
-	-d	The web root directory	(default: current working path)
+	-i	The ip/if-name to listen on	(default: 0.0.0.0)
+	-p	The port to listen on		(default: 8000)
+	-d	The web root directory		(default: current working path)
 
 TLS options:
 	-s	Use TLS
