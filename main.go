@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/patrickhener/goshs/internal/myhttp"
+	"github.com/patrickhener/goshs/internal/myutils"
 )
 
 const goshsVersion = "v0.1.1"
@@ -70,6 +72,21 @@ func init() {
 	if *version {
 		fmt.Printf("goshs version is: %+v\n", goshsVersion)
 		os.Exit(0)
+	}
+
+	if !strings.Contains(ip, ".") {
+		addr, err := myutils.GetInterfaceIpv4Addr(ip)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(-1)
+		}
+
+		if addr == "" {
+			fmt.Println("IP address cannot be found for provided interface")
+			os.Exit(-1)
+		}
+
+		ip = addr
 	}
 }
 
