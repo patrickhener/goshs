@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/patrickhener/goshs/internal/myca"
-	"github.com/patrickhener/goshs/internal/mylog"
 	"golang.org/x/net/webdav"
 )
 
@@ -51,11 +50,11 @@ func (wd *WebdavServer) Start() {
 		LockSystem: webdav.NewMemLS(),
 		Logger: func(r *http.Request, e error) {
 			if e != nil {
-				fmt.Printf("WEBDAV [%s]: %s ERROR: %s\n", r.Method, r.URL, e)
+				log.Printf("WEBDAV ERROR: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 				return
 			} else {
 				if r.Method != "PROPFIND" {
-					mylog.LogRequest(r.RemoteAddr, r.Method, r.URL.Path, r.Proto, 200)
+					log.Printf("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 				}
 			}
 		},
