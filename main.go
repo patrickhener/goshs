@@ -3,16 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/patrickhener/goshs/internal/myhttp"
 	"github.com/patrickhener/goshs/internal/myutils"
+	"github.com/patrickhener/goshs/internal/mywebdav"
 )
 
-const goshsVersion = "v0.1.2"
+const goshsVersion = "v0.1.3"
 
 var (
 	port       = 8000
@@ -23,6 +27,8 @@ var (
 	myKey      = ""
 	myCert     = ""
 	basicAuth  = ""
+	webdav     = false
+	webdavPort = 8001
 )
 
 func init() {
@@ -37,15 +43,19 @@ func init() {
 	flag.StringVar(&myKey, "sk", myKey, "server key")
 	flag.StringVar(&myCert, "sc", myCert, "server cert")
 	flag.StringVar(&basicAuth, "P", basicAuth, "basic auth")
+	flag.BoolVar(&webdav, "w", webdav, "enable webdav")
+	flag.IntVar(&webdavPort, "wp", webdavPort, "webdav port")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = func() {
 		fmt.Printf("goshs %s\n", goshsVersion)
 		fmt.Printf("Usage: %s [options]\n\n", os.Args[0])
 		fmt.Println("Web server options:")
-		fmt.Println("\t-i\tThe ip/if-name to listen on\t(default: 0.0.0.0)")
-		fmt.Println("\t-p\tThe port to listen on\t\t(default: 8000)")
-		fmt.Println("\t-d\tThe web root directory\t\t(default: current working path)")
+		fmt.Println("\t-i\tThe ip/if-name to listen on\t\t(default: 0.0.0.0)")
+		fmt.Println("\t-p\tThe port to listen on\t\t\t(default: 8000)")
+		fmt.Println("\t-d\tThe web root directory\t\t\t(default: current working path)")
+		fmt.Println("\t-w\tAlso serve using webdav protocol\t(default: false)")
+		fmt.Println("\t-wp\tThe port to listen on for webdav\t(default: 8001)")
 		fmt.Println("")
 		fmt.Println("TLS options:")
 		fmt.Println("\t-s\tUse TLS")
@@ -93,6 +103,9 @@ func init() {
 }
 
 func main() {
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
 	// Random Seed generation (used for CA serial)
 	rand.Seed(time.Now().UnixNano())
 	// Setup the custom file server
@@ -107,5 +120,24 @@ func main() {
 		BasicAuth:  basicAuth,
 		Version:    goshsVersion,
 	}
-	server.Start()
+
+	go server.Start()
+
+	if webdav {
+		wd := &mywebdav.WebdavServer{
+			IP:         ip,
+			Port:       webdavPort,
+			Webroot:    webroot,
+			SSL:        ssl,
+			SelfSigned: selfsigned,
+			MyCert:     myCert,
+			MyKey:      myKey,
+			BasicAuth:  basicAuth,
+		}
+		go wd.Start()
+	}
+
+	<-done
+
+	log.Println("Received CTRL+C, exiting...")
 }

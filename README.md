@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.2-green)
+![Version](https://img.shields.io/badge/Version-v0.1.3-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -21,6 +21,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
   * provide own certificate
 * Non persistent clipboard
   * Download clipboard entries as .json file
+* WebDAV support
 
 # Installation
 
@@ -48,9 +49,11 @@ make build
 Usage: goshs [options]
 
 Web server options:
-	-i	The ip/if-name to listen on	(default: 0.0.0.0)
-	-p	The port to listen on		(default: 8000)
-	-d	The web root directory		(default: current working path)
+	-i	The ip/if-name to listen on			(default: 0.0.0.0)
+	-p	The port to listen on				(default: 8000)
+	-d	The web root directory				(default: current working path)
+	-w	Also serve using webdav protocol	(default: false)
+	-wp	The port to listen on for webdav	(default: 8001)
 
 TLS options:
 	-s	Use TLS
@@ -77,6 +80,10 @@ Usage examples:
 **Serve from your current directory**
 
 `goshs`
+
+**Serve from your current directory with webdav enabled on custom port**
+
+`goshs -w -wp 8081`
 
 **Serve from another directory**
 
