@@ -49,7 +49,7 @@ func (wd *WebdavServer) Start() {
 		FileSystem: webdav.Dir(wd.Webroot),
 		LockSystem: webdav.NewMemLS(),
 		Logger: func(r *http.Request, e error) {
-			if e != nil {
+			if e != nil && r.Method != "PROPFIND" {
 				log.Printf("WEBDAV ERROR: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 				return
 			} else {
