@@ -85,7 +85,7 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		username, password, authOK := r.BasicAuth()
-		if authOK == false {
+		if !authOK {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
@@ -154,6 +154,7 @@ func (fs *FileServer) Start() {
 			log.Println("WARNING! Be sure to check the fingerprint of certificate")
 			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
 			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
+
 			log.Panic(server.ListenAndServeTLS("", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
@@ -172,6 +173,7 @@ func (fs *FileServer) Start() {
 
 			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
+
 	} else {
 		log.Printf("Serving HTTP on %+v port %+v from %+v\n", fs.IP, fs.Port, fs.Webroot)
 		log.Panic(server.ListenAndServe())
