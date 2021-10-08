@@ -162,7 +162,7 @@ func (fs *FileServer) Start(what string) {
 	go fs.Hub.Run()
 
 	// Check BasicAuth and use middleware
-	if fs.BasicAuth != "" {
+	if fs.BasicAuth != "" && what == "web" {
 		if !fs.SSL {
 			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
 		}
