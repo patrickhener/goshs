@@ -13,7 +13,6 @@ import (
 
 	"github.com/patrickhener/goshs/internal/myhttp"
 	"github.com/patrickhener/goshs/internal/myutils"
-	"github.com/patrickhener/goshs/internal/mywebdav"
 )
 
 const goshsVersion = "v0.1.3"
@@ -121,20 +120,12 @@ func main() {
 		Version:    goshsVersion,
 	}
 
-	go server.Start()
+	go server.Start("web")
 
 	if webdav {
-		wd := &mywebdav.WebdavServer{
-			IP:         ip,
-			Port:       webdavPort,
-			Webroot:    webroot,
-			SSL:        ssl,
-			SelfSigned: selfsigned,
-			MyCert:     myCert,
-			MyKey:      myKey,
-			BasicAuth:  basicAuth,
-		}
-		go wd.Start()
+		server.WebdavPort = webdavPort
+
+		go server.Start("webdav")
 	}
 
 	<-done

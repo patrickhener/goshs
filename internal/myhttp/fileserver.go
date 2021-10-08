@@ -24,6 +24,7 @@ import (
 	"github.com/patrickhener/goshs/internal/mylog"
 	"github.com/patrickhener/goshs/internal/mysock"
 	"github.com/patrickhener/goshs/internal/myutils"
+	"golang.org/x/net/webdav"
 )
 
 // Static will provide the embedded files as http.FS
@@ -61,6 +62,7 @@ type item struct {
 type FileServer struct {
 	IP         string
 	Port       int
+	WebdavPort int
 	Webroot    string
 	SSL        bool
 	SelfSigned bool
@@ -68,6 +70,8 @@ type FileServer struct {
 	MyCert     string
 	BasicAuth  string
 	Version    string
+	Fingerprint256 string
+	Fingerprint1 string
 	Hub        *mysock.Hub
 	Clipboard  *myclipboard.Clipboard
 }
@@ -101,22 +105,48 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 }
 
 // Start will start the file server
-func (fs *FileServer) Start() {
+func (fs *FileServer) Start(what string) {
+	var addr string
 	// Setup routing with gorilla/mux
 	mux := mux.NewRouter()
-	mux.PathPrefix("/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/").HandlerFunc(fs.static)
-	// Websocket
-	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws").HandlerFunc(fs.socket)
-	// Clipboard
-	mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/download").HandlerFunc(fs.cbDown)
-	mux.PathPrefix("/cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390/").HandlerFunc(fs.bulkDownload)
-	mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
-	mux.PathPrefix("/").HandlerFunc(fs.handler)
+
+	switch what {
+	case "web":
+		mux.PathPrefix("/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/").HandlerFunc(fs.static)
+		// Websocket
+		mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws").HandlerFunc(fs.socket)
+		// Clipboard
+		mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/download").HandlerFunc(fs.cbDown)
+		mux.PathPrefix("/cf985bddf28fed5d5c53b069d6a6ebe601088ca6e20ec5a5a8438f8e1ffd9390/").HandlerFunc(fs.bulkDownload)
+		mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
+		mux.PathPrefix("/").HandlerFunc(fs.handler)
+
+		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
+	case "webdav":
+		wdHandler := &webdav.Handler{
+			FileSystem: webdav.Dir(fs.Webroot),
+			LockSystem: webdav.NewMemLS(),
+			Logger: func(r *http.Request, e error) {
+				if e != nil && r.Method != "PROPFIND" {
+					log.Printf("WEBDAV ERROR: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
+					return
+				} else {
+					if r.Method != "PROPFIND" {
+						log.Printf("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
+					}
+				}
+			},
+		}
+
+		mux.PathPrefix("/").Handler(wdHandler)
+		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.WebdavPort)
+	default:
+	}
 
 	// construct server
-	add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
+	// add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	server := http.Server{
-		Addr:    add,
+		Addr:    addr,
 		Handler: mux,
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 120 * time.Second,
@@ -150,10 +180,9 @@ func (fs *FileServer) Start() {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			server.TLSConfig = serverTLSConf
-			log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
-			log.Println("WARNING! Be sure to check the fingerprint of certificate")
-			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
-			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
+			fs.Fingerprint256 = fingerprint256
+			fs.Fingerprint1 = fingerprint1
+			fs.logStart(what)
 
 			log.Panic(server.ListenAndServeTLS("", ""))
 		} else {
@@ -165,17 +194,15 @@ func (fs *FileServer) Start() {
 			if err != nil {
 				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
-
-			log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
-			log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
-			log.Printf("SHA-256 Fingerprint: %+v\n", fingerprint256)
-			log.Printf("SHA-1   Fingerprint: %+v\n", fingerprint1)
+			fs.Fingerprint256 = fingerprint256
+			fs.Fingerprint1 = fingerprint1
+			fs.logStart(what)
 
 			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
 
 	} else {
-		log.Printf("Serving HTTP on %+v port %+v from %+v\n", fs.IP, fs.Port, fs.Webroot)
+		fs.logStart(what)
 		log.Panic(server.ListenAndServe())
 	}
 }
@@ -345,7 +372,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 
 	// Handle if no files are selected
 	if len(files) <= 0 {
-		fs.handleError(w, req, errors.New("You need to select a file before you can download a zip archive"), 404)
+		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
 	}
 
 	// Clean file paths and fill slice
@@ -573,5 +600,45 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	}
 	if err := t.Execute(w, e); err != nil {
 		log.Printf("Error executing the template: %+v", err)
+	}
+}
+
+func (fs *FileServer) logStart(what string) {
+	switch what {
+	case "web":
+		if fs.SSL {
+			// Check if selfsigned
+			if fs.SelfSigned {
+				log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
+				log.Println("WARNING! Be sure to check the fingerprint of certificate")
+				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+			} else {
+				log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
+				log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
+				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+			}
+		} else {
+			log.Printf("Serving HTTP on %+v port %+v from %+v\n", fs.IP, fs.Port, fs.Webroot)
+		}
+	case "webdav":
+		if fs.SSL {
+			// Check if selfsigned
+			if fs.SelfSigned {
+				log.Printf("Serving WEBDAV on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.WebdavPort, fs.Webroot)
+				log.Println("WARNING! Be sure to check the fingerprint of certificate")
+				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+			} else {
+				log.Printf("Serving WEBDAV on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.WebdavPort, fs.Webroot, fs.MyKey, fs.MyCert)
+				log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
+				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+			}
+		} else {
+			log.Printf("Serving WEBDAV on %+v port %+v from %+v\n", fs.IP, fs.WebdavPort, fs.Webroot)
+		}
+	default:
 	}
 }
