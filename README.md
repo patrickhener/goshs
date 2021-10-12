@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.4-green)
+![Version](https://img.shields.io/badge/Version-v0.1.5-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -14,7 +14,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 # Features
 * Download or view files
   * Bulk download as .zip file
-* Upload files
+* Upload files (Drag & Drop)
 * Basic Authentication
 * Transport Layer Security (HTTPS)
   * self-signed
@@ -22,6 +22,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Non persistent clipboard
   * Download clipboard entries as .json file
 * WebDAV support
+* Read-Only and Upload-Only mode
 
 # Installation
 
@@ -46,7 +47,7 @@ make build
 # Usage
 
 ```bash
-goshs v0.1.4
+goshs v0.1.5
 Usage: ./goshs [options]
 
 Web server options:
