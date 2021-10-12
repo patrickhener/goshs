@@ -13,6 +13,10 @@
     <link rel="stylesheet"
         href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/datatable/jquery.dataTables.min.css" />
     <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/dropzone/basic.min.css" />
+    <link rel="stylesheet"
+        href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/dropzone/dropzone.min.css" />
+    <link rel="stylesheet"
         href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css" />
     <link rel="stylesheet"
         href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/fontawesome-5.15.1/css/all.min.css" />
@@ -40,29 +44,31 @@
         <div class="row pt-4">
             <!-- 6: File Listing -->
             <div class="col">
+                <!-- Heading Row -->
+                <div class="row">
+                    <div class="col mb-2">
+                        <h1>Upload File</h1>
+                    </div>
+                </div>
                 <!-- Upload Row -->
                 <div class="row">
                     <div class="col mb-2">
-                    <!-- Upload Form -->
+                        <!-- Upload Form -->
                         {{ if (eq .Directory.RelPath "/") }}
                         <form method="post" action="/upload" enctype="multipart/form-data">
                         {{ else }}
                         <form method="post" action="{{.Directory.RelPath}}/upload" enctype="multipart/form-data">
                         {{ end }}
-                            <div class="input-group">
-                                <div class="custom-file">
-                                    <input type="file" id="files" name="files" class="custom-file-input"
-                                        data-multiple-caption="{count} files selected" multiple />
-                                    <label class="custom-file-label" for="files"><i class="fa fa-upload"><span>Choose file(s) ...</span></i></label>
-                                </div>
-                                <div class="input-group-append">
-                                    <!-- Upload Btn -->
-                                    <button type="submit" class="btn btn-primary">
-                                        Upload
-                                    </button>
 
-                                </div>
+                        <div class="input-group">
+                            <div class="dropzone form-control" id="mydropzone">
+                                <div class="dz-message" data-dz-message><span>Drag & Drop files here or click to select. Submit with button on the right</span></div>
                             </div>
+                            <div class="input-group-append">
+                                <button type="submit" id="submit-dropzone" class="btn btn-primary">+</button>
+                            </div>
+                        </div>
+
                         </form>
                     </div>
                 </div>
@@ -300,7 +306,48 @@
     <!-- Scripts -->
     <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/jquery-3.5.1.min.js"></script>
     <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/datatable/jquery.dataTables.min.js"></script>
+    <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/dropzone/dropzone.min.js"></script>
     <script src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/js/main.min.js"></script>
+
+    <!-- Dropzone related config -->
+    <script>
+        Dropzone.autoDiscover = false;
+    </script>
+    {{ if (eq .Directory.RelPath "/") }}
+        <script>
+            let url = "/upload"
+        </script>
+    {{ else }}
+        <script>
+            let url = "{{.Directory.RelPath}}/upload"
+        </script>
+    {{ end }}
+
+    <script>
+        let myDropzone = new Dropzone("div#mydropzone", {
+            autoProcessQueue: false,
+            paramName: "files",
+            method: "post",
+            url: url,
+            uploadMultiple: true,
+            parallelUploads: 100,
+            maxFiles: 100,
+            maxFilesize: 10240,
+
+            init: () => {
+                document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    myDropzone.processQueue();
+                })
+
+            }
+        });
+
+        myDropzone.on("successmultiple", () => {
+            location.reload();
+        });
+    </script>
 </body>
 
 </html>

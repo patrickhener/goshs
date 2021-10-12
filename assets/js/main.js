@@ -15,35 +15,14 @@ $(document).ready(function () {
   });
 });
 
-// Label change for Upload Form
-var input = document.querySelector('.custom-file-input');
-var label = input.nextElementSibling;
-varlabelVal = label.innerText;
-
-input.addEventListener('change', function (e) {
-  var fileName = '';
-  if (this.files && this.files.length > 1)
-    fileName =
-      ' ' +
-      (this.getAttribute('data-multiple-caption') || '').replace(
-        '{count}',
-        this.files.length
-      );
-  else {
-    fileName = ' ' + e.target.value.split('\\').pop();
-  }
-
-  if (fileName) label.querySelector('span').innerHTML = fileName;
-  else label.innerText = labelVal;
-});
-
 // Checkbox handling
 var checkboxes = document.querySelectorAll('.downloadBulkCheckbox');
 
 Array.prototype.forEach.call(checkboxes, function (cb) {
   cb.addEventListener('change', function () {
-    checkedBoxes = document.querySelectorAll('input[type=checkbox]:checked')
-      .length;
+    checkedBoxes = document.querySelectorAll(
+      'input[type=checkbox]:checked'
+    ).length;
     if (checkedBoxes >= 1) {
       document.getElementById('downloadBulkButton').style.display = 'block';
     } else {

@@ -1,10 +1,10 @@
 .PHONY: build
 
+# uglify-js and https://github.com/wellington/wellington needed
 generate:
 	@echo "[*] Minifying and compiling scss and js"
 	@uglifyjs -o internal/myhttp/static/js/main.min.js assets/js/main.js
 	@wt compile assets/css/style.scss -s compressed -b internal/myhttp/static/css
-	# @wt compile assets/css/style.scss -b static/css
 	@echo "[OK] Done minifying and compiling things"
 
 security:

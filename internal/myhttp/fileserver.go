@@ -324,17 +324,14 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	// Get ref to the parsed multipart form
 	m := req.MultipartForm
 
-	// Get the File Headers
-	files := m.File["files"]
-
-	for i := range files {
-		file, err := files[i].Open()
+	for _, f := range m.File {
+		file, err := f[0].Open()
 		if err != nil {
 			log.Printf("Error retrieving the file: %+v\n", err)
 		}
 		defer file.Close()
 
-		filename := files[i].Filename
+		filename := f[0].Filename
 
 		// Sanitize filename (No path traversal)
 		filenameSlice := strings.Split(filename, "/")
