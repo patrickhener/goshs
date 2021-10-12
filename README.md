@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.3-green)
+![Version](https://img.shields.io/badge/Version-v0.1.4-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -46,33 +46,37 @@ make build
 # Usage
 
 ```bash
-Usage: goshs [options]
+goshs v0.1.4
+Usage: ./goshs [options]
 
 Web server options:
-	-i	The ip/if-name to listen on			(default: 0.0.0.0)
-	-p	The port to listen on				(default: 8000)
-	-d	The web root directory				(default: current working path)
-	-w	Also serve using webdav protocol	(default: false)
-	-wp	The port to listen on for webdav	(default: 8001)
+  -i,  --ip           The ip/if-name to listen on             (default: 0.0.0.0)
+  -p,  --port         The port to listen on                   (default: 8000)
+  -d,  --dir          The web root directory                  (default: current working path)
+  -w,  --webdav       Also serve using webdav protocol        (default: false)
+  -wp, --webdav-port  The port to listen on for webdav        (default: 8001)
+  -ro, --read-only    Read only mode, no upload possible      (default: false)
+  -uo, --upload-only  Upload only mode, no download possible  (default: false)
 
 TLS options:
-	-s	Use TLS
-	-ss	Use a self-signed certificate
-	-sk	Path to server key
-	-sc	Path to server certificate
+  -s,  --ssl          Use TLS
+  -ss, --self-signed  Use a self-signed certificate
+  -sk, --server-key   Path to server key
+  -sc, --server-cert  Path to server certificate
 
 Authentication options:
-	-P	Use basic authentication password (user: gopher)
+  -b, --basic-auth    Use basic authentication (user:pass)
 
 Misc options:
-	-v	Print the current goshs version
+  -v  Print the current goshs version
 
 Usage examples:
-	Start with default values:		./goshs
-	Start with different port:		./goshs -p 8080
-	Start with self-signed cert:	./goshs -s -ss
-	Start with custom cert:			./goshs -s -sk <path to key> -sc <path to cert>
-	Start with basic auth:			./goshs -P $up3r$3cur3
+  Start with default values:    ./goshs
+  Start with wevdav support:    ./goshs -w
+  Start with different port:    ./goshs -p 8080
+  Start with self-signed cert:  ./goshs -s -ss
+  Start with custom cert:       ./goshs -s -sk <path to key> -sc <path to cert>
+  Start with basic auth:        ./goshs -b secret-user:$up3r$3cur3
 ```
 
 # Examples
@@ -95,9 +99,9 @@ Usage examples:
 
 **Password protect the service**
 
-`goshs -P VeryS3cureP4$$w0rd`
+`goshs -b secret-user:VeryS3cureP4$$w0rd`
 
-*Please note:* goshs uses HTTP basic authentication. It is recommended to use SSL option with basic authentication to prevent from credentials beeing transfered in cleartext over the line. User is `gopher`.
+*Please note:* goshs uses HTTP basic authentication. It is recommended to use SSL option with basic authentication to prevent from credentials beeing transfered in cleartext over the line.
 
 **Use TLS connection**
 

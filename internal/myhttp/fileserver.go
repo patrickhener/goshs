@@ -60,20 +60,23 @@ type item struct {
 
 // FileServer holds the fileserver information
 type FileServer struct {
-	IP         string
-	Port       int
-	WebdavPort int
-	Webroot    string
-	SSL        bool
-	SelfSigned bool
-	MyKey      string
-	MyCert     string
-	BasicAuth  string
-	Version    string
+	IP             string
+	Port           int
+	WebdavPort     int
+	Webroot        string
+	SSL            bool
+	SelfSigned     bool
+	MyKey          string
+	MyCert         string
+	User           string
+	Pass           string
+	Version        string
 	Fingerprint256 string
-	Fingerprint1 string
-	Hub        *mysock.Hub
-	Clipboard  *myclipboard.Clipboard
+	Fingerprint1   string
+	UploadOnly     bool
+	ReadOnly       bool
+	Hub            *mysock.Hub
+	Clipboard      *myclipboard.Clipboard
 }
 
 type httperror struct {
@@ -94,7 +97,7 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if username != "gopher" || password != fs.BasicAuth {
+		if username != fs.User || password != fs.Pass {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
@@ -162,11 +165,11 @@ func (fs *FileServer) Start(what string) {
 	go fs.Hub.Run()
 
 	// Check BasicAuth and use middleware
-	if fs.BasicAuth != "" && what == "web" {
+	if fs.User != "" && what == "web" {
 		if !fs.SSL {
 			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
 		}
-		log.Printf("Using 'gopher:%+v' as basic auth\n", fs.BasicAuth)
+		log.Printf("Using basic auth with user '%s' and password '%s'\n", fs.User, fs.Pass)
 		// Use middleware
 		mux.Use(fs.BasicAuthMiddleware)
 	}
@@ -300,6 +303,10 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 
 // upload handles the POST request to upload files
 func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
+	if fs.ReadOnly {
+		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
+		return
+	}
 	// Get url so you can extract Headline and title
 	upath := req.URL.Path
 
@@ -366,6 +373,10 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 // bulkDownload will provide zip archived download bundle of multiple selected files
 func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
+	if fs.UploadOnly {
+		fs.handleError(w, req, fmt.Errorf("%s", "Bulk download not allowed due to 'upload only' option"), http.StatusForbidden)
+		return
+	}
 	// make slice and query files from request
 	var filesCleaned []string
 	files := req.URL.Query()["file"]
@@ -533,6 +544,11 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		d.IsSubdirectory = false
 	}
 
+	// upload only mode empty directory
+	if fs.UploadOnly {
+		d = &directory{}
+	}
+
 	// Construct template
 	tem := &indexTemplate{
 		Directory:    d,
@@ -550,6 +566,10 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 }
 
 func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *os.File) {
+	if fs.UploadOnly {
+		fs.handleError(w, req, fmt.Errorf("%s", "Download not allowed due to 'upload only' option"), http.StatusForbidden)
+		return
+	}
 	// Extract download parameter
 	download := req.URL.Query()
 	if _, ok := download["download"]; ok {
