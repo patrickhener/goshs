@@ -334,8 +334,8 @@
             maxFiles: 100,
             maxFilesize: 10240,
 
-            init: () => {
-                document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", (e) => {
+            init: function () {
+                document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     myDropzone.processQueue();
@@ -344,7 +344,7 @@
             }
         });
 
-        myDropzone.on("successmultiple", () => {
+        myDropzone.on("successmultiple", function () {
             location.reload();
         });
     </script>
