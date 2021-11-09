@@ -36,9 +36,7 @@ const (
 	maxMessageSize = 8000000
 )
 
-var (
-	newline = []byte{'\n'}
-)
+var newline = []byte{'\n'}
 
 var wsupgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,

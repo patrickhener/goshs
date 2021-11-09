@@ -35,7 +35,6 @@ var (
 // Man page
 func usage() func() {
 	return func() {
-
 		fmt.Printf(`
 goshs %s
 Usage: %s [options]
@@ -147,13 +146,12 @@ func init() {
 func parseBasicAuth() (string, string) {
 	auth := strings.SplitN(basicAuth, ":", 2)
 	if len(auth) < 2 {
-		fmt.Println("Wrong basic auth format. Please provide user:password seperated by a colon")
+		fmt.Println("Wrong basic auth format. Please provide user:password separated by a colon")
 		os.Exit(-1)
 	}
 	user := auth[0]
 	pass := auth[1]
 	return user, pass
-
 }
 
 func main() {

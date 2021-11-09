@@ -29,8 +29,7 @@ import (
 // Sum will give the sha256 and sha1 sum of the certificate
 func Sum(cert []byte) (sha256s, sha1s string) {
 	// Building sha256 sum
-	var f256 [32]byte
-	f256 = sha256.Sum256(cert)
+	f256 := sha256.Sum256(cert)
 	sha256s = fmt.Sprintf("%X", f256)
 
 	b := strings.Builder{}
@@ -46,10 +45,9 @@ func Sum(cert []byte) (sha256s, sha1s string) {
 	sha256s = b.String()
 
 	// building sha1 sum
-	var f1 [20]byte
 	// disable "G401 (CWE-326): Use of weak cryptographic primitive"
 	// #nosec G401
-	f1 = sha1.Sum(cert)
+	f1 := sha1.Sum(cert)
 	sha1s = fmt.Sprintf("%X", f1)
 
 	b = strings.Builder{}
@@ -65,7 +63,6 @@ func Sum(cert []byte) (sha256s, sha1s string) {
 	sha1s = b.String()
 
 	return sha256s, sha1s
-
 }
 
 // ParseAndSum will take the user provided cert and return the sha256 and sha1 sum

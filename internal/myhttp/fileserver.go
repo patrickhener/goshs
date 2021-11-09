@@ -27,6 +27,10 @@ import (
 	"golang.org/x/net/webdav"
 )
 
+const (
+	modeWeb = "web"
+)
+
 // Static will provide the embedded files as http.FS
 //go:embed static
 var static embed.FS
@@ -104,7 +108,6 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-
 }
 
 // Start will start the file server
@@ -114,7 +117,7 @@ func (fs *FileServer) Start(what string) {
 	mux := mux.NewRouter()
 
 	switch what {
-	case "web":
+	case modeWeb:
 		mux.PathPrefix("/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/").HandlerFunc(fs.static)
 		// Websocket
 		mux.PathPrefix("/14644be038ea0118a1aadfacca2a7d1517d7b209c4b9674ee893b1944d1c2d54/ws").HandlerFunc(fs.socket)
@@ -133,10 +136,8 @@ func (fs *FileServer) Start(what string) {
 				if e != nil && r.Method != "PROPFIND" {
 					log.Printf("WEBDAV ERROR: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 					return
-				} else {
-					if r.Method != "PROPFIND" {
-						log.Printf("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
-					}
+				} else if r.Method != "PROPFIND" {
+					log.Printf("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 				}
 			},
 		}
@@ -165,7 +166,7 @@ func (fs *FileServer) Start(what string) {
 	go fs.Hub.Run()
 
 	// Check BasicAuth and use middleware
-	if fs.User != "" && what == "web" {
+	if fs.User != "" && what == modeWeb {
 		if !fs.SSL {
 			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
 		}
@@ -203,7 +204,6 @@ func (fs *FileServer) Start(what string) {
 
 			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
-
 	} else {
 		fs.logStart(what)
 		log.Panic(server.ListenAndServe())
@@ -358,7 +358,6 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			log.Println("ERROR: Not able to write file to disk")
 			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
-
 	}
 
 	// Log request
@@ -379,7 +378,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	files := req.URL.Query()["file"]
 
 	// Handle if no files are selected
-	if len(files) <= 0 {
+	if len(files) == 0 {
 		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
 	}
 
@@ -473,7 +472,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	items := make([]item, 0, len(fis))
 	// Iterate over FileInfo of dir
 	for _, fi := range fis {
-		var item = item{}
+		item := item{}
 		// Need to set this up here for directories to work
 		item.Name = fi.Name()
 		item.Ext = strings.ToLower(myutils.ReturnExt(fi.Name()))
@@ -528,12 +527,11 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		if len(pathSlice) > 2 {
 			pathSlice = pathSlice[1 : len(pathSlice)-1]
 
-			var backString string = ""
+			var backString string
 			for _, part := range pathSlice {
 				backString += "/" + part
 			}
 			d.Back = backString
-
 		} else {
 			d.Back = "/"
 		}
@@ -613,7 +611,6 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	t := template.New("error")
 	if _, err := t.Parse(string(file)); err != nil {
 		log.Printf("Error parsing the template: %+v", err)
-
 	}
 	if err := t.Execute(w, e); err != nil {
 		log.Printf("Error executing the template: %+v", err)
@@ -622,7 +619,7 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 
 func (fs *FileServer) logStart(what string) {
 	switch what {
-	case "web":
+	case modeWeb:
 		if fs.SSL {
 			// Check if selfsigned
 			if fs.SelfSigned {
