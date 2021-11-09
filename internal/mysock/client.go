@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -37,7 +38,6 @@ const (
 
 var (
 	newline = []byte{'\n'}
-	space   = []byte{' '}
 )
 
 var wsupgrader = websocket.Upgrader{
@@ -94,22 +94,25 @@ func (c *Client) readPump() {
 		// Switch here over possible socket events and pull in handlers
 		switch packet.Type {
 		case "newEntry":
-			entry := string(packet.Content)
-			submitEntry := entry[1 : len(entry)-1]
-			if err := c.hub.cb.AddEntry(submitEntry); err != nil {
+			var entry string
+			if err := json.Unmarshal(packet.Content, &entry); err != nil {
+				log.Printf("ERROR: Error reading json packet: %+v", err)
+			}
+			if err := c.hub.cb.AddEntry(entry); err != nil {
 				log.Printf("Error: Error creating Clipboard entry: %+v", err)
 			}
 			c.refreshClipboard()
 
 		case "delEntry":
-			type delID struct {
-				Content int
-			}
-			var id delID
+			var id string
 			if err := json.Unmarshal(packet.Content, &id); err != nil {
 				log.Printf("ERROR: Error reading json packet: %+v", err)
 			}
-			if err := c.hub.cb.DeleteEntry(id.Content); err != nil {
+			iid, err := strconv.Atoi(id)
+			if err != nil {
+				log.Printf("ERROR: Error reading json packet: %+v", err)
+			}
+			if err := c.hub.cb.DeleteEntry(iid); err != nil {
 				log.Printf("ERROR: Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
 			}
 			c.refreshClipboard()

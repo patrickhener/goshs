@@ -2,7 +2,6 @@ package myclipboard
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -33,13 +32,13 @@ func (c *Clipboard) AddEntry(con string) error {
 		entries = append(entries, Entry{
 			ID:      newID,
 			Content: con,
-			Time:    fmt.Sprintf("%s", time.Now().Format("Mon Jan _2 15:04:05 2006")),
+			Time:    time.Now().Format("Mon Jan _2 15:04:05 2006"),
 		})
 	} else {
 		entries = append(entries, Entry{
 			ID:      0,
 			Content: con,
-			Time:    fmt.Sprintf("%s", time.Now().Format("Mon Jan _2 15:04:05 2006")),
+			Time:    time.Now().Format("Mon Jan _2 15:04:05 2006"),
 		})
 	}
 	c.Entries = entries
