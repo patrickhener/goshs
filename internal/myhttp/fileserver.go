@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -134,10 +133,10 @@ func (fs *FileServer) Start(what string) {
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, e error) {
 				if e != nil && r.Method != "PROPFIND" {
-					log.Printf("WEBDAV ERROR: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
+					mylog.Errorf("WEBDAV: %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 					return
 				} else if r.Method != "PROPFIND" {
-					log.Printf("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
+					mylog.Infof("WEBDAV:  %s - - \"%s %s %s\"", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 				}
 			},
 		}
@@ -168,9 +167,9 @@ func (fs *FileServer) Start(what string) {
 	// Check BasicAuth and use middleware
 	if fs.User != "" && what == modeWeb {
 		if !fs.SSL {
-			log.Printf("WARNING!: You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.\n")
+			mylog.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
 		}
-		log.Printf("Using basic auth with user '%s' and password '%s'\n", fs.User, fs.Pass)
+		mylog.Infof("Using basic auth with user '%s' and password '%s'", fs.User, fs.Pass)
 		// Use middleware
 		mux.Use(fs.BasicAuthMiddleware)
 	}
@@ -181,32 +180,32 @@ func (fs *FileServer) Start(what string) {
 		if fs.SelfSigned {
 			serverTLSConf, fingerprint256, fingerprint1, err := myca.Setup()
 			if err != nil {
-				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
+				mylog.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			server.TLSConfig = serverTLSConf
 			fs.Fingerprint256 = fingerprint256
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
 
-			log.Panic(server.ListenAndServeTLS("", ""))
+			mylog.Panic(server.ListenAndServeTLS("", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
-				log.Fatalln("You need to provide server.key and server.crt if -s and not -ss")
+				mylog.Fatal("You need to provide server.key and server.crt if -s and not -ss")
 			}
 
 			fingerprint256, fingerprint1, err := myca.ParseAndSum(fs.MyCert)
 			if err != nil {
-				log.Fatalf("Unable to start SSL enabled server: %+v\n", err)
+				mylog.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			fs.Fingerprint256 = fingerprint256
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
 
-			log.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
+			mylog.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
 	} else {
 		fs.logStart(what)
-		log.Panic(server.ListenAndServe())
+		mylog.Panic(server.ListenAndServe())
 	}
 }
 
@@ -228,7 +227,7 @@ func (fs *FileServer) cbDown(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if _, err := w.Write(content); err != nil {
-		log.Printf("ERROR: Error writing response to browser: %+v", err)
+		mylog.Errorf("Error writing response to browser: %+v", err)
 	}
 }
 
@@ -241,7 +240,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	// Load file with parcello
 	staticFile, err := static.ReadFile(path)
 	if err != nil {
-		log.Printf("ERROR: static file: %+v cannot be loaded: %+v", path, err)
+		mylog.Errorf("static file: %+v cannot be loaded: %+v", path, err)
 	}
 
 	// Get mimetype from extension
@@ -250,7 +249,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	// Set mimetype and deliver to browser
 	w.Header().Add("Content-Type", contentType)
 	if _, err := w.Write(staticFile); err != nil {
-		log.Printf("ERROR: Error writing response to browser: %+v", err)
+		mylog.Errorf("Error writing response to browser: %+v", err)
 	}
 }
 
@@ -282,7 +281,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	}
 	if err != nil {
 		// Handle general error
-		log.Println(err)
+		mylog.Info(err)
 		return
 	}
 	// disable G307 (CWE-703): Deferring unsafe method "Close" on type "*os.File"
@@ -317,7 +316,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 	// Parse request
 	if err := req.ParseMultipartForm(10 << 20); err != nil {
-		log.Printf("Error parsing multipart request: %+v", err)
+		mylog.Errorf("parsing multipart request: %+v", err)
 		return
 	}
 
@@ -327,7 +326,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	for _, f := range m.File {
 		file, err := f[0].Open()
 		if err != nil {
-			log.Printf("Error retrieving the file: %+v\n", err)
+			mylog.Errorf("retrieving the file: %+v\n", err)
 		}
 		defer file.Close()
 
@@ -342,20 +341,20 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 		// Create file to write to
 		if _, err := os.Create(savepath); err != nil {
-			log.Println("ERROR: Not able to create file on disk")
+			mylog.Errorf("Not able to create file on disk")
 			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
 		// Read file from post body
 		fileBytes, err := ioutil.ReadAll(file)
 		if err != nil {
-			log.Println("ERROR: Not able to read file from request")
+			mylog.Errorf("Not able to read file from request")
 			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
 		// Write file to disk
 		if err := ioutil.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
-			log.Println("ERROR: Not able to write file to disk")
+			mylog.Errorf("Not able to write file to disk")
 			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 	}
@@ -450,13 +449,13 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	for _, file := range filesCleaned {
 		err := filepath.Walk(path.Join(fs.Webroot, file), walker)
 		if err != nil {
-			log.Printf("Error creating zip file: %+v", err)
+			mylog.Errorf("creating zip file: %+v", err)
 		}
 	}
 
 	// Close Zip Writer and Flush to http.ResponseWriter
 	if err := resultZip.Close(); err != nil {
-		log.Println(err)
+		mylog.Error(err)
 	}
 }
 
@@ -497,7 +496,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 			item.IsSymlink = true
 			item.SymlinkTarget, err = os.Readlink(path.Join(fs.Webroot, relpath, fi.Name()))
 			if err != nil {
-				log.Printf("Error resolving symlink: %+v", err)
+				mylog.Errorf("resolving symlink: %+v", err)
 			}
 		}
 		// Add to items slice
@@ -512,7 +511,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Template parsing and writing to browser
 	indexFile, err := static.ReadFile("static/templates/index.html")
 	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
+		mylog.Errorf("opening embedded file: %+v", err)
 	}
 
 	// Construct directory for template
@@ -553,10 +552,10 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 
 	t := template.New("index")
 	if _, err := t.Parse(string(indexFile)); err != nil {
-		log.Printf("ERROR: Error parsing template: %+v", err)
+		mylog.Errorf("Error parsing template: %+v", err)
 	}
 	if err := t.Execute(w, tem); err != nil {
-		log.Printf("ERROR: Error executing template: %+v", err)
+		mylog.Errorf("Error executing template: %+v", err)
 	}
 }
 
@@ -570,19 +569,19 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 	if _, ok := download["download"]; ok {
 		stat, err := file.Stat()
 		if err != nil {
-			log.Printf("Error reading file stats for download: %+v", err)
+			mylog.Errorf("reading file stats for download: %+v", err)
 		}
 		contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"", stat.Name())
 		// Handle as download
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Header().Add("Content-Disposition", contentDisposition)
 		if _, err := io.Copy(w, file); err != nil {
-			log.Printf("ERROR: Error writing response to browser: %+v", err)
+			mylog.Errorf("Error writing response to browser: %+v", err)
 		}
 	} else {
 		// Write to browser
 		if _, err := io.Copy(w, file); err != nil {
-			log.Printf("ERROR: Error writing response to browser: %+v", err)
+			mylog.Errorf("Error writing response to browser: %+v", err)
 		}
 	}
 }
@@ -606,52 +605,73 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	// Template handling
 	file, err := static.ReadFile("static/templates/error.html")
 	if err != nil {
-		log.Printf("Error opening embedded file: %+v", err)
+		mylog.Errorf("opening embedded file: %+v", err)
 	}
 	t := template.New("error")
 	if _, err := t.Parse(string(file)); err != nil {
-		log.Printf("Error parsing the template: %+v", err)
+		mylog.Errorf("parsing the template: %+v", err)
 	}
 	if err := t.Execute(w, e); err != nil {
-		log.Printf("Error executing the template: %+v", err)
+		mylog.Errorf("executing the template: %+v", err)
 	}
 }
 
 func (fs *FileServer) logStart(what string) {
+	var interfaceAdresses map[string]string
+	var err error
+	if what == modeWeb {
+		if fs.IP == "0.0.0.0" {
+			interfaceAdresses, err = myutils.GetAllIPAdresses()
+			if err != nil {
+				mylog.Errorf("There has been an error fetching the interface addresses: %+v\n", err)
+			}
+			for k, v := range interfaceAdresses {
+				mylog.Infof("Serving on interface %s bound to %s:%+v\n", k, v, fs.Port)
+			}
+		} else {
+			mylog.Infof("Serving on %s:%+v\n", fs.IP, fs.Port)
+		}
+	}
+
+	protocol := "HTTP"
+	if fs.SSL {
+		protocol = "HTTPS"
+	}
+
 	switch what {
 	case modeWeb:
 		if fs.SSL {
 			// Check if selfsigned
 			if fs.SelfSigned {
-				log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.Port, fs.Webroot)
-				log.Println("WARNING! Be sure to check the fingerprint of certificate")
-				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
-				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+				mylog.Infof("Serving %s from %+v with ssl enabled and self-signed certificate\n", protocol, fs.Webroot)
+				mylog.Warn("Be sure to check the fingerprint of certificate")
+				mylog.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				mylog.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
 			} else {
-				log.Printf("Serving HTTPS on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.Port, fs.Webroot, fs.MyKey, fs.MyCert)
-				log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
-				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
-				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+				mylog.Infof("Serving %s from %+v with ssl enabled server key: %+v, server cert: %+v\n", protocol, fs.Webroot, fs.MyKey, fs.MyCert)
+				mylog.Info("You provided a certificate and might want to check the fingerprint nonetheless")
+				mylog.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				mylog.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
 			}
 		} else {
-			log.Printf("Serving HTTP on %+v port %+v from %+v\n", fs.IP, fs.Port, fs.Webroot)
+			mylog.Infof("Serving %s from %+v\n", protocol, fs.Webroot)
 		}
 	case "webdav":
 		if fs.SSL {
 			// Check if selfsigned
 			if fs.SelfSigned {
-				log.Printf("Serving WEBDAV on %+v port %+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.WebdavPort, fs.Webroot)
-				log.Println("WARNING! Be sure to check the fingerprint of certificate")
-				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
-				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+				mylog.Infof("Serving WEBDAV on %+v:%+v from %+v with ssl enabled and self-signed certificate\n", fs.IP, fs.WebdavPort, fs.Webroot)
+				mylog.Warn("WARNING! Be sure to check the fingerprint of certificate")
+				mylog.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				mylog.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
 			} else {
-				log.Printf("Serving WEBDAV on %+v port %+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.WebdavPort, fs.Webroot, fs.MyKey, fs.MyCert)
-				log.Println("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
-				log.Printf("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
-				log.Printf("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
+				mylog.Infof("Serving WEBDAV on %+v:%+v from %+v with ssl enabled server key: %+v, server cert: %+v\n", fs.IP, fs.WebdavPort, fs.Webroot, fs.MyKey, fs.MyCert)
+				mylog.Info("INFO! You provided a certificate and might want to check the fingerprint nonetheless")
+				mylog.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
+				mylog.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
 			}
 		} else {
-			log.Printf("Serving WEBDAV on %+v port %+v from %+v\n", fs.IP, fs.WebdavPort, fs.Webroot)
+			mylog.Infof("Serving WEBDAV on %+v:%+v from %+v\n", fs.IP, fs.WebdavPort, fs.Webroot)
 		}
 	default:
 	}

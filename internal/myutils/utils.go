@@ -3,11 +3,12 @@ package myutils
 import (
 	"crypto/rand"
 	"fmt"
-	"log"
 	"math/big"
 	"mime"
 	"net"
 	"strings"
+
+	"github.com/patrickhener/goshs/internal/mylog"
 )
 
 // ByteCountDecimal generates human readable file sizes and returns a string
@@ -39,7 +40,7 @@ func ReturnExt(n string) string {
 func RandomNumber() (big.Int, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1000))
 	if err != nil {
-		log.Printf("Error when generating random number: %+v", err)
+		mylog.Errorf("when generating random number: %+v", err)
 		return *big.NewInt(0), err
 	}
 	return *n, err
@@ -81,4 +82,26 @@ func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 		return "", fmt.Errorf("interface %s doesn't have an ipv4 address", interfaceName)
 	}
 	return ipv4Addr.String(), nil
+}
+
+// GetAllIPAdresses will return a map of interface and associated ipv4 addresses for displaying reasons
+func GetAllIPAdresses() (map[string]string, error) {
+	ifaceAddress := make(map[string]string)
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range ifaces {
+		ip, err := GetInterfaceIpv4Addr(i.Name)
+		if err != nil {
+			continue
+		}
+
+		ifaceAddress[i.Name] = ip
+
+	}
+	return ifaceAddress, nil
+
 }

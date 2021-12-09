@@ -18,11 +18,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/patrickhener/goshs/internal/mylog"
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
@@ -91,7 +91,7 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 	randInt, err := myutils.RandomNumber()
 	if err != nil {
-		log.Printf("Error when creating certificate: %+v", err)
+		mylog.Errorf("when creating certificate: %+v", err)
 	}
 	ca := &x509.Certificate{
 		SerialNumber: &randInt,
@@ -131,7 +131,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}); err != nil {
-		log.Printf("ERROR: Error encoding pem: %+v", err)
+		mylog.Errorf("encoding pem: %+v", err)
 	}
 
 	caPrivKeyPEM := new(bytes.Buffer)
@@ -139,12 +139,12 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	}); err != nil {
-		log.Printf("ERROR: Error encoding pem: %+v", err)
+		mylog.Errorf("encoding pem: %+v", err)
 	}
 
 	randInt, err = myutils.RandomNumber()
 	if err != nil {
-		log.Printf("Error when creating certificate: %+v", err)
+		mylog.Errorf("when creating certificate: %+v", err)
 	}
 	// set up our server certificate
 	cert := &x509.Certificate{
@@ -182,7 +182,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}); err != nil {
-		log.Printf("ERROR: Error encoding pem: %+v", err)
+		mylog.Errorf("encoding pem: %+v", err)
 	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
@@ -190,7 +190,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	}); err != nil {
-		log.Printf("ERROR: Error encoding pem: %+v", err)
+		mylog.Errorf("encoding pem: %+v", err)
 	}
 
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())

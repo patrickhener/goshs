@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/patrickhener/goshs/internal/myhttp"
+	"github.com/patrickhener/goshs/internal/mylog"
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
@@ -117,12 +117,12 @@ func init() {
 	if !strings.Contains(ip, ".") {
 		addr, err := myutils.GetInterfaceIpv4Addr(ip)
 		if err != nil {
-			log.Fatal(err)
+			mylog.Fatal(err)
 			os.Exit(-1)
 		}
 
 		if addr == "" {
-			log.Println("IP address cannot be found for provided interface")
+			mylog.Fatal("IP address cannot be found for provided interface")
 			os.Exit(-1)
 		}
 
@@ -131,12 +131,12 @@ func init() {
 
 	// Sanity check for upload only vs read only
 	if uploadOnly && readOnly {
-		log.Println("You can only select either 'upload only' or 'read only', not both.")
+		mylog.Fatal("You can only select either 'upload only' or 'read only', not both.")
 		os.Exit(-1)
 	}
 
 	if webdav {
-		log.Println("WARNING: upload/read-only mode deactivated due to use of 'webdav' mode")
+		mylog.Warn("upload/read-only mode deactivated due to use of 'webdav' mode")
 		uploadOnly = false
 		readOnly = false
 	}
@@ -193,5 +193,5 @@ func main() {
 
 	<-done
 
-	log.Println("Received CTRL+C, exiting...")
+	mylog.Infof("Received CTRL+C, exiting...")
 }
