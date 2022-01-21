@@ -150,7 +150,7 @@ func (fs *FileServer) Start(what string) {
 	// add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	server := http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: http.AllowQuerySemicolons(mux),
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 120 * time.Second,
 		ReadTimeout:  120 * time.Second,
@@ -289,7 +289,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// Log request
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, http.StatusOK)
+	mylog.LogRequest(req, http.StatusOK)
 
 	// Switch and check if dir
 	stat, _ := file.Stat()
@@ -360,7 +360,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, http.StatusOK)
+	mylog.LogRequest(req, http.StatusOK)
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, target, http.StatusSeeOther)
@@ -594,7 +594,7 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	var e httperror
 
 	// Log to console
-	mylog.LogRequest(req.RemoteAddr, req.Method, req.URL.Path, req.Proto, status)
+	mylog.LogRequest(req, status)
 
 	// Construct error for template filling
 	e.ErrorCode = status

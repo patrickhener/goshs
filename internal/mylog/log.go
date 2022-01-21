@@ -1,6 +1,7 @@
 package mylog
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -8,12 +9,18 @@ import (
 )
 
 // LogRequest will log the request in a uniform way
-func LogRequest(remoteAddr, method, url, proto string, status int) {
+func LogRequest(req *http.Request, status int) {
 	if status == http.StatusInternalServerError || status == http.StatusNotFound {
-		logger.Errorf("%s - - \"%s %s %s\" - %+v", remoteAddr, method, url, proto, status)
+		logger.Errorf("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
 		return
 	}
-	logger.Infof("%s - - \"%s %s %s\" - %+v", remoteAddr, method, url, proto, status)
+	logger.Infof("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
+	fmt.Println(req.URL.Query())
+	if req.URL.Query() != nil {
+		for k, v := range req.URL.Query() {
+			logger.Infof("Parameter %s is %s", k, v)
+		}
+	}
 }
 
 var logger *StandardLogger
