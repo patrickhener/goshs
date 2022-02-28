@@ -3,6 +3,8 @@ package myclipboard
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/patrickhener/goshs/internal/mylog"
 )
 
 // Clipboard is the in memory clipboard to hold the copy-pasteable content
@@ -49,7 +51,8 @@ func (c *Clipboard) AddEntry(con string) error {
 func (c *Clipboard) DeleteEntry(id int) error {
 	entries := c.Entries
 	entries = append(entries[:id], entries[id+1:]...)
-	c.Entries = entries
+	newEntries := reindex(entries)
+	c.Entries = newEntries
 	return nil
 }
 
@@ -73,4 +76,17 @@ func (c *Clipboard) Download() ([]byte, error) {
 		return nil, err
 	}
 	return e, nil
+}
+
+func reindex(entries []Entry) []Entry {
+	var newEntries []Entry
+	for i, e := range entries {
+		mylog.Debugf("Entry #%d: %+v\n", i, e)
+		newEntries = append(newEntries, Entry{
+			ID:      i,
+			Content: e.Content,
+			Time:    e.Time,
+		})
+	}
+	return newEntries
 }

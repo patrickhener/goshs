@@ -1,7 +1,6 @@
 package mylog
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -15,10 +14,9 @@ func LogRequest(req *http.Request, status int) {
 		return
 	}
 	logger.Infof("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
-	fmt.Println(req.URL.Query())
 	if req.URL.Query() != nil {
 		for k, v := range req.URL.Query() {
-			logger.Infof("Parameter %s is %s", k, v)
+			logger.Debugf("Parameter %s is %s", k, v)
 		}
 	}
 }

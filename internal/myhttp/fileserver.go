@@ -262,9 +262,13 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	if upath == "/favicon.ico" {
 		return
 	}
+	upath = path.Clean(upath)
+	upath = filepath.Clean(upath)
+
+	mylog.Debugf("Cleaned upath is: %+v", upath)
 
 	// Define absolute path
-	open := fs.Webroot + path.Clean(upath)
+	open := fs.Webroot + upath
 
 	// Check if you are in a dir
 	// disable G304 (CWE-22): Potential file inclusion via variable
