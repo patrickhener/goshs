@@ -518,14 +518,10 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		mylog.Errorf("opening embedded file: %+v", err)
 	}
 
-	if relpath == "\\" {
-		relpath = "/"
-	}
-
 	// Construct directory for template
 	d := &directory{
 		RelPath: relpath,
-		AbsPath: filepath.Join(fs.Webroot, relpath), //Filepath is OS aware.
+		AbsPath: path.Join(fs.Webroot, relpath),
 		Content: items,
 	}
 	if relpath != "/" {
