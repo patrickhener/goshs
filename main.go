@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
-const goshsVersion = "v0.1.7"
+const goshsVersion = "v0.1.8"
 
 var (
 	port       = 8000
@@ -140,6 +141,17 @@ func init() {
 		uploadOnly = false
 		readOnly = false
 	}
+
+	// Abspath for webroot
+	var err error
+	mylog.Debugf("Webroot before transformation: %s", webroot)
+	if !filepath.IsAbs(webroot) {
+		webroot, err = filepath.Abs(filepath.Join(wd, webroot))
+		if err != nil {
+			mylog.Fatalf("Webroot cannot be constructed: %+v", err)
+		}
+	}
+	mylog.Debugf("Final webroot is: %s", webroot)
 }
 
 // Sanity checks if basic auth has the right format
