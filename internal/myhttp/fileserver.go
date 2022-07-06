@@ -147,14 +147,10 @@ func (fs *FileServer) Start(what string) {
 	}
 
 	// construct server
-	// add := fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	server := http.Server{
 		Addr:    addr,
 		Handler: http.AllowQuerySemicolons(mux),
-		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 120 * time.Second,
-		ReadTimeout:  120 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
 	// init clipboard
@@ -587,6 +583,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		// Handle as download
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Header().Add("Content-Disposition", contentDisposition)
+		w.Header().Add("Content-Length", fmt.Sprintf("%d", stat.Size()))
 		if _, err := io.Copy(w, file); err != nil {
 			mylog.Errorf("Error writing response to browser: %+v", err)
 		}
