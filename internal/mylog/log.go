@@ -1,6 +1,9 @@
 package mylog
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -10,27 +13,36 @@ import (
 // LogRequest will log the request in a uniform way
 func LogRequest(req *http.Request, status int, verbose bool) {
 	if status == http.StatusInternalServerError || status == http.StatusNotFound {
-		if verbose {
-			logger.Errorf("[User-Agent: %s] %s - - \"%s %s %s\" - %+v", req.UserAgent(), req.RemoteAddr, req.Method, req.URL, req.Proto, status)
-			return
-
-		}
 		logger.Errorf("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
-		return
+	} else {
+		logger.Infof("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
 	}
-	if verbose {
-		logger.Infof("[User-Agent: %s] %s - - \"%s %s %s\" - %+v", req.UserAgent(), req.RemoteAddr, req.Method, req.URL, req.Proto, status)
-		if req.URL.Query() != nil {
-			for k, v := range req.URL.Query() {
-				logger.Debugf("Parameter %s is %s", k, v)
-			}
-		}
-		return
-	}
-	logger.Infof("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
 	if req.URL.Query() != nil {
 		for k, v := range req.URL.Query() {
 			logger.Debugf("Parameter %s is %s", k, v)
+		}
+	}
+	if verbose {
+		logger.Infof("User Agent: %s", req.UserAgent())
+		for k, v := range req.URL.Query() {
+			logger.Infof("Parameter %s is", k)
+			var x struct{}
+			if err := json.Unmarshal([]byte(v[0]), &x); err != nil {
+				logger.Debug("Not JSON format printing plain")
+				fmt.Println(v[0])
+			} else {
+				dst := &bytes.Buffer{}
+				err := json.Indent(dst, []byte(v[0]), "", "  ")
+				if err != nil {
+					logger.Debug("Not JSON format printing plain")
+					fmt.Println(v[0])
+				} else {
+					logger.Debug("It is JSON - pretty print")
+					// fmt.Println(v[0])
+					fmt.Println(dst.String())
+				}
+			}
+
 		}
 	}
 }
