@@ -8,9 +8,23 @@ import (
 )
 
 // LogRequest will log the request in a uniform way
-func LogRequest(req *http.Request, status int) {
+func LogRequest(req *http.Request, status int, verbose bool) {
 	if status == http.StatusInternalServerError || status == http.StatusNotFound {
+		if verbose {
+			logger.Errorf("[User-Agent: %s] %s - - \"%s %s %s\" - %+v", req.UserAgent(), req.RemoteAddr, req.Method, req.URL, req.Proto, status)
+			return
+
+		}
 		logger.Errorf("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)
+		return
+	}
+	if verbose {
+		logger.Infof("[User-Agent: %s] %s - - \"%s %s %s\" - %+v", req.UserAgent(), req.RemoteAddr, req.Method, req.URL, req.Proto, status)
+		if req.URL.Query() != nil {
+			for k, v := range req.URL.Query() {
+				logger.Debugf("Parameter %s is %s", k, v)
+			}
+		}
 		return
 	}
 	logger.Infof("%s - - \"%s %s %s\" - %+v", req.RemoteAddr, req.Method, req.URL, req.Proto, status)

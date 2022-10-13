@@ -16,7 +16,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
-const goshsVersion = "v0.1.8"
+const goshsVersion = "v0.1.9"
 
 var (
 	port       = 8000
@@ -31,6 +31,7 @@ var (
 	webdavPort = 8001
 	uploadOnly = false
 	readOnly   = false
+	verbose    = false
 )
 
 // Man page
@@ -59,7 +60,8 @@ Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass)
 
 Misc options:
-  -v  Print the current goshs version
+  -V  --verbose       Activate verbose log output             (default: false)
+  -v                  Print the current goshs version
 
 Usage examples:
   Start with default values:    ./goshs
@@ -102,6 +104,8 @@ func init() {
 	flag.BoolVar(&uploadOnly, "upload-only", uploadOnly, "upload only")
 	flag.BoolVar(&readOnly, "ro", readOnly, "read only")
 	flag.BoolVar(&readOnly, "read-only", readOnly, "read only")
+	flag.BoolVar(&verbose, "V", verbose, "verbose")
+	flag.BoolVar(&verbose, "verbose", verbose, "verbose")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -192,6 +196,7 @@ func main() {
 		Pass:       pass,
 		UploadOnly: uploadOnly,
 		ReadOnly:   readOnly,
+		Verbose:    verbose,
 		Version:    goshsVersion,
 	}
 

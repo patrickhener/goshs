@@ -78,6 +78,7 @@ type FileServer struct {
 	Fingerprint1   string
 	UploadOnly     bool
 	ReadOnly       bool
+	Verbose        bool
 	Hub            *mysock.Hub
 	Clipboard      *myclipboard.Clipboard
 }
@@ -289,7 +290,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// Log request
-	mylog.LogRequest(req, http.StatusOK)
+	mylog.LogRequest(req, http.StatusOK, fs.Verbose)
 
 	// Switch and check if dir
 	stat, _ := file.Stat()
@@ -315,7 +316,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	target := strings.Join(targetpath, "/")
 
 	// Parse request
-	if err := req.ParseMultipartForm(10 << 20); err != nil {
+	if err := req.ParseMultipartForm(64 << 32); err != nil {
 		mylog.Errorf("parsing multipart request: %+v", err)
 		return
 	}
@@ -363,7 +364,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	mylog.LogRequest(req, http.StatusOK)
+	mylog.LogRequest(req, http.StatusOK, fs.Verbose)
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, target, http.StatusSeeOther)
@@ -603,7 +604,7 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	var e httperror
 
 	// Log to console
-	mylog.LogRequest(req, status)
+	mylog.LogRequest(req, status, fs.Verbose)
 
 	// Construct error for template filling
 	e.ErrorCode = status
