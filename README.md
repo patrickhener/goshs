@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.8-green)
+![Version](https://img.shields.io/badge/Version-v0.1.9-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -47,8 +47,10 @@ make build
 # Usage
 
 ```bash
-goshs v0.1.5
-Usage: ./goshs [options]
+> goshs -h
+
+goshs v0.1.9
+Usage: goshs [options]
 
 Web server options:
   -i,  --ip           The ip/if-name to listen on             (default: 0.0.0.0)
@@ -69,7 +71,8 @@ Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass)
 
 Misc options:
-  -v  Print the current goshs version
+  -V  --verbose       Activate verbose log output             (default: false)
+  -v                  Print the current goshs version
 
 Usage examples:
   Start with default values:    ./goshs
