@@ -259,6 +259,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	if upath == "/favicon.ico" {
 		return
 	}
+
 	upath = path.Clean(upath)
 	upath = filepath.Clean(upath)
 
@@ -470,6 +471,9 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		fs.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
+
+	// Cleanup for Windows Paths
+	relpath = strings.TrimLeft(relpath, "\\")
 
 	// Create empty slice
 	items := make([]item, 0, len(fis))
