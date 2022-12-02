@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.1.9-green)
+![Version](https://img.shields.io/badge/Version-v0.2.0-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -60,6 +60,7 @@ Web server options:
   -wp, --webdav-port  The port to listen on for webdav        (default: 8001)
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
+  -si, --silent       Running without dir listing             (default: false)
 
 TLS options:
   -s,  --ssl          Use TLS
@@ -116,6 +117,11 @@ Usage examples:
 *Provide own certificate*
 
 `goshs -s -sk server.key -sc server.crt`
+
+**Run in silent mode**  
+This mode will omit the dir listing on the web interface. Also you will not have access to the clipboard or upload form. Still you could upload a file using the corresponding post request (see examples).
+
+`goshs -si`
 
 # Credits
 

@@ -16,7 +16,7 @@ import (
 	"github.com/patrickhener/goshs/internal/myutils"
 )
 
-const goshsVersion = "v0.1.9"
+const goshsVersion = "v0.2.0"
 
 var (
 	port       = 8000
@@ -32,6 +32,7 @@ var (
 	uploadOnly = false
 	readOnly   = false
 	verbose    = false
+	silent     = false
 )
 
 // Man page
@@ -49,6 +50,7 @@ Web server options:
   -wp, --webdav-port  The port to listen on for webdav        (default: 8001)
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
+  -si, --silent       Running without dir listing             (default: false)
 
 TLS options:
   -s,  --ssl          Use TLS
@@ -106,6 +108,8 @@ func init() {
 	flag.BoolVar(&readOnly, "read-only", readOnly, "read only")
 	flag.BoolVar(&verbose, "V", verbose, "verbose")
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose")
+	flag.BoolVar(&silent, "si", silent, "silent")
+	flag.BoolVar(&silent, "silent", silent, "silent")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -196,6 +200,7 @@ func main() {
 		Pass:       pass,
 		UploadOnly: uploadOnly,
 		ReadOnly:   readOnly,
+		Silent:     silent,
 		Verbose:    verbose,
 		Version:    goshsVersion,
 	}

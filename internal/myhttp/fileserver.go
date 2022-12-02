@@ -40,6 +40,10 @@ type indexTemplate struct {
 	Directory    *directory
 }
 
+type silentTemplate struct {
+	GoshsVersion string
+}
+
 type directory struct {
 	RelPath        string
 	AbsPath        string
@@ -78,6 +82,7 @@ type FileServer struct {
 	Fingerprint1   string
 	UploadOnly     bool
 	ReadOnly       bool
+	Silent         bool
 	Verbose        bool
 	Hub            *mysock.Hub
 	Clipboard      *myclipboard.Clipboard
@@ -169,6 +174,10 @@ func (fs *FileServer) Start(what string) {
 		mylog.Infof("Using basic auth with user '%s' and password '%s'", fs.User, fs.Pass)
 		// Use middleware
 		mux.Use(fs.BasicAuthMiddleware)
+	}
+
+	if fs.Silent {
+		mylog.Info("Serving in silent mode - no dir listing available at HTTP Listener")
 	}
 
 	// Check if ssl
@@ -516,59 +525,80 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
 	})
 
-	// Template parsing and writing to browser
-	indexFile, err := static.ReadFile("static/templates/index.html")
-	if err != nil {
-		mylog.Errorf("opening embedded file: %+v", err)
-	}
-
-	// Windows upload compatibility
-	if relpath == "\\" {
-		relpath = "/"
-	}
-
-	// Construct directory for template
-	d := &directory{
-		RelPath: relpath,
-		AbsPath: filepath.Join(fs.Webroot, relpath),
-		Content: items,
-	}
-	if relpath != "/" {
-		d.IsSubdirectory = true
-		pathSlice := strings.Split(relpath, "/")
-		if len(pathSlice) > 2 {
-			pathSlice = pathSlice[1 : len(pathSlice)-1]
-
-			var backString string
-			for _, part := range pathSlice {
-				backString += "/" + part
-			}
-			d.Back = backString
-		} else {
-			d.Back = "/"
+	if fs.Silent {
+		silentFile, err := static.ReadFile("static/templates/silent.html")
+		if err != nil {
+			mylog.Errorf("opening embedded file: %+v", err)
 		}
+
+		tem := &silentTemplate{
+			GoshsVersion: fs.Version,
+		}
+
+		t := template.New("silent")
+
+		if _, err := t.Parse(string(silentFile)); err != nil {
+			mylog.Errorf("Error parsing template: %+v", err)
+		}
+		if err := t.Execute(w, tem); err != nil {
+			mylog.Errorf("Error executing template: %+v", err)
+		}
+
 	} else {
-		d.IsSubdirectory = false
-	}
+		// Template parsing and writing to browser
+		indexFile, err := static.ReadFile("static/templates/index.html")
+		if err != nil {
+			mylog.Errorf("opening embedded file: %+v", err)
+		}
 
-	// upload only mode empty directory
-	if fs.UploadOnly {
-		d = &directory{}
-	}
+		// Windows upload compatibility
+		if relpath == "\\" {
+			relpath = "/"
+		}
 
-	// Construct template
-	tem := &indexTemplate{
-		Directory:    d,
-		GoshsVersion: fs.Version,
-		Clipboard:    fs.Clipboard,
-	}
+		// Construct directory for template
+		d := &directory{
+			RelPath: relpath,
+			AbsPath: filepath.Join(fs.Webroot, relpath),
+			Content: items,
+		}
+		if relpath != "/" {
+			d.IsSubdirectory = true
+			pathSlice := strings.Split(relpath, "/")
+			if len(pathSlice) > 2 {
+				pathSlice = pathSlice[1 : len(pathSlice)-1]
 
-	t := template.New("index")
-	if _, err := t.Parse(string(indexFile)); err != nil {
-		mylog.Errorf("Error parsing template: %+v", err)
-	}
-	if err := t.Execute(w, tem); err != nil {
-		mylog.Errorf("Error executing template: %+v", err)
+				var backString string
+				for _, part := range pathSlice {
+					backString += "/" + part
+				}
+				d.Back = backString
+			} else {
+				d.Back = "/"
+			}
+		} else {
+			d.IsSubdirectory = false
+		}
+
+		// upload only mode empty directory
+		if fs.UploadOnly {
+			d = &directory{}
+		}
+
+		// Construct template
+		tem := &indexTemplate{
+			Directory:    d,
+			GoshsVersion: fs.Version,
+			Clipboard:    fs.Clipboard,
+		}
+
+		t := template.New("index")
+		if _, err := t.Parse(string(indexFile)); err != nil {
+			mylog.Errorf("Error parsing template: %+v", err)
+		}
+		if err := t.Execute(w, tem); err != nil {
+			mylog.Errorf("Error executing template: %+v", err)
+		}
 	}
 }
 
