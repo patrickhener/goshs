@@ -152,6 +152,9 @@ func init() {
 
 	// Abspath for webroot
 	var err error
+	// Trim trailing / for linux/mac and \ for windows
+	webroot = strings.TrimSuffix(webroot, "/")
+	webroot = strings.TrimSuffix(webroot, "\\")
 	mylog.Debugf("Webroot before transformation: %s", webroot)
 	if !filepath.IsAbs(webroot) {
 		webroot, err = filepath.Abs(filepath.Join(wd, webroot))
