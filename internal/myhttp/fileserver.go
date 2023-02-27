@@ -31,6 +31,7 @@ const (
 )
 
 // Static will provide the embedded files as http.FS
+//
 //go:embed static
 var static embed.FS
 
@@ -624,6 +625,10 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		}
 	} else {
 		// Write to browser
+		stat, _ := file.Stat()
+		filename := stat.Name()
+		contentType := myutils.MimeByExtension(filename)
+		w.Header().Add("Content-Type", contentType)
 		if _, err := io.Copy(w, file); err != nil {
 			mylog.Errorf("Error writing response to browser: %+v", err)
 		}
