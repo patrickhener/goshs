@@ -33,7 +33,7 @@ You can download the executable from the [release section](https://github.com/pa
 
 ```bash
 go get -u github.com/patrickhener/goshs
-go install github.com/patrickhener/goshs
+go install github.com/patrickhener/goshs@latest
 ```
 
 ## Build yourself

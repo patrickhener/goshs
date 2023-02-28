@@ -107,5 +107,4 @@ func GetAllIPAdresses() (map[string]string, error) {
 
 	}
 	return ifaceAddress, nil
-
 }

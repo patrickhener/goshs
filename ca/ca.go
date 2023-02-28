@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"os"
 
 	// disable G505 (CWE-327): Blocklisted import crypto/sha1: weak cryptographic primitive
 	// #nosec G505
@@ -17,7 +18,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"strings"
 	"time"
@@ -70,7 +70,7 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 	// disable G304 (CWE-22): Potential file inclusion via variable
 	// risk accepted, maybe check if can be used to do malicous things
 	// #nosec G304
-	certBytes, err := ioutil.ReadFile(cert)
+	certBytes, err := os.ReadFile(cert)
 	if err != nil {
 		return "", "", err
 	}
