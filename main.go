@@ -11,12 +11,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/patrickhener/goshs/internal/myhttp"
-	"github.com/patrickhener/goshs/internal/mylog"
-	"github.com/patrickhener/goshs/internal/myutils"
+	"github.com/patrickhener/goshs/httpserver"
+	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.2.0"
+const goshsVersion = "v0.3.0"
 
 var (
 	port       = 8000
@@ -124,14 +124,14 @@ func init() {
 	// Check if interface name was provided as -i
 	// If so, resolve to ip address of interface
 	if !strings.Contains(ip, ".") {
-		addr, err := myutils.GetInterfaceIpv4Addr(ip)
+		addr, err := utils.GetInterfaceIpv4Addr(ip)
 		if err != nil {
-			mylog.Fatal(err)
+			logger.Fatal(err)
 			os.Exit(-1)
 		}
 
 		if addr == "" {
-			mylog.Fatal("IP address cannot be found for provided interface")
+			logger.Fatal("IP address cannot be found for provided interface")
 			os.Exit(-1)
 		}
 
@@ -140,12 +140,12 @@ func init() {
 
 	// Sanity check for upload only vs read only
 	if uploadOnly && readOnly {
-		mylog.Fatal("You can only select either 'upload only' or 'read only', not both.")
+		logger.Fatal("You can only select either 'upload only' or 'read only', not both.")
 		os.Exit(-1)
 	}
 
 	if webdav {
-		mylog.Warn("upload/read-only mode deactivated due to use of 'webdav' mode")
+		logger.Warn("upload/read-only mode deactivated due to use of 'webdav' mode")
 		uploadOnly = false
 		readOnly = false
 	}
@@ -155,14 +155,12 @@ func init() {
 	// Trim trailing / for linux/mac and \ for windows
 	webroot = strings.TrimSuffix(webroot, "/")
 	webroot = strings.TrimSuffix(webroot, "\\")
-	mylog.Debugf("Webroot before transformation: %s", webroot)
 	if !filepath.IsAbs(webroot) {
 		webroot, err = filepath.Abs(filepath.Join(wd, webroot))
 		if err != nil {
-			mylog.Fatalf("Webroot cannot be constructed: %+v", err)
+			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
 	}
-	mylog.Debugf("Final webroot is: %s", webroot)
 }
 
 // Sanity checks if basic auth has the right format
@@ -191,7 +189,7 @@ func main() {
 	// Random Seed generation (used for CA serial)
 	rand.Seed(time.Now().UnixNano())
 	// Setup the custom file server
-	server := &myhttp.FileServer{
+	server := &httpserver.FileServer{
 		IP:         ip,
 		Port:       port,
 		Webroot:    webroot,
@@ -218,5 +216,5 @@ func main() {
 
 	<-done
 
-	mylog.Infof("Received CTRL+C, exiting...")
+	logger.Infof("Received CTRL+C, exiting...")
 }
