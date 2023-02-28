@@ -28,15 +28,12 @@ func ByteCountDecimal(b int64) string {
 
 // MimeByExtension returns the mimetype string depending on the filename and its extension
 func MimeByExtension(n string) string {
-	logger.Debugf("The string handed to MimeByExtension is: %s\n", n)
-	logger.Debugf("Discovered Extension: %s\n", mime.TypeByExtension(ReturnExt(n)))
 	return mime.TypeByExtension(ReturnExt(n))
 }
 
 // ReturnExt returns the extension without from a filename
 func ReturnExt(n string) string {
 	extSlice := strings.Split(n, ".")
-	logger.Debugf("The sliced extension is: %s\n", extSlice)
 	return "." + extSlice[len(extSlice)-1]
 }
 

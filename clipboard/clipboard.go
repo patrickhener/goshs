@@ -4,8 +4,6 @@ package clipboard
 import (
 	"encoding/json"
 	"time"
-
-	"github.com/patrickhener/goshs/logger"
 )
 
 // Clipboard is the in memory clipboard to hold the copy-pasteable content
@@ -82,7 +80,6 @@ func (c *Clipboard) Download() ([]byte, error) {
 func reindex(entries []Entry) []Entry {
 	var newEntries []Entry
 	for i, e := range entries {
-		logger.Debugf("Entry #%d: %+v\n", i, e)
 		newEntries = append(newEntries, Entry{
 			ID:      i,
 			Content: e.Content,

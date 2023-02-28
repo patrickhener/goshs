@@ -155,14 +155,12 @@ func init() {
 	// Trim trailing / for linux/mac and \ for windows
 	webroot = strings.TrimSuffix(webroot, "/")
 	webroot = strings.TrimSuffix(webroot, "\\")
-	logger.Debugf("Webroot before transformation: %s", webroot)
 	if !filepath.IsAbs(webroot) {
 		webroot, err = filepath.Abs(filepath.Join(wd, webroot))
 		if err != nil {
 			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
 	}
-	logger.Debugf("Final webroot is: %s", webroot)
 }
 
 // Sanity checks if basic auth has the right format

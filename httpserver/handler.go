@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -41,6 +42,8 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 
 // handler is the function which actually handles dir or file retrieval
 func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
+	// Define if to return json instead of html parsing
+	json := false
 	// Get url so you can extract Headline and title
 	upath := req.URL.Path
 
@@ -52,7 +55,9 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	upath = path.Clean(upath)
 	upath = filepath.Clean(upath)
 
-	logger.Debugf("Cleaned upath is: %+v", upath)
+	if _, ok := req.URL.Query()["json"]; ok {
+		json = true
+	}
 
 	// Define absolute path
 	open := fs.Webroot + upath
@@ -85,13 +90,13 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// Switch and check if dir
 	stat, _ := file.Stat()
 	if stat.IsDir() {
-		fs.processDir(w, req, file, upath)
+		fs.processDir(w, req, file, upath, json)
 	} else {
 		fs.sendFile(w, req, file)
 	}
 }
 
-func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string) {
+func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool) {
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
@@ -142,6 +147,20 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	sort.Slice(items, func(i, j int) bool {
 		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
 	})
+
+	// if ?json output json listing
+	if jsonOutput {
+		w.Header().Add("Content-Type", "application/json")
+		resJson, err := json.Marshal(items)
+		if err != nil {
+			logger.Errorf("error marshaling items to json: %+v", err)
+		}
+		_, err = w.Write(resJson)
+		if err != nil {
+			logger.Errorf("error writing json as response: %+v", err)
+		}
+		return
+	}
 
 	if fs.Silent {
 		silentFile, err := static.ReadFile("static/templates/silent.html")

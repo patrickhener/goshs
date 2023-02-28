@@ -26,16 +26,16 @@ type directory struct {
 }
 
 type item struct {
-	URI                 string
-	Name                string
-	IsDir               bool
-	IsSymlink           bool
-	SymlinkTarget       string
-	Ext                 string
-	DisplaySize         string
-	SortSize            int64
-	DisplayLastModified string
-	SortLastModified    time.Time
+	URI                 string    `json:"-"`
+	Name                string    `json:"name"`
+	IsDir               bool      `json:"is_dir"`
+	IsSymlink           bool      `json:"is_symlink"`
+	SymlinkTarget       string    `json:"symlink_target"`
+	Ext                 string    `json:"extension"`
+	DisplaySize         string    `json:"-"`
+	SortSize            int64     `json:"size_bytes"`
+	DisplayLastModified string    `json:"-"`
+	SortLastModified    time.Time `json:"last_modified"`
 }
 
 // FileServer holds the fileserver information
