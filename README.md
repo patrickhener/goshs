@@ -23,6 +23,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
   * Download clipboard entries as .json file
 * WebDAV support
 * Read-Only and Upload-Only mode
+* Silent mode (no webserver output)
 * Retrieve json on cli
 
 # Installation
