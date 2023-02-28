@@ -1,4 +1,5 @@
-package myutils
+// Package utils has general utility functions
+package utils
 
 import (
 	"crypto/rand"
@@ -8,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/patrickhener/goshs/internal/mylog"
+	"github.com/patrickhener/goshs/logger"
 )
 
 // ByteCountDecimal generates human readable file sizes and returns a string
@@ -27,15 +28,15 @@ func ByteCountDecimal(b int64) string {
 
 // MimeByExtension returns the mimetype string depending on the filename and its extension
 func MimeByExtension(n string) string {
-	mylog.Debugf("The string handed to MimeByExtension is: %s\n", n)
-	mylog.Debugf("Discovered Extension: %s\n", mime.TypeByExtension(ReturnExt(n)))
+	logger.Debugf("The string handed to MimeByExtension is: %s\n", n)
+	logger.Debugf("Discovered Extension: %s\n", mime.TypeByExtension(ReturnExt(n)))
 	return mime.TypeByExtension(ReturnExt(n))
 }
 
 // ReturnExt returns the extension without from a filename
 func ReturnExt(n string) string {
 	extSlice := strings.Split(n, ".")
-	mylog.Debugf("The sliced extension is: %s\n", extSlice)
+	logger.Debugf("The sliced extension is: %s\n", extSlice)
 	return "." + extSlice[len(extSlice)-1]
 }
 
@@ -43,7 +44,7 @@ func ReturnExt(n string) string {
 func RandomNumber() (big.Int, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1000))
 	if err != nil {
-		mylog.Errorf("when generating random number: %+v", err)
+		logger.Errorf("when generating random number: %+v", err)
 		return *big.NewInt(0), err
 	}
 	return *n, err

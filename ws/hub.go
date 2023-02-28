@@ -1,6 +1,8 @@
-package mysock
+package ws
 
-import "github.com/patrickhener/goshs/internal/myclipboard"
+import (
+	"github.com/patrickhener/goshs/clipboard"
+)
 
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
@@ -18,11 +20,11 @@ type Hub struct {
 	unregister chan *Client
 
 	// Handle clipboard
-	cb *myclipboard.Clipboard
+	cb *clipboard.Clipboard
 }
 
 // NewHub will create a new hub
-func NewHub(cb *myclipboard.Clipboard) *Hub {
+func NewHub(cb *clipboard.Clipboard) *Hub {
 	return &Hub{
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),

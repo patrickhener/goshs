@@ -1,4 +1,5 @@
-package mylog
+// Package logger will take care of all logging messages using logrus
+package logger
 
 import (
 	"bytes"

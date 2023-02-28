@@ -1,7 +1,7 @@
-// Package myca ...
+// Package ca will handle the creation of certificates for TSL encrypted communication
 // Credits: Shane Utt
 // https://shaneutt.com/blog/golang-ca-and-signed-cert-go/
-package myca
+package ca
 
 import (
 	"bytes"
@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickhener/goshs/internal/mylog"
-	"github.com/patrickhener/goshs/internal/myutils"
+	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/utils"
 )
 
 // Sum will give the sha256 and sha1 sum of the certificate
@@ -89,9 +89,9 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 
 // Setup will deliver a fully initialized CA and server cert
 func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
-	randInt, err := myutils.RandomNumber()
+	randInt, err := utils.RandomNumber()
 	if err != nil {
-		mylog.Errorf("when creating certificate: %+v", err)
+		logger.Errorf("when creating certificate: %+v", err)
 	}
 	ca := &x509.Certificate{
 		SerialNumber: &randInt,
@@ -131,7 +131,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}); err != nil {
-		mylog.Errorf("encoding pem: %+v", err)
+		logger.Errorf("encoding pem: %+v", err)
 	}
 
 	caPrivKeyPEM := new(bytes.Buffer)
@@ -139,12 +139,12 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	}); err != nil {
-		mylog.Errorf("encoding pem: %+v", err)
+		logger.Errorf("encoding pem: %+v", err)
 	}
 
-	randInt, err = myutils.RandomNumber()
+	randInt, err = utils.RandomNumber()
 	if err != nil {
-		mylog.Errorf("when creating certificate: %+v", err)
+		logger.Errorf("when creating certificate: %+v", err)
 	}
 	// set up our server certificate
 	cert := &x509.Certificate{
@@ -182,7 +182,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}); err != nil {
-		mylog.Errorf("encoding pem: %+v", err)
+		logger.Errorf("encoding pem: %+v", err)
 	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
@@ -190,7 +190,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	}); err != nil {
-		mylog.Errorf("encoding pem: %+v", err)
+		logger.Errorf("encoding pem: %+v", err)
 	}
 
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())

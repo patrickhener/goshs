@@ -1,4 +1,4 @@
-package mysock
+package ws
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/patrickhener/goshs/internal/mylog"
+	"github.com/patrickhener/goshs/logger"
 )
 
 // Packet defines a packet struct
@@ -79,13 +79,13 @@ func (c *Client) readPump() {
 		var packet Packet
 		if err := c.conn.ReadJSON(&packet); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				mylog.Errorf("%v", err)
+				logger.Errorf("%v", err)
 			}
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 				break
 			}
 
-			mylog.Errorf("reading message: %v", err)
+			logger.Errorf("reading message: %v", err)
 			break
 		}
 
@@ -94,35 +94,35 @@ func (c *Client) readPump() {
 		case "newEntry":
 			var entry string
 			if err := json.Unmarshal(packet.Content, &entry); err != nil {
-				mylog.Errorf("Error reading json packet: %+v", err)
+				logger.Errorf("Error reading json packet: %+v", err)
 			}
 			if err := c.hub.cb.AddEntry(entry); err != nil {
-				mylog.Errorf("Error creating Clipboard entry: %+v", err)
+				logger.Errorf("Error creating Clipboard entry: %+v", err)
 			}
 			c.refreshClipboard()
 
 		case "delEntry":
 			var id string
 			if err := json.Unmarshal(packet.Content, &id); err != nil {
-				mylog.Errorf("Error reading json packet: %+v", err)
+				logger.Errorf("Error reading json packet: %+v", err)
 			}
 			iid, err := strconv.Atoi(id)
 			if err != nil {
-				mylog.Errorf("Error reading json packet: %+v", err)
+				logger.Errorf("Error reading json packet: %+v", err)
 			}
 			if err := c.hub.cb.DeleteEntry(iid); err != nil {
-				mylog.Errorf("Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
+				logger.Errorf("Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
 			}
 			c.refreshClipboard()
 
 		case "clearClipboard":
 			if err := c.hub.cb.ClearClipboard(); err != nil {
-				mylog.Errorf("Error clearing clipboard: %+v", err)
+				logger.Errorf("Error clearing clipboard: %+v", err)
 			}
 			c.refreshClipboard()
 
 		default:
-			mylog.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
+			logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
 		}
 	}
 }
@@ -191,7 +191,7 @@ func (c *Client) writePump() {
 func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := wsupgrader.Upgrade(w, r, nil)
 	if err != nil {
-		mylog.Errorf("Failed to upgrade ws: %+v", err)
+		logger.Errorf("Failed to upgrade ws: %+v", err)
 		return
 	}
 
@@ -208,7 +208,7 @@ func (c *Client) refreshClipboard() {
 	}
 	broadcastMessage, err := json.Marshal(sendPkg)
 	if err != nil {
-		mylog.Errorf("Unable to marshal json data in redirect: %+v", err)
+		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
 	}
 
 	c.hub.broadcast <- broadcastMessage
