@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.2.0-green)
+![Version](https://img.shields.io/badge/Version-v0.3.0-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -23,6 +23,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
   * Download clipboard entries as .json file
 * WebDAV support
 * Read-Only and Upload-Only mode
+* Retrieve json on cli
 
 # Installation
 
@@ -123,10 +124,68 @@ This mode will omit the dir listing on the web interface. Also you will not have
 
 `goshs -si`
 
+**Retrieve the directory listing in json format**  
+You can now retrieve the directory listing in *json* format. This is meant to be used with curl for example in environments where you do not have a browser on hand.
+```bash
+curl -s localhost:8000/?json | jq
+[
+  {
+    "name": ".git/",
+    "is_dir": true,
+    "is_symlink": false,
+    "symlink_target": "",
+    "extension": "",
+    "size_bytes": 4096,
+    "last_modified": "2023-02-28T15:38:11.982+01:00"
+  },
+  {
+    "name": ".github/",
+    "is_dir": true,
+    "is_symlink": false,
+    "symlink_target": "",
+    "extension": "",
+    "size_bytes": 4096,
+    "last_modified": "2023-02-28T10:27:35.524+01:00"
+  },
+  {
+    "name": ".gitignore",
+    "is_dir": false,
+    "is_symlink": false,
+    "symlink_target": "",
+    "extension": ".gitignore",
+    "size_bytes": 48,
+    "last_modified": "2023-02-20T07:58:46.436+01:00"
+  },
+  ... snip ...
+```
+
+Or with path:
+
+```bash
+curl -s localhost:8000/utils?json | jq
+[
+  {
+    "name": "utils.go",
+    "is_dir": false,
+    "is_symlink": false,
+    "symlink_target": "",
+    "extension": ".go",
+    "size_bytes": 2218,
+    "last_modified": "2023-02-28T15:28:54.783+01:00"
+  },
+  {
+    "name": "utils_test.go",
+    "is_dir": false,
+    "is_symlink": false,
+    "symlink_target": "",
+    "extension": ".go",
+    "size_bytes": 2012,
+    "last_modified": "2023-02-28T15:28:12.748+01:00"
+  }
+]
+```
+
+
 # Credits
 
 A special thank you goes to *sc0tfree* for inspiring this project with his project [updog](https://github.com/sc0tfree/updog) written in Python.
-
-# Tutorial Series
-
-I wrote several blog posts how and why I implemented all of this. You can find it [here](https://hesec.de/tags/goshs/) if you are interested about the technical background.
