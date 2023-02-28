@@ -20,10 +20,8 @@ import (
 
 // static will give static content for style and function
 func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
-	// Check which file to serve
-	upath := req.URL.Path
-	staticPath := strings.SplitAfterN(upath, "/", 3)[2]
-	path := "static/" + staticPath
+	// Construct static path to file
+	path := "static" + req.URL.Path
 	// Load file with parcello
 	staticFile, err := static.ReadFile(path)
 	if err != nil {
@@ -31,7 +29,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get mimetype from extension
-	contentType := utils.MimeByExtension(staticPath)
+	contentType := utils.MimeByExtension(path)
 
 	// Set mimetype and deliver to browser
 	w.Header().Add("Content-Type", contentType)
@@ -42,8 +40,30 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 
 // handler is the function which actually handles dir or file retrieval
 func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
+	// Early break for /?ws, /?cbDown, /?bulk and /?static
+	if _, ok := req.URL.Query()["ws"]; ok {
+		fs.socket(w, req)
+		return
+	}
+	if _, ok := req.URL.Query()["cbDown"]; ok {
+		fs.cbDown(w, req)
+		return
+	}
+	if _, ok := req.URL.Query()["bulk"]; ok {
+		fs.bulkDownload(w, req)
+		return
+	}
+	if _, ok := req.URL.Query()["static"]; ok {
+		fs.static(w, req)
+		return
+	}
+
 	// Define if to return json instead of html parsing
 	json := false
+	if _, ok := req.URL.Query()["json"]; ok {
+		json = true
+	}
+
 	// Get url so you can extract Headline and title
 	upath := req.URL.Path
 
@@ -54,10 +74,6 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 
 	upath = path.Clean(upath)
 	upath = filepath.Clean(upath)
-
-	if _, ok := req.URL.Query()["json"]; ok {
-		json = true
-	}
 
 	// Define absolute path
 	open := fs.Webroot + upath
@@ -117,10 +133,6 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		item.Ext = strings.ToLower(utils.ReturnExt(fi.Name()))
 		// Add / to name if dir
 		if fi.IsDir() {
-			// Check if special path exists as dir on disk and do not add
-			if utils.CheckSpecialPath(fi.Name()) {
-				continue
-			}
 			item.Name += "/"
 			item.IsDir = true
 			item.Ext = ""

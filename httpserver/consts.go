@@ -1,5 +1,5 @@
 package httpserver
 
 const (
-	modeWeb = "web"
+	modeWeb string = "web"
 )

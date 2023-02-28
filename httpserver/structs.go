@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"html/template"
 	"time"
 
 	"github.com/patrickhener/goshs/clipboard"
@@ -66,4 +67,5 @@ type httperror struct {
 	ErrorMessage string
 	AbsPath      string
 	GoshsVersion string
+	Statics      template.FuncMap
 }

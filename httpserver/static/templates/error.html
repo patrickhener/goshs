@@ -10,19 +10,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>goshs ERROR - {{.AbsPath}}</title>
     <!-- stylesheets -->
-    <link
-      rel="icon"
-      type="image/gif"
-      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/favicon.gif"
-    />
-    <link
-      rel="stylesheet"
-      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/css/style.css"
-    />
-    <link
-      rel="stylesheet"
-      href="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/3rdparty/fontawesome-5.15.1/css/all.min.css"
-    />
+    <link rel="icon" type="image/gif" href="/images/favicon.gif?static" />
+    <link rel="stylesheet" href="/css/style.css?static" />
+    <link rel="stylesheet" href="/3rdparty/fontawesome-5.15.1/css/all.min.css?static" />
   </head>
   <body class="disable-scrollbars">
     <div class="container-fluid p-4">
@@ -31,10 +21,7 @@
         <div class="col-md-12">
           <header id="header" class="d-flex align_item_center">
             <div onclick="document.location='/'" class="logo">
-              <img
-                src="/425bda8487e36deccb30dd24be590b8744e3a28a8bb5a57d9b3fcd24ae09ad3c/images/error-gopher.gif"
-                alt="goshs"
-              />
+              <img src="/images/error-gopher.gif?static" alt="goshs" />
             </div>
             <div class="heading_title">
               {{ if (eq .ErrorCode 404) }}
