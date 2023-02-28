@@ -3,6 +3,7 @@ package httpserver
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/patrickhener/goshs/ca"
@@ -45,8 +46,9 @@ func (fs *FileServer) Start(what string) {
 
 	// construct server
 	server := http.Server{
-		Addr:    addr,
-		Handler: http.AllowQuerySemicolons(mux),
+		Addr:              addr,
+		Handler:           http.AllowQuerySemicolons(mux),
+		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
