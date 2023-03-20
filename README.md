@@ -40,6 +40,8 @@ go install github.com/patrickhener/goshs@latest
 
 ## Build yourself
 
+Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [wt](https://github.com/wellington/wellington). After installing those 2 packages you can easily just:
+
 ```bash
 git clone https://github.com/patrickhener/goshs.git
 cd goshs
