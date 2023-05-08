@@ -60,7 +60,7 @@ func (fs *FileServer) Start(what string) {
 	go fs.Hub.Run()
 
 	// Check BasicAuth and use middleware
-	if fs.User != "" && what == modeWeb {
+	if (fs.User != "" || fs.Pass != "") && what == modeWeb {
 		if !fs.SSL {
 			logger.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
 		}
