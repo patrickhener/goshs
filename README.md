@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.3.0-green)
+![Version](https://img.shields.io/badge/Version-v0.3.1-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -53,7 +53,7 @@ make build
 ```bash
 > goshs -h
 
-goshs v0.1.9
+goshs v0.3.1
 Usage: goshs [options]
 
 Web server options:
@@ -73,19 +73,20 @@ TLS options:
   -sc, --server-cert  Path to server certificate
 
 Authentication options:
-  -b, --basic-auth    Use basic authentication (user:pass)
+  -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
 
 Misc options:
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
 Usage examples:
-  Start with default values:    ./goshs
-  Start with wevdav support:    ./goshs -w
-  Start with different port:    ./goshs -p 8080
-  Start with self-signed cert:  ./goshs -s -ss
-  Start with custom cert:       ./goshs -s -sk <path to key> -sc <path to cert>
-  Start with basic auth:        ./goshs -b secret-user:$up3r$3cur3
+  Start with default values:    	./goshs
+  Start with wevdav support:    	./goshs -w
+  Start with different port:    	./goshs -p 8080
+  Start with self-signed cert:  	./goshs -s -ss
+  Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
+  Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
+  Start with basic auth empty user:	./goshs -b :$up3r$3cur3
 ```
 
 # Examples
