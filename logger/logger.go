@@ -3,10 +3,12 @@ package logger
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -27,6 +29,18 @@ func LogRequest(req *http.Request, status int, verbose bool) {
 	}
 	if verbose {
 		logger.Infof("User Agent: %s", req.UserAgent())
+		auth := req.Header.Get("Authorization")
+		if auth != "" {
+			logger.Infof("Authorization Header: %s", auth)
+			if strings.Contains(auth, "Basic") {
+				decodedAuth, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(auth, "Basic ", ""))
+				if err != nil {
+					logger.Warnf("error decoding basic auth: %s", err)
+					return
+				}
+				logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
+			}
+		}
 		for k, v := range req.URL.Query() {
 			logger.Infof("Parameter %s is", k)
 			var x struct{}
