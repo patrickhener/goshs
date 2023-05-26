@@ -25,7 +25,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Read-Only and Upload-Only mode
 * Silent mode (no webserver output)
 * Retrieve json on cli
-* Drop user privileges before execution
+* Drop user privileges before execution (Unix only)
   * Example: Run on port 80, but process is "www-data"
 
 # Installation
@@ -78,7 +78,7 @@ Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
 
 Misc options:
-  -u  --user          Drop privs to user                      (default: current user)
+  -u  --user          Drop privs to user (unix only)          (default: current user)
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
