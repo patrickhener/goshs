@@ -10,7 +10,7 @@ import (
 )
 
 func (fs *FileServer) dropPrivs() {
-	if syscall.Getuid() == 0 {
+	if syscall.Getuid() == 0 && fs.DropUser == "" {
 		logger.Warn("Running as user root! You should be careful with that!!")
 	}
 

@@ -25,6 +25,8 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Read-Only and Upload-Only mode
 * Silent mode (no webserver output)
 * Retrieve json on cli
+* Drop user privileges before execution
+  * Example: Run on port 80, but process is "www-data"
 
 # Installation
 
@@ -130,6 +132,7 @@ This mode will omit the dir listing on the web interface. Also you will not have
 
 **Retrieve the directory listing in json format**  
 You can now retrieve the directory listing in *json* format. This is meant to be used with curl for example in environments where you do not have a browser on hand.
+
 ```bash
 curl -s localhost:8000/?json | jq
 [
@@ -189,6 +192,21 @@ curl -s localhost:8000/utils?json | jq
 ]
 ```
 
+**Drop user privs**  
+You might wanna bind to port `80` but rather not have the process running as root. So you can use `-u/--user` to drop privileges:
+
+```bash
+user@host:~/projects/goshs$ sudo ./goshs -p 80 --u user
+INFO   [2023-05-26 11:56:19] Serving on interface lo bound to 127.0.0.1:80 
+INFO   [2023-05-26 11:56:19] Serving HTTP from /home/user/goshs  
+INFO   [2023-05-26 11:56:19] Dropping privileges to user 'user'           
+```
+
+```bash
+user@host:~$ ps aux | grep goshs
+root       35975  0.0  0.0  10828  5028 pts/0    S+   11:56   0:00 sudo ./goshs -p 80 --u user
+user       35976  0.0  0.1 1166136 8460 pts/0    Sl+  11:56   0:00 ./goshs -p 80 --u user
+```
 
 # Credits
 
