@@ -12,7 +12,7 @@ archives:
   - name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
-      {{- .Arch }}
+      {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 checksum:
   name_template: 'checksums.txt'
