@@ -9,12 +9,15 @@ builds:
       - windows
       - darwin
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- title .OS}}_
+      {{- if eq .Arch "darwin" }}Darwin
+      {{- else if eq .Arch "linux" }}Linux
+      {{- else if eq .Arch "windows" }}Windows
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
