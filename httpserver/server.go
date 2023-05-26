@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -44,9 +45,16 @@ func (fs *FileServer) Start(what string) {
 	default:
 	}
 
+	// construct and bind listener
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		logger.Fatalf("Error binding to listener '%s': %+v", addr, err)
+	}
+	defer listener.Close()
+
 	// construct server
 	server := http.Server{
-		Addr:              addr,
+		// Addr:              addr,
 		Handler:           http.AllowQuerySemicolons(mux),
 		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
@@ -86,7 +94,11 @@ func (fs *FileServer) Start(what string) {
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
 
-			logger.Panic(server.ListenAndServeTLS("", ""))
+			// Drop privs if needed
+			fs.dropPrivs()
+
+			logger.Panic(server.ServeTLS(listener, "", ""))
+			// logger.Panic(server.ListenAndServeTLS("", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
 				logger.Fatal("You need to provide server.key and server.crt if -s and not -ss")
@@ -100,10 +112,19 @@ func (fs *FileServer) Start(what string) {
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
 
-			logger.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
+			// Drop privs if needed
+			fs.dropPrivs()
+
+			logger.Panic(server.ServeTLS(listener, "", ""))
+			//logger.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
 	} else {
 		fs.logStart(what)
-		logger.Panic(server.ListenAndServe())
+
+		// Drop privs if needed
+		fs.dropPrivs()
+
+		logger.Panic(server.Serve(listener))
+		//logger.Panic(server.ListenAndServe())
 	}
 }

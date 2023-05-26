@@ -33,6 +33,7 @@ var (
 	readOnly   = false
 	verbose    = false
 	silent     = false
+	dropuser   = ""
 )
 
 // Man page
@@ -62,6 +63,7 @@ Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
 
 Misc options:
+  -u  --user          Drop privs to user                      (default: current user)
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
@@ -111,6 +113,8 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flag.BoolVar(&silent, "si", silent, "silent")
 	flag.BoolVar(&silent, "silent", silent, "silent")
+	flag.StringVar(&dropuser, "u", dropuser, "user")
+	flag.StringVar(&dropuser, "user", dropuser, "user")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -179,6 +183,7 @@ func parseBasicAuth() (string, string) {
 func main() {
 	user := ""
 	pass := ""
+
 	// check for basic auth
 	if basicAuth != "" {
 		user, pass = parseBasicAuth()
@@ -200,6 +205,7 @@ func main() {
 		MyKey:      myKey,
 		User:       user,
 		Pass:       pass,
+		DropUser:   dropuser,
 		UploadOnly: uploadOnly,
 		ReadOnly:   readOnly,
 		Silent:     silent,

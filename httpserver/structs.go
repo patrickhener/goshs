@@ -51,6 +51,7 @@ type FileServer struct {
 	MyCert         string
 	User           string
 	Pass           string
+	DropUser       string
 	Version        string
 	Fingerprint256 string
 	Fingerprint1   string
