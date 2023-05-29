@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"crypto/tls"
 
 	"github.com/gorilla/mux"
 	"github.com/patrickhener/goshs/ca"
@@ -108,6 +109,17 @@ func (fs *FileServer) Start(what string) {
 			if err != nil {
 				logger.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
+
+			cert, err := tls.LoadX509KeyPair(fs.MyCert, fs.MyKey)
+			if err != nil {
+				logger.Fatalf("Failed to load provided key or certificate: %+v\n", err)
+			}
+
+			server.TLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				MinVersion:   tls.VersionTLS12,
+			}
+
 			fs.Fingerprint256 = fingerprint256
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
