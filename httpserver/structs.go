@@ -12,6 +12,7 @@ type indexTemplate struct {
 	Clipboard    *clipboard.Clipboard
 	GoshsVersion string
 	Directory    *directory
+	CLI          bool
 }
 
 type silentTemplate struct {
@@ -43,6 +44,7 @@ type item struct {
 type FileServer struct {
 	IP             string
 	Port           int
+	CLI            bool
 	WebdavPort     int
 	Webroot        string
 	SSL            bool

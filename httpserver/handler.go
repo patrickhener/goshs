@@ -239,6 +239,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 			Directory:    d,
 			GoshsVersion: fs.Version,
 			Clipboard:    fs.Clipboard,
+			CLI:          fs.CLI,
 		}
 
 		t := template.New("index")

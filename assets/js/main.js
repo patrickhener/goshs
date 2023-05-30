@@ -68,6 +68,11 @@ connection.onmessage = function (m) {
     var message = JSON.parse(m.data);
     if (message['type'] == 'refreshClipboard') {
       location.reload();
+    } else if (message['type'] == 'updateCLI') {
+      output = document.getElementById('cliOutput');
+      output.innerHTML = message['content'];
+      input = document.getElementById('cliCommand');
+      input.value = '';
     }
   } catch (e) {
     console.log('Error reading message: ', e);
@@ -104,4 +109,16 @@ function delClipboard(id) {
     content: id,
   };
   connection.send(JSON.stringify(msg));
+}
+
+function sendCommand(e) {
+  e.preventDefault();
+  command = document.getElementById('cliCommand');
+  var text = command.value;
+  var msg = {
+    type: 'command',
+    content: text,
+  };
+  connection.send(JSON.stringify(msg));
+  command.value == '';
 }

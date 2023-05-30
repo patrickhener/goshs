@@ -21,6 +21,7 @@ const goshsVersion = "v0.3.2"
 var (
 	port       = 8000
 	ip         = "0.0.0.0"
+	cli        = false
 	webroot    = "."
 	ssl        = false
 	selfsigned = false
@@ -52,6 +53,7 @@ Web server options:
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -si, --silent       Running without dir listing             (default: false)
+  -c, --cli           Enable cli                              (default: false)
 
 TLS options:
   -s,  --ssl          Use TLS
@@ -115,6 +117,8 @@ func init() {
 	flag.BoolVar(&silent, "silent", silent, "silent")
 	flag.StringVar(&dropuser, "u", dropuser, "user")
 	flag.StringVar(&dropuser, "user", dropuser, "user")
+	flag.BoolVar(&cli, "c", cli, "cli")
+	flag.BoolVar(&cli, "cli", cli, "cli")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -198,6 +202,7 @@ func main() {
 	server := &httpserver.FileServer{
 		IP:         ip,
 		Port:       port,
+		CLI:        cli,
 		Webroot:    webroot,
 		SSL:        ssl,
 		SelfSigned: selfsigned,

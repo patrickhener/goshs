@@ -227,15 +227,15 @@
                     </div>
                 </div>
             </div>
-            <!-- 6: Clipboard -->
+            <!-- 6: Clipboard and CLI-->
             <div class="col">
-                <!-- Heading Row -->
+                <!-- Clipboard Heading Row -->
                 <div class="row">
                     <div class="col mb-2">
                         <h1>Clipboard</h1>
                     </div>
                 </div>
-                <!-- Input Row -->
+                <!-- Clipboard Input Row -->
                 <div class="row">
                     <div class="col mb-2">
                         <form method="GET" action="#" onsubmit="return sendEntry(event)" id="clipform">
@@ -249,7 +249,7 @@
                         </form>
                     </div>
                 </div>
-                <!-- Control Row -->
+                <!-- Clipboard Control Row -->
                 <div class="row">
                     <div class="col mb-2 text-right">
                         <div class="d-flex flex-row-reverse">
@@ -283,6 +283,34 @@
                         {{ end }}
                     </div>
                 </div>
+                {{ if .CLI }}
+                <!-- CLI Heading Row -->
+                <div class="row">
+                    <div class="col mb-2">
+                        <h1>CLI</h1>
+                    </div>
+                </div>
+                <!-- CLI Input Row -->
+                <div class="row">
+                    <div class="col mb-2">
+                        <form method="GET" action="#" onsubmit="return sendCommand(event)" id="cli">
+                            <div class="input-group cbInputGroup">
+                                <textarea id="cliCommand" rows="4" cols="80" name="cliCommand" form="cliform"
+                                    class="form-control"></textarea>
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">run</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- CLI Output Row-->
+                <div class="row">
+                    <div class="col mb-2">
+                        <pre id="cliOutput">test</pre>
+                    </div>
+                </div>
+                {{ end }}
             </div>
         </div>
 
