@@ -1,10 +1,11 @@
 .PHONY: build
 
-# uglify-js and https://github.com/wellington/wellington needed
+# uglify-js and sass needed
 generate:
-	@echo "[*] Minifying and compiling scss and js"
+	@echo "[*] Minifying js and compiling scss"
 	@uglifyjs -o httpserver/static/js/main.min.js assets/js/main.js
-	@wt compile assets/css/style.scss -s compressed -b httpserver/static/css
+	@uglifyjs -o httpserver/static/js/color-modes.min.js assets/js/color-modes.js
+	@sass --no-source-map -s compressed assets/css/style.scss httpserver/static/css/style.css
 	@echo "[OK] Done minifying and compiling things"
 
 security:
