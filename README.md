@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.3.2-green)
+![Version](https://img.shields.io/badge/Version-v0.3.3-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -9,7 +9,8 @@
 
 goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
 
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot-light"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-dark.png" alt="goshs-screenshot-dark"></kbd>
 
 # Features
 * Download or view files
@@ -27,6 +28,9 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Retrieve json on cli
 * Drop user privileges before execution (Unix only)
   * Example: Run on port 80, but process is "www-data"
+* Themes
+  * Dark Mode
+  * Light Mode
 
 # Installation
 
@@ -42,7 +46,7 @@ go install github.com/patrickhener/goshs@latest
 
 ## Build yourself
 
-Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [wt](https://github.com/wellington/wellington). After installing those 2 packages you can easily just:
+Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing this packages you can easily just:
 
 ```bash
 git clone https://github.com/patrickhener/goshs.git
@@ -55,7 +59,7 @@ make build
 ```bash
 > goshs -h
 
-goshs v0.3.1
+goshs v0.3.3
 Usage: goshs [options]
 
 Web server options:

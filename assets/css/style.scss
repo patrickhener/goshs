@@ -9,13 +9,16 @@ $fontBold: 600;
 $desktop: 1024px;
 $tablet: 768px;
 $mobile: 576px;
-$primary-color: #3d7892;
-$secondary-color: #fff6bb;
+$primary-color-light: #3d7892;
+$secondary-color-light: #fff6bb;
 $light-color: #fff;
 $dark-color: #555;
+$dark-light-color: #adb5bd;
+$dark-dark-color: #212529;
 $alt-bg-color: #f9f9f9;
 $slider-bg-color: #ccc;
 $tableHoverColor: #bbb;
+$color-mode-type: data;
 
 // -------- Mixins ------------
 @mixin mQ($size) {
@@ -71,11 +74,6 @@ p {
   align-items: center;
 }
 
-// Overwriting theme colors
-$theme-colors: (
-  'primary': $primary-color,
-);
-
 // import must come after theme overwrite
 // and before element overwrite
 // for it to work
@@ -88,8 +86,6 @@ body {
   line-height: 1.625;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: $dark-color;
-  background-color: $alt-bg-color;
   width: 100%;
   height: 100%;
   position: absolute;
@@ -109,7 +105,6 @@ h3,
 h4,
 h5,
 h6 {
-  color: $dark-color;
   font-weight: 600;
   margin: 0;
   line-height: 1.2;
@@ -134,16 +129,6 @@ h6 {
   font-size: 13px;
 }
 
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active,
-.btn-primary.active,
-.open > .dropdown-toggle.btn-primary {
-  color: $dark-color;
-  background-color: $tableHoverColor;
-  border-color: $tableHoverColor;
-}
-
 .card-body {
   pre {
     white-space: pre-wrap;
@@ -151,7 +136,40 @@ h6 {
   }
 }
 
-// -------- Custom styling --------
+// ---- Tables ----
+.table {
+  td {
+    font-size: 0.95em;
+    vertical-align: middle;
+  }
+
+  .file_ic {
+    font-size: 1.5em;
+  }
+}
+
+.table-hover {
+  tbody {
+    tr:hover,
+    tr:active,
+    tr:visited,
+    tr:focus {
+      font-weight: bold;
+    }
+
+    a:hover,
+    a:active,
+    a:visited,
+    a:focus {
+      font-weight: bold;
+    }
+
+    .file_ic {
+      font-weight: bold;
+    }
+  }
+}
+
 .disable-scrollbars {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
@@ -166,7 +184,6 @@ h6 {
   margin: 0px 0;
   margin-left: 20px;
   padding-bottom: 20px;
-  border-bottom: 5px solid $dark-color;
 
   @include mQ($tablet) {
     justify-content: center;
@@ -207,59 +224,6 @@ h6 {
   }
 }
 
-// ---- Table ----
-.table {
-  color: $primary-color;
-
-  a {
-    color: $primary-color;
-  }
-
-  td {
-    font-size: 0.95em;
-    vertical-align: middle;
-  }
-
-  .file_ic {
-    color: $primary-color;
-    font-size: 1.5em;
-  }
-
-  .thead-dark {
-    th {
-      background-color: $dark-color;
-    }
-  }
-}
-
-.table-hover {
-  tbody {
-    tr:hover {
-      color: $dark-color;
-      background-color: $tableHoverColor;
-      font-weight: bold;
-
-      a,
-      a:hover,
-      a:active,
-      a:visited {
-        color: $dark-color;
-        font-weight: bold;
-      }
-
-      .file_ic {
-        color: $dark-color;
-        font-weight: bold;
-      }
-    }
-  }
-
-  .table-primary:hover {
-    color: $dark-color;
-    background-color: $tableHoverColor;
-  }
-}
-
 // ---- Footer ----
 footer {
   text-align: center;
@@ -269,10 +233,200 @@ footer {
   margin-bottom: 0;
 }
 
-// ---- Error Code ----
-.error-code {
-  color: $primary-color;
-  background-color: $secondary-color;
-  border: solid 2px $dark-color;
-  border-radius: 8px;
+// ---- LIGHT THEME ----
+@include color-mode(light) {
+  body {
+    color: $dark-color;
+    background-color: $alt-bg-color;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: $dark-color;
+  }
+
+  #header {
+    border-bottom: 5px solid $dark-color;
+  }
+
+  .dz-message {
+    color: $dark-color;
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:active,
+  .btn-primary.active,
+  .open > .dropdown-toggle.btn-primary {
+    color: $dark-color;
+    background-color: $tableHoverColor;
+    border-color: $tableHoverColor;
+  }
+
+  .btn-primary {
+    background-color: $primary-color-light;
+    border-color: $primary-color-light;
+  }
+
+  .error-code {
+    color: $primary-color-light;
+    background-color: $secondary-color-light;
+    border: solid 2px $dark-color;
+    border-radius: 8px;
+  }
+
+  .del_button {
+    color: $primary-color-light;
+  }
+
+  footer {
+    color: $dark-color;
+  }
+
+  .table {
+    tbody {
+      td {
+        color: $primary-color-light;
+      }
+
+      a {
+        color: $primary-color-light;
+      }
+    }
+
+    .file_ic {
+      color: $primary-color-light;
+    }
+
+    .thead-dark {
+      th {
+        color: #fff;
+        background-color: $dark-color;
+      }
+    }
+  }
+
+  .table-hover {
+    tbody {
+      tr:hover,
+      tr:active,
+      tr:visited,
+      tr:focus {
+        color: $dark-color;
+        background-color: $tableHoverColor;
+      }
+
+      a:hover,
+      a:active,
+      a:visited,
+      a:focus {
+        color: $primary-color-light;
+      }
+
+      .file_ic {
+        color: $primary-color-light;
+      }
+    }
+
+    .table-primary:hover {
+      color: $dark-color;
+      background-color: $tableHoverColor;
+    }
+  }
+}
+
+// ---- DARK THEME ----
+@include color-mode(dark) {
+  #header {
+    border-bottom: 5px solid $dark-light-color;
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:active,
+  .btn-primary.active,
+  .open > .dropdown-toggle.btn-primary {
+    color: $dark-color;
+    background-color: $tableHoverColor;
+    border-color: $tableHoverColor;
+  }
+
+  .btn-primary {
+    background-color: $primary-color-light;
+    border-color: $primary-color-light;
+  }
+
+  .table {
+    tbody {
+      td {
+        color: $dark-light-color;
+      }
+
+      a {
+        color: $dark-light-color;
+      }
+    }
+
+    .file_ic {
+        color: $dark-light-color;
+    }
+
+    .thead-dark {
+      th {
+        color: $dark-light-color;
+        background-color: $dark-dark-color;
+      }
+    }
+  }
+
+  .table-hover {
+    tbody {
+      tr:hover,
+      tr:active,
+      tr:visited,
+      tr:focus {
+        color: $dark-color;
+        background-color: $tableHoverColor;
+      }
+
+      a:hover,
+      a:active,
+      a:visited,
+      a:focus {
+        color: $dark-light-color;
+      }
+
+      .file_ic {
+        color: $primary-color-light;
+      }
+
+      i {
+        color: $primary-color-light;
+      }
+    }
+
+    .table-primary:hover {
+      color: $dark-color;
+      background-color: $tableHoverColor;
+    }
+  }
+
+  .dataTables_filter {
+    color: $dark-light-color;
+  }
+
+  .del_button {
+    color: $dark-light-color;
+  }
+
+  .error-code {
+    color: $dark-light-color;
+    background-color: $dark-dark-color;
+    border: solid 2px $dark-light-color;
+    border-radius: 8px;
+  }
 }

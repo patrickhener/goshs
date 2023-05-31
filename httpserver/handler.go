@@ -142,7 +142,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		item.DisplaySize = utils.ByteCountDecimal(fi.Size())
 		item.SortSize = fi.Size()
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
-		item.SortLastModified = fi.ModTime()
+		item.SortLastModified = fi.ModTime().UTC().UnixMilli()
 		// Check and resolve symlink
 		if fi.Mode()&os.ModeSymlink != 0 {
 			item.IsSymlink = true
