@@ -301,6 +301,7 @@
             </div>
             <!-- 6: Clipboard and CLI-->
             <div class="col">
+                <div class="d-flex flex-column h-100">
                 <!-- Clipboard Heading Row -->
                 <div class="row">
                     <div class="col mb-2">
@@ -368,20 +369,17 @@
                             <div class="input-group cbInputGroup">
                                 <textarea id="cliCommand" rows="4" cols="80" name="cliCommand" form="cliform"
                                     class="form-control"></textarea>
-                                <div class="input-group-append">
                                     <button class="btn btn-primary" type="submit">run</button>
-                                </div>
                             </div>
                         </form>
                     </div>
                 </div>
                 <!-- CLI Output Row-->
-                <div class="row">
-                    <div class="col mb-2">
-                        <pre id="cliOutput">test</pre>
-                    </div>
+                <div class="row mb-3 p-2 flex-grow-1">
+                        <textarea id="cliOutput" rows="4" cols="80" name="cliOutput" class="form-control flex-grow-1" disabled></textarea>
                 </div>
                 {{ end }}
+            </div>
             </div>
         </div>
 
