@@ -22,11 +22,11 @@ func (fs *FileServer) dropPrivs() {
 		if err != nil {
 			logger.Fatalf("User not found or other error: %+v", err)
 		}
-		uid, err := strconv.Atoi(user.Gid)
+		uid, err := strconv.Atoi(user.Uid)
 		if err != nil {
 			logger.Fatalf("Error reading users UID: %+v", err)
 		}
-		gid, err := strconv.Atoi(user.Uid)
+		gid, err := strconv.Atoi(user.Gid)
 		if err != nil {
 			logger.Fatalf("Error reading users GID: %+v", err)
 		}
