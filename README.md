@@ -97,7 +97,7 @@ Usage examples:
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
-  Start with cli enabled:			    ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
+  Start with cli enabled:  ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 ```
 
 # Examples
