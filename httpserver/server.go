@@ -1,11 +1,13 @@
 package httpserver
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"time"
-	"crypto/tls"
 
 	"github.com/gorilla/mux"
 	"github.com/patrickhener/goshs/ca"
@@ -58,6 +60,7 @@ func (fs *FileServer) Start(what string) {
 		// Addr:              addr,
 		Handler:           http.AllowQuerySemicolons(mux),
 		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
+		ErrorLog:          log.New(ioutil.Discard, "", 0),
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
