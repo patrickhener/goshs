@@ -1,0 +1,8 @@
+project: goshs
+target: goshs
+cmds:
+  - cmd: /goshs/dist/linux_amd64/goshs -p 8080
+    network:
+      client: false
+      url: tcp://[::]:8080
+      timeout: 1.0
