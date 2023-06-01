@@ -121,4 +121,11 @@ function sendCommand(e) {
   };
   connection.send(JSON.stringify(msg));
   command.value == '';
+  command.focus();
 }
+
+$('#cliCommand').on('keydown', function (e) {
+  if (e.which == 13) {
+    sendCommand(e);
+  }
+});

@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.3.3-green)
+![Version](https://img.shields.io/badge/Version-v0.3.4-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -31,6 +31,8 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Themes
   * Dark Mode
   * Light Mode
+* Command Line
+  * Run Commands on the system hosting `goshs`
 
 # Installation
 
@@ -59,7 +61,7 @@ make build
 ```bash
 > goshs -h
 
-goshs v0.3.3
+goshs v0.3.4
 Usage: goshs [options]
 
 Web server options:
@@ -71,6 +73,7 @@ Web server options:
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -si, --silent       Running without dir listing             (default: false)
+  -c,  --cli          Enable cli (only with auth and tls)     (default: false)
 
 TLS options:
   -s,  --ssl          Use TLS
@@ -94,6 +97,7 @@ Usage examples:
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
+  Start with cli enabled:			    ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 ```
 
 # Examples
@@ -212,6 +216,11 @@ user@host:~$ ps aux | grep goshs
 root       35975  0.0  0.0  10828  5028 pts/0    S+   11:56   0:00 sudo ./goshs -p 80 --u user
 user       35976  0.0  0.1 1166136 8460 pts/0    Sl+  11:56   0:00 ./goshs -p 80 --u user
 ```
+
+**Run with cli mode enabled**  
+CLI mode will let you run commands on the system hosting `goshs` and return the output to you.
+
+`goshs -b secret-user:$up3r$3cur3 -s -ss -c`
 
 # Credits
 

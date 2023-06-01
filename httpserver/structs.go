@@ -7,15 +7,11 @@ import (
 	"github.com/patrickhener/goshs/ws"
 )
 
-type indexTemplate struct {
+type baseTemplate struct {
 	Clipboard    *clipboard.Clipboard
 	GoshsVersion string
 	Directory    *directory
 	CLI          bool
-}
-
-type silentTemplate struct {
-	GoshsVersion string
 }
 
 type directory struct {
@@ -67,6 +63,7 @@ type FileServer struct {
 type httperror struct {
 	ErrorCode    int
 	ErrorMessage string
+	Directory    *directory
 	AbsPath      string
 	GoshsVersion string
 	Statics      template.FuncMap

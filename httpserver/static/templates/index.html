@@ -1,447 +1,303 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html lang="en" data-bs-theme="dark">
-
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>goshs - {{.Directory.AbsPath}}</title>
-    <!-- stylesheets -->
-    <link rel="icon" type="image/gif" href="/images/favicon.gif?static" />
-    <link rel="stylesheet" href="/3rdparty/datatable/datatables.min.css?static" />
-    <link rel="stylesheet" href="/3rdparty/dropzone/basic.min.css?static" />
-    <link rel="stylesheet" href="/3rdparty/dropzone/dropzone.min.css?static" />
-    <link rel="stylesheet" href="/3rdparty/fontawesome-6.4.0/css/all.min.css?static" />
-    <link rel="stylesheet" href="/css/style.css?static" />
-</head>
-
-<body class="disable-scrollbars">
-    <!-- Symbols for theme switcher -->
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <symbol id="check2" viewBox="0 0 16 16">
-            <path
-                d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
-        </symbol>
-        <symbol id="moon-stars-fill" viewBox="0 0 16 16">
-            <path
-                d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z" />
-            <path
-                d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z" />
-        </symbol>
-        <symbol id="sun-fill" viewBox="0 0 16 16">
-            <path
-                d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
-        </symbol>
-    </svg>
-    <!-- Container -->
-    <div class="container-fluid">
-        <!-- Theme -->
-        <div class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle">
-            <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center" id="bd-theme"
-                type="button" aria-expanded="false" data-bs-toggle="dropdown" aria-label="Toggle theme (auto)">
-                <svg class="bi my-1 theme-icon-active" width="1em" height="1em">
-                    <use href="#moon-stars-fill"></use>
-                </svg>
-                <span class="visually-hidden" id="bd-theme-text">Toggle theme</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="bd-theme-text">
-                <li>
-                    <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light"
-                        aria-pressed="false">
-                        <svg class="bi me-2 opacity-50 theme-icon" width="1em" height="1em">
-                            <use href="#sun-fill"></use>
-                        </svg>
-                        Light
-                        <svg class="bi ms-auto d-none" width="1em" height="1em">
-                            <use href="#check2"></use>
-                        </svg>
-                    </button>
-                </li>
-                <li>
-                    <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark"
-                        aria-pressed="false">
-                        <svg class="bi me-2 opacity-50 theme-icon" width="1em" height="1em">
-                            <use href="#moon-stars-fill"></use>
-                        </svg>
-                        Dark
-                        <svg class="bi ms-auto d-none" width="1em" height="1em">
-                            <use href="#check2"></use>
-                        </svg>
-                    </button>
-                </li>
-            </ul>
-        </div>
-        <!-- Header -->
-        <div class="row">
-            <div class="col-md-12">
-                <header id="header" class="d-flex align_item_center">
-                    <div onclick="document.location='/'" class="logo">
-                        <img id="goshslogo" src="/images/goshs-logo-dark.png?static" alt="goshs" />
-                    </div>
-                    <div class="heading_title">
-                        <h2>Directory: {{.Directory.AbsPath}}</h2>
-                    </div>
-                </header>
-            </div>
-        </div>
-
-        <!-- Content Row -->
-        <div class="row pt-4">
-            <!-- 6: File Listing -->
-            <div class="col">
-                <!-- Heading Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <h1>Upload File</h1>
-                    </div>
+{{ template "header" . }}
+<!-- Content Row -->
+<div class="container-fluid flex-fill mt-2">
+    <div class="row h-100">
+        <!-- 6: File Listing -->
+        <div class="col-xl-6">
+            <!-- Heading Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <h1>Upload File</h1>
                 </div>
-                <!-- Upload Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <!-- Upload Form -->
-                        {{ if (eq .Directory.RelPath "/") }}
-                        <form method="post" action="/upload" enctype="multipart/form-data">
-                            {{ else }}
-                            <form method="post" action="{{.Directory.RelPath}}/upload" enctype="multipart/form-data">
+            </div>
+            <!-- Upload Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <!-- Upload Form -->
+                    {{ if (eq .Directory.RelPath "/") }}
+                    <form method="post" action="/upload" enctype="multipart/form-data">
+                        {{ else }}
+                        <form method="post" action="{{.Directory.RelPath}}/upload" enctype="multipart/form-data">
+                            {{ end }}
+
+                            <div class="input-group">
+                                <div class="dropzone form-control" id="mydropzone">
+                                    <div class="dz-message" data-dz-message><span>Drag & Drop files here or click to
+                                            select. Submit with button on the right</span></div>
+                                </div>
+                                <button type="submit" id="submit-dropzone" class="btn btn-primary">+</button>
+                            </div>
+
+                        </form>
+                </div>
+            </div>
+            <!-- Checkbox Control Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <!-- Control Checkboxes -->
+                    <input type="button" class="btn btn-primary mr-1" value="Select All" onclick=selectAll()>
+                    <input type="button" class="btn btn-primary" value="Select None" onclick=selectNone()>
+                </div>
+            </div>
+
+            <!-- Table Row -->
+            <div class="row">
+                <div class="col">
+                    <!-- Table -->
+                    <form method="GET" action="/">
+                        <table id="tableData" class="table table-striped table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th width="4%">
+                                        <!--Checkbox multiple downloads -->
+                                    </th>
+                                    <th width="4%">
+                                        <!--Type (Directory or File)-->
+                                    </th>
+                                    <th>Name</th>
+                                    <th>Size</th>
+                                    <th>Last Modified</th>
+                                    <th width="4%">
+                                        <!--Direct Download button-->
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Back with .. -->
+                                {{ if .Directory.IsSubdirectory }}
+                                <tr>
+                                    <td></td>
+                                    <td><i class="fa-solid fa-level-up-alt file_ic"></i></td>
+                                    <td><a href="{{.Directory.Back}}">../</a></td>
+                                    <td data-order="0">--</td>
+                                    <td data-order="0">--</td>
+                                    <td></td>
+                                </tr>
                                 {{ end }}
-
-                                <div class="input-group">
-                                    <div class="dropzone form-control" id="mydropzone">
-                                        <div class="dz-message" data-dz-message><span>Drag & Drop files here or click to
-                                                select. Submit with button on the right</span></div>
-                                    </div>
-                                    <button type="submit" id="submit-dropzone" class="btn btn-primary">+</button>
-                                </div>
-
-                            </form>
-                    </div>
-                </div>
-                <!-- Checkbox Control Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <!-- Control Checkboxes -->
-                        <input type="button" class="btn btn-primary mr-1" value="Select All" onclick=selectAll()>
-                        <input type="button" class="btn btn-primary" value="Select None" onclick=selectNone()>
-                    </div>
-                </div>
-
-                <!-- Table Row -->
-                <div class="row">
-                    <div class="col">
-                        <!-- Table -->
-                        <form method="GET" action="/">
-                            <table id="tableData" class="table table-striped table-hover">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th width="4%">
-                                            <!--Checkbox multiple downloads -->
-                                        </th>
-                                        <th width="4%">
-                                            <!--Type (Directory or File)-->
-                                        </th>
-                                        <th>Name</th>
-                                        <th>Size</th>
-                                        <th>Last Modified</th>
-                                        <th width="4%">
-                                            <!--Direct Download button-->
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Back with .. -->
-                                    {{ if .Directory.IsSubdirectory }}
-                                    <tr>
-                                        <td></td>
-                                        <td><i class="fa-solid fa-level-up-alt file_ic"></i></td>
-                                        <td><a href="{{.Directory.Back}}">../</a></td>
-                                        <td data-order="0">--</td>
-                                        <td data-order="0">--</td>
-                                        <td></td>
-                                    </tr>
-                                    {{ end }}
-                                    {{range .Directory.Content}}
-                                    <tr>
-                                        <td>
-                                            <div class="chkbx">
-                                                <input type="checkbox" class="checkbox downloadBulkCheckbox" name="file"
-                                                    value="{{.URI}}" />
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <!-- Icon -->
-                                            {{ if .IsDir }}
-                                            <i class="fa-solid fa-folder file_ic"></i>
-                                            <!-- Directory icon -->
-                                            {{ else }}
-                                            {{ if .IsSymlink }}
-                                            <i class="fa-solid fa-file file_ic"></i>
-                                            <!-- File icon -->
-
-                                            {{ else if or (eq .Ext ".gz") (eq .Ext ".zip") (eq .Ext ".tar") (eq .Ext
-                                            ".rar") (eq .Ext ".7z") }}
-                                            <i class="fa-solid fa-file-archive file_ic"></i>
-                                            <!-- Archive icon -->
-
-                                            {{ else if (eq .Ext ".pdf") }}
-                                            <i class="fa-solid fa-file-pdf file_ic"></i>
-                                            <!-- PDF icon -->
-
-                                            {{ else if or (eq .Ext ".pptx") (eq .Ext ".ppt") (eq .Ext ".pps") (eq .Ext
-                                            ".odp") }}
-                                            <i class="fa-solid fa-file-powerpoint file_ic"></i>
-                                            <!-- Powerpoint icon -->
-
-                                            {{ else if or (eq .Ext ".docx") (eq .Ext ".doc") (eq .Ext ".odt") }}
-                                            <i class="fa-solid fa-file-word file_ic"></i>
-                                            <!-- Word icon -->
-
-                                            {{ else if or (eq .Ext ".xlsx") (eq .Ext ".xls") (eq .Ext ".ods") }}
-                                            <i class="fa-solid fa-file-excel file_ic"></i>
-                                            <!-- Excel icon -->
-
-                                            {{ else if (eq .Ext ".csv") }}
-                                            <i class="fa-solid fa-file-csv file_ic"></i>
-                                            <!-- CSV icon -->
-
-                                            {{ else if (eq .Ext ".exe") }}
-                                            <i class="fab fa-windows file_ic"></i>
-                                            <!-- Windows icon -->
-
-                                            {{ else if or (eq .Ext ".txt") (eq .Ext ".rtf") (eq .Ext ".md") (eq .Ext
-                                            ".conf") (eq .Ext ".html") (eq .Ext ".htm") (eq .Ext ".log") (eq .Ext
-                                            ".ini") (eq .Ext ".cfg") (eq .Ext ".yml") (eq .Ext ".toml") (eq .Ext
-                                            ".json") (eq .Ext ".asc") (eq .Ext ".xml") }}
-                                            <i class="fa-solid fa-file-alt file_ic"></i>
-                                            <!-- Text icon -->
-
-                                            {{ else if or (eq .Ext ".flac") (eq .Ext ".wav") (eq .Ext ".mp3") }}
-                                            <i class="fa-solid fa-file-audio file_ic"></i>
-                                            <!-- Audio icon -->
-
-                                            {{ else if or (eq .Ext ".mpeg") (eq .Ext ".mpg") (eq .Ext ".mp4") (eq .Ext
-                                            ".wmv") (eq .Ext ".avi") (eq .Ext ".flv") (eq .Ext ".mkv") (eq .Ext ".mov")
-                                            (eq .Ext ".webm") (eq .Ext ".vob") (eq .Ext ".ogg") (eq .Ext ".m4v") (eq
-                                            .Ext ".h264") }}
-                                            <i class="fa-solid fa-file-video file_ic"></i>
-                                            <!-- Video icon -->
-
-                                            {{ else if or (eq .Ext ".bmp") (eq .Ext ".tiff") (eq .Ext ".tif") (eq .Ext
-                                            ".ai") (eq .Ext ".cdr") (eq .Ext ".xcf") (eq .Ext ".raw") (eq .Ext ".gif")
-                                            (eq .Ext ".png") (eq .Ext ".jpg") (eq .Ext ".jpeg") (eq .Ext ".psd") (eq
-                                            .Ext ".svg") ( eq .Ext ".ico") }}
-                                            <i class="fa-solid fa-file-image file_ic"></i>
-                                            <!-- Picture icon -->
-
-                                            {{ else if or (eq .Ext ".php") (eq .Ext ".py") (eq .Ext ".go") (eq .Ext
-                                            ".cs") (eq .Ext ".c") (eq .Ext ".pl") (eq .Ext ".rb") (eq .Ext ".cgi") (eq
-                                            .Ext ".cpp") (eq .Ext ".java") (eq .Ext ".tex") (eq .Ext ".bat") (eq .Ext
-                                            ".ps1") }}
-                                            <i class="fa-solid fa-file-code file_ic"></i>
-                                            <!-- Code icon -->
-
-                                            {{ else if or (eq .Ext ".iso") (eq .Ext ".dmg") (eq .Ext ".bin") (eq .Ext
-                                            ".vcd") (eq .Ext ".vhd") (eq .Ext ".vhdx") (eq .Ext ".vmdk") (eq .Ext
-                                            ".qcow2") (eq .Ext ".img") }}
-                                            <i class="fa-solid fa-compact-disc file_ic"></i>
-                                            <!-- ISO icon -->
-
-                                            {{ else if or (eq .Ext ".mdb") (eq .Ext ".db") (eq .Ext ".dbf") (eq .Ext
-                                            ".dat") (eq .Ext ".sql") }}
-                                            <i class="fa-solid fa-database file_ic"></i>
-                                            <!-- Database icon -->
-
-                                            {{ else }}
-                                            <i class="fa-solid fa-file file_ic"></i>
-                                            <!--File icon -->
-
-                                            {{ end }}
-                                            {{ end }}
-                                        </td>
-                                        <td>
-                                            <!-- Name -->
-                                            {{ if .IsSymlink }}
-                                            <a href="/{{.URI}}">{{.Name}} --> {{.SymlinkTarget}}</a>
-                                            {{ else }}
-                                            <a href="/{{.URI}}">{{.Name}}</a>
-                                            {{ end }}
-                                        </td>
-
-                                        <!-- File size -->
+                                {{range .Directory.Content}}
+                                <tr>
+                                    <td>
+                                        <div class="chkbx">
+                                            <input type="checkbox" class="checkbox downloadBulkCheckbox" name="file"
+                                                value="{{.URI}}" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <!-- Icon -->
                                         {{ if .IsDir }}
-                                        <td data-order="0">
-                                            --
-                                        </td>
+                                        <i class="fa-solid fa-folder file_ic"></i>
+                                        <!-- Directory icon -->
                                         {{ else }}
-                                        <td data-order="{{.SortSize}}">
-                                            {{.DisplaySize}}
-                                        </td>
+                                        {{ if .IsSymlink }}
+                                        <i class="fa-solid fa-file file_ic"></i>
+                                        <!-- File icon -->
+
+                                        {{ else if or (eq .Ext ".gz") (eq .Ext ".zip") (eq .Ext ".tar") (eq .Ext
+                                        ".rar") (eq .Ext ".7z") }}
+                                        <i class="fa-solid fa-file-archive file_ic"></i>
+                                        <!-- Archive icon -->
+
+                                        {{ else if (eq .Ext ".pdf") }}
+                                        <i class="fa-solid fa-file-pdf file_ic"></i>
+                                        <!-- PDF icon -->
+
+                                        {{ else if or (eq .Ext ".pptx") (eq .Ext ".ppt") (eq .Ext ".pps") (eq .Ext
+                                        ".odp") }}
+                                        <i class="fa-solid fa-file-powerpoint file_ic"></i>
+                                        <!-- Powerpoint icon -->
+
+                                        {{ else if or (eq .Ext ".docx") (eq .Ext ".doc") (eq .Ext ".odt") }}
+                                        <i class="fa-solid fa-file-word file_ic"></i>
+                                        <!-- Word icon -->
+
+                                        {{ else if or (eq .Ext ".xlsx") (eq .Ext ".xls") (eq .Ext ".ods") }}
+                                        <i class="fa-solid fa-file-excel file_ic"></i>
+                                        <!-- Excel icon -->
+
+                                        {{ else if (eq .Ext ".csv") }}
+                                        <i class="fa-solid fa-file-csv file_ic"></i>
+                                        <!-- CSV icon -->
+
+                                        {{ else if (eq .Ext ".exe") }}
+                                        <i class="fab fa-windows file_ic"></i>
+                                        <!-- Windows icon -->
+
+                                        {{ else if or (eq .Ext ".txt") (eq .Ext ".rtf") (eq .Ext ".md") (eq .Ext
+                                        ".conf") (eq .Ext ".html") (eq .Ext ".htm") (eq .Ext ".log") (eq .Ext
+                                        ".ini") (eq .Ext ".cfg") (eq .Ext ".yml") (eq .Ext ".toml") (eq .Ext
+                                        ".json") (eq .Ext ".asc") (eq .Ext ".xml") }}
+                                        <i class="fa-solid fa-file-alt file_ic"></i>
+                                        <!-- Text icon -->
+
+                                        {{ else if or (eq .Ext ".flac") (eq .Ext ".wav") (eq .Ext ".mp3") }}
+                                        <i class="fa-solid fa-file-audio file_ic"></i>
+                                        <!-- Audio icon -->
+
+                                        {{ else if or (eq .Ext ".mpeg") (eq .Ext ".mpg") (eq .Ext ".mp4") (eq .Ext
+                                        ".wmv") (eq .Ext ".avi") (eq .Ext ".flv") (eq .Ext ".mkv") (eq .Ext ".mov")
+                                        (eq .Ext ".webm") (eq .Ext ".vob") (eq .Ext ".ogg") (eq .Ext ".m4v") (eq
+                                        .Ext ".h264") }}
+                                        <i class="fa-solid fa-file-video file_ic"></i>
+                                        <!-- Video icon -->
+
+                                        {{ else if or (eq .Ext ".bmp") (eq .Ext ".tiff") (eq .Ext ".tif") (eq .Ext
+                                        ".ai") (eq .Ext ".cdr") (eq .Ext ".xcf") (eq .Ext ".raw") (eq .Ext ".gif")
+                                        (eq .Ext ".png") (eq .Ext ".jpg") (eq .Ext ".jpeg") (eq .Ext ".psd") (eq
+                                        .Ext ".svg") ( eq .Ext ".ico") }}
+                                        <i class="fa-solid fa-file-image file_ic"></i>
+                                        <!-- Picture icon -->
+
+                                        {{ else if or (eq .Ext ".php") (eq .Ext ".py") (eq .Ext ".go") (eq .Ext
+                                        ".cs") (eq .Ext ".c") (eq .Ext ".pl") (eq .Ext ".rb") (eq .Ext ".cgi") (eq
+                                        .Ext ".cpp") (eq .Ext ".java") (eq .Ext ".tex") (eq .Ext ".bat") (eq .Ext
+                                        ".ps1") }}
+                                        <i class="fa-solid fa-file-code file_ic"></i>
+                                        <!-- Code icon -->
+
+                                        {{ else if or (eq .Ext ".iso") (eq .Ext ".dmg") (eq .Ext ".bin") (eq .Ext
+                                        ".vcd") (eq .Ext ".vhd") (eq .Ext ".vhdx") (eq .Ext ".vmdk") (eq .Ext
+                                        ".qcow2") (eq .Ext ".img") }}
+                                        <i class="fa-solid fa-compact-disc file_ic"></i>
+                                        <!-- ISO icon -->
+
+                                        {{ else if or (eq .Ext ".mdb") (eq .Ext ".db") (eq .Ext ".dbf") (eq .Ext
+                                        ".dat") (eq .Ext ".sql") }}
+                                        <i class="fa-solid fa-database file_ic"></i>
+                                        <!-- Database icon -->
+
+                                        {{ else }}
+                                        <i class="fa-solid fa-file file_ic"></i>
+                                        <!--File icon -->
+
                                         {{ end }}
-                                        <td data-order="{{.SortLastModified}}">
-                                            <!-- File last modified -->
-                                            {{ .DisplayLastModified }}
-                                        </td>
-                                        <td>
-                                            {{ if .IsDir }}
-                                            <!--No download button-->
-                                            {{ else }}
-                                            <a href="/{{.URI}}?download"><i class="fa-solid fa-download fa-1x"></i></a>
-                                            {{ end }}
-                                        </td>
-                                    </tr>
+                                        {{ end }}
+                                    </td>
+                                    <td>
+                                        <!-- Name -->
+                                        {{ if .IsSymlink }}
+                                        <a href="/{{.URI}}">{{.Name}} --> {{.SymlinkTarget}}</a>
+                                        {{ else }}
+                                        <a href="/{{.URI}}">{{.Name}}</a>
+                                        {{ end }}
+                                    </td>
+
+                                    <!-- File size -->
+                                    {{ if .IsDir }}
+                                    <td data-order="0">
+                                        --
+                                    </td>
+                                    {{ else }}
+                                    <td data-order="{{.SortSize}}">
+                                        {{.DisplaySize}}
+                                    </td>
                                     {{ end }}
-                                </tbody>
-                            </table>
-                            <input type="hidden" name="bulk" value="true" />
-                            <input type="submit" class="btn btn-primary" id="downloadBulkButton"
-                                value="Download Selected" style="display:none">
-                        </form>
-                    </div>
+                                    <td data-order="{{.SortLastModified}}">
+                                        <!-- File last modified -->
+                                        {{ .DisplayLastModified }}
+                                    </td>
+                                    <td>
+                                        {{ if .IsDir }}
+                                        <!--No download button-->
+                                        {{ else }}
+                                        <a href="/{{.URI}}?download"><i class="fa-solid fa-download fa-1x"></i></a>
+                                        {{ end }}
+                                    </td>
+                                </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                        <input type="hidden" name="bulk" value="true" />
+                        <input type="submit" class="btn btn-primary" id="downloadBulkButton" value="Download Selected"
+                            style="display:none">
+                    </form>
                 </div>
-            </div>
-            <!-- 6: Clipboard and CLI-->
-            <div class="col">
-                <div class="d-flex flex-column h-100">
-                <!-- Clipboard Heading Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <h1>Clipboard</h1>
-                    </div>
-                </div>
-                <!-- Clipboard Input Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <form method="GET" action="#" onsubmit="return sendEntry(event)" id="clipform">
-                            <div class="input-group cbInputGroup">
-                                <textarea id="cbEntry" rows="4" cols="80" name="cbEntry" form="clipform"
-                                    class="form-control"></textarea>
-                                <button class="btn btn-primary" type="submit">+</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <!-- Clipboard Control Row -->
-                <div class="row">
-                    <div class="col mb-2 text-right">
-                        <div class="d-flex flex-row-reverse">
-                            <form action="#" onsubmit="return clearClipboard(event)">
-                                <button type="submit" class="btn btn-danger">Clear Clipboard</button>
-                            </form>
-                            <a href="/?cbDown" class="btn btn-primary"><i class="fa-solid fa-download"></i> Export</a>
-                        </div>
-                    </div>
-                </div>
-                <!-- Clipboard Cards Row -->
-                <div class="row">
-                    <div class="col">
-                        {{ range .Clipboard.Entries }}
-                        <div class="card clipboardCard mt-2" id="card-{{.ID}}">
-                            <div class="card-header d-flex flex-row">
-                                <div class="col-md-10">
-                                    <h5 class="card-title">{{.Time}}</h5>
-                                </div>
-                                <div class="col-md-1">
-                                    <sup><a href="#" onclick="return delClipboard('{{.ID}}')"><i
-                                                class="fa-solid fa-trash del_button"></i></a></sup>
-                                </div>
-                                <div class="col-md-1">
-                                    <h5>{{.ID}}</h5>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <pre>{{.Content}}</pre>
-                            </div>
-                        </div>
-                        {{ end }}
-                    </div>
-                </div>
-                {{ if .CLI }}
-                <!-- CLI Heading Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <h1>CLI</h1>
-                    </div>
-                </div>
-                <!-- CLI Input Row -->
-                <div class="row">
-                    <div class="col mb-2">
-                        <form method="GET" action="#" onsubmit="return sendCommand(event)" id="cli">
-                            <div class="input-group cbInputGroup">
-                                <textarea id="cliCommand" rows="4" cols="80" name="cliCommand" form="cliform"
-                                    class="form-control"></textarea>
-                                    <button class="btn btn-primary" type="submit">run</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <!-- CLI Output Row-->
-                <div class="row mb-3 p-2 flex-grow-1">
-                        <textarea id="cliOutput" rows="4" cols="80" name="cliOutput" class="form-control flex-grow-1" disabled></textarea>
-                </div>
-                {{ end }}
-            </div>
             </div>
         </div>
-
-        <!-- Footer Row -->
-        <div class="row">
-            <div class="col-md-12 d-flex justify-content-center">
-                <footer>
-                    <p>
-                        goshs {{ .GoshsVersion }}
-                    </p>
-                </footer>
+        <!-- 6: Clipboard and CLI-->
+        <div class="col-xl-6 h-100">
+            <!-- Clipboard Heading Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <h1>Clipboard</h1>
+                </div>
             </div>
+            <!-- Clipboard Input Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <form method="GET" action="#" onsubmit="return sendEntry(event)" id="clipform">
+                        <div class="input-group cbInputGroup">
+                            <textarea id="cbEntry" rows="4" cols="80" name="cbEntry" form="clipform"
+                                class="form-control"></textarea>
+                            <button class="btn btn-primary" type="submit">+</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- Clipboard Control Row -->
+            <div class="row">
+                <div class="col mb-2 text-right">
+                    <div class="d-flex flex-row-reverse">
+                        <form action="#" onsubmit="return clearClipboard(event)">
+                            <button type="submit" class="btn btn-danger">Clear Clipboard</button>
+                        </form>
+                        <a href="/?cbDown" class="btn btn-primary"><i class="fa-solid fa-download"></i> Export</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Clipboard Cards Row -->
+            <div class="row">
+                <div class="col">
+                    {{ range .Clipboard.Entries }}
+                    <div class="card clipboardCard mt-2" id="card-{{.ID}}">
+                        <div class="card-header d-flex flex-row">
+                            <div class="col-md-10">
+                                <h5 class="card-title">{{.Time}}</h5>
+                            </div>
+                            <div class="col-md-1">
+                                <sup><a href="#" onclick="return delClipboard('{{.ID}}')"><i
+                                            class="fa-solid fa-trash del_button"></i></a></sup>
+                            </div>
+                            <div class="col-md-1">
+                                <h5>{{.ID}}</h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <pre>{{.Content}}</pre>
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+            {{ if .CLI }}
+            <!-- CLI Heading Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <h1>CLI</h1>
+                </div>
+            </div>
+            <!-- CLI Input Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <form method="GET" action="#" onsubmit="return sendCommand(event)" id="cli">
+                        <div class="input-group cbInputGroup">
+                            <textarea id="cliCommand" rows="2" cols="80" name="cliCommand" form="cliform"
+                                class="form-control disable-scrollbars" autofocus></textarea>
+                            <button class="btn btn-primary" type="submit">run</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- CLI Output Row-->
+            <div class="row h-50">
+                <div class="col mb-2">
+                    <textarea id="cliOutput" name="cliOutput" class="form-control h-100 disable-scrollbars"
+                        disabled></textarea>
+                </div>
+            </div>
+            {{ end }}
         </div>
     </div>
+</div>
 
-    <!-- Scripts -->
-    <script src="/js/bootstrap.bundle.min.js?static"></script>
-    <script src="/js/color-modes.min.js?static"></script>
-    <script src="/js/jquery-3.7.0.min.js?static"></script>
-    <script src="/3rdparty/datatable/datatables.min.js?static"></script>
-    <script src="/3rdparty/dropzone/dropzone.min.js?static"></script>
-    <script src="/js/main.min.js?static"></script>
-
-    <!-- Dropzone related config -->
-    <script>
-        Dropzone.autoDiscover = false;
-    </script>
-    {{ if (eq .Directory.RelPath "/") }}
-    <script>
-        let url = "/upload"
-    </script>
-    {{ else }}
-    <script>
-        let url = "{{.Directory.RelPath}}/upload"
-    </script>
-    {{ end }}
-
-    <script>
-        let myDropzone = new Dropzone("div#mydropzone", {
-            autoProcessQueue: false,
-            paramName: "files",
-            method: "post",
-            url: url,
-            uploadMultiple: true,
-            parallelUploads: 100,
-            maxFiles: 100,
-            maxFilesize: 10240,
-
-            init: function () {
-                document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    myDropzone.processQueue();
-                })
-
-            }
-        });
-
-        myDropzone.on("successmultiple", function () {
-            location.reload();
-        });
-    </script>
-</body>
-
-</html>
+{{ template "scripts_index" . }}
+{{ template "footer" . }}

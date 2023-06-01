@@ -1,0 +1,163 @@
+// general_theme.scss
+
+body {
+  font-family: 'Fira Code VF', monospace, sans-serif !important;
+  font-weight: 300;
+  line-height: 1.625;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: -1;
+  min-height: 100vh;
+}
+
+a,
+a:hover,
+a:active,
+a:visited {
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 36px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 15px;
+}
+h6 {
+  font-size: 13px;
+}
+
+.card-body {
+  pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+}
+
+.container {
+  flex: 1 0 auto;
+}
+
+// ---- Tables ----
+.table {
+  td {
+    font-size: 0.95em;
+    vertical-align: middle;
+  }
+
+  .file_ic {
+    font-size: 1.5em;
+  }
+}
+
+.table-hover {
+  tbody {
+    tr:hover,
+    tr:active,
+    tr:visited,
+    tr:focus {
+      font-weight: bold;
+    }
+
+    a:hover,
+    a:active,
+    a:visited,
+    a:focus {
+      font-weight: bold;
+    }
+
+    .file_ic {
+      font-weight: bold;
+    }
+  }
+}
+
+.disable-scrollbars {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  &::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* Chrome/Safari/Webkit */
+  }
+}
+
+// ---- header ----
+#header {
+  margin: 0px 0;
+  margin-left: 20px;
+  padding-bottom: 20px;
+
+  @include mQ($tablet) {
+    justify-content: center;
+  }
+
+  @include mQ($mobile) {
+    margin-left: 10px;
+    flex-direction: column;
+  }
+
+  // ---- logo -----
+  .logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    img {
+      width: 65px;
+    }
+  }
+
+  // ---- heading ----
+  .heading_title {
+    margin-left: 20px;
+
+    @include mQ($mobile) {
+      margin-left: 0px;
+      margin-top: 20px;
+    }
+
+    h2 {
+      font-size: 22px;
+
+      @include mQ($mobile) {
+        text-align: center;
+      }
+    }
+  }
+}
+
+// ---- Footer ----
+footer {
+  text-align: center;
+  font-size: 0.8em;
+  font-weight: bold;
+  margin: 30px 0;
+  margin-bottom: 0;
+}
+
+.flex-fill {
+  flex: 1 1 auto;
+}
