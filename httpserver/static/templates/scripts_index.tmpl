@@ -1,0 +1,48 @@
+// scripts_index.tmpl
+{{ define "scripts_index" }}
+
+<script src="/js/jquery-3.7.0.min.js?static"></script>
+<script src="/3rdparty/datatable/datatables.min.js?static"></script>
+<script src="/3rdparty/dropzone/dropzone.min.js?static"></script>
+<script src="/js/main.min.js?static"></script>
+
+<!-- Dropzone related config -->
+<script>
+    Dropzone.autoDiscover = false;
+</script>
+{{ if (eq .Directory.RelPath "/") }}
+<script>
+    let url = "/upload"
+</script>
+{{ else }}
+<script>
+    let url = "{{.Directory.RelPath}}/upload"
+</script>
+{{ end }}
+
+<script>
+    let myDropzone = new Dropzone("div#mydropzone", {
+        autoProcessQueue: false,
+        paramName: "files",
+        method: "post",
+        url: url,
+        uploadMultiple: true,
+        parallelUploads: 100,
+        maxFiles: 100,
+        maxFilesize: 10240,
+
+        init: function () {
+            document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                myDropzone.processQueue();
+            })
+
+        }
+    });
+
+    myDropzone.on("successmultiple", function () {
+        location.reload();
+    });
+</script>
+{{ end }}

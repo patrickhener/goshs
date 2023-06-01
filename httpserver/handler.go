@@ -175,31 +175,23 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	}
 
 	if fs.Silent {
-		silentFile, err := static.ReadFile("static/templates/silent.html")
-		if err != nil {
-			logger.Errorf("opening embedded file: %+v", err)
-		}
-
-		tem := &silentTemplate{
+		tem := &baseTemplate{
 			GoshsVersion: fs.Version,
+			Directory:    &directory{AbsPath: "silent mode"},
 		}
 
-		t := template.New("silent")
+		files := []string{"static/templates/silent.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
 
-		if _, err := t.Parse(string(silentFile)); err != nil {
-			logger.Errorf("Error parsing template: %+v", err)
+		t, err := template.ParseFS(static, files...)
+		if err != nil {
+			logger.Errorf("Error parsing templates: %+v", err)
 		}
+
 		if err := t.Execute(w, tem); err != nil {
 			logger.Errorf("Error executing template: %+v", err)
 		}
 
 	} else {
-		// Template parsing and writing to browser
-		indexFile, err := static.ReadFile("static/templates/index.html")
-		if err != nil {
-			logger.Errorf("opening embedded file: %+v", err)
-		}
-
 		// Windows upload compatibility
 		if relpath == "\\" {
 			relpath = "/"
@@ -235,16 +227,20 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		}
 
 		// Construct template
-		tem := &indexTemplate{
+		tem := &baseTemplate{
 			Directory:    d,
 			GoshsVersion: fs.Version,
 			Clipboard:    fs.Clipboard,
+			CLI:          fs.CLI,
 		}
 
-		t := template.New("index")
-		if _, err := t.Parse(string(indexFile)); err != nil {
-			logger.Errorf("Error parsing template: %+v", err)
+		files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
+
+		t, err := template.ParseFS(static, files...)
+		if err != nil {
+			logger.Errorf("Error parsing templates: %+v", err)
 		}
+
 		if err := t.Execute(w, tem); err != nil {
 			logger.Errorf("Error executing template: %+v", err)
 		}

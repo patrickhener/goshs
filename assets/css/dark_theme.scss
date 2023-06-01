@@ -1,0 +1,102 @@
+// dark_theme.scss
+
+// ---- DARK THEME ----
+@include color-mode(dark) {
+  #header {
+    border-bottom: 5px solid $dark-light-color;
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:active,
+  .btn-primary.active,
+  .open > .dropdown-toggle.btn-primary {
+    color: $dark-color;
+    background-color: $tableHoverColor;
+    border-color: $tableHoverColor;
+  }
+
+  .btn-primary {
+    background-color: $primary-color-light;
+    border-color: $primary-color-light;
+  }
+
+  .table {
+    tbody {
+      td {
+        color: $dark-light-color;
+      }
+
+      a {
+        color: $dark-light-color;
+      }
+    }
+
+    .file_ic {
+      color: $dark-light-color;
+    }
+
+    .thead-dark {
+      th {
+        color: $dark-light-color;
+        background-color: $dark-dark-color;
+      }
+    }
+  }
+
+  .table-hover {
+    tbody {
+      tr:hover,
+      tr:active,
+      tr:visited,
+      tr:focus {
+        color: $dark-color;
+        background-color: $tableHoverColor;
+      }
+
+      a:hover,
+      a:active,
+      a:visited,
+      a:focus {
+        color: $dark-light-color;
+      }
+
+      .file_ic {
+        color: $primary-color-light;
+      }
+
+      i {
+        color: $primary-color-light;
+      }
+    }
+
+    .table-primary:hover {
+      color: $dark-color;
+      background-color: $tableHoverColor;
+    }
+  }
+
+  .dataTables_filter {
+    color: $dark-light-color;
+  }
+
+  .del_button {
+    color: $dark-light-color;
+  }
+
+  .error-code {
+    color: $dark-light-color;
+    background-color: $dark-dark-color;
+    border: solid 2px $dark-light-color;
+    border-radius: 8px;
+  }
+
+  textarea:focus {
+    border-color: $primary-color-light;
+    box-shadow: 0 0 0 0.25rem rgba($color: #3d7892, $alpha: 0.25);
+  }
+
+  textarea:disabled {
+    background-color: $dark-dark-color;
+  }
+}

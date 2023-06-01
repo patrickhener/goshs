@@ -1,0 +1,24 @@
+// vars.scss
+
+$fontLight: 300;
+$fontBold: 600;
+$desktop: 1024px;
+$tablet: 768px;
+$mobile: 576px;
+$primary-color-light: #3d7892;
+$secondary-color-light: #fff6bb;
+$light-color: #fff;
+$dark-color: #555;
+$dark-light-color: #adb5bd;
+$dark-dark-color: #212529;
+$alt-bg-color: #f9f9f9;
+$slider-bg-color: #ccc;
+$tableHoverColor: #bbb;
+$color-mode-type: data;
+
+// -------- Mixins ------------
+@mixin mQ($size) {
+  @media (max-width: $size) {
+    @content;
+  }
+}

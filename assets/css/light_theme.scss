@@ -1,0 +1,117 @@
+// light_theme.scss
+
+// ---- LIGHT THEME ----
+@include color-mode(light) {
+  body {
+    color: $dark-color;
+    background-color: $alt-bg-color;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: $dark-color;
+  }
+
+  #header {
+    border-bottom: 5px solid $dark-color;
+  }
+
+  .dz-message {
+    color: $dark-color;
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:active,
+  .btn-primary.active,
+  .open > .dropdown-toggle.btn-primary {
+    color: $dark-color;
+    background-color: $tableHoverColor;
+    border-color: $tableHoverColor;
+  }
+
+  .btn-primary {
+    background-color: $primary-color-light;
+    border-color: $primary-color-light;
+  }
+
+  .error-code {
+    color: $primary-color-light;
+    background-color: $secondary-color-light;
+    border: solid 2px $dark-color;
+    border-radius: 8px;
+  }
+
+  .del_button {
+    color: $primary-color-light;
+  }
+
+  footer {
+    color: $dark-color;
+  }
+
+  .table {
+    tbody {
+      td {
+        color: $primary-color-light;
+      }
+
+      a {
+        color: $primary-color-light;
+      }
+    }
+
+    .file_ic {
+      color: $primary-color-light;
+    }
+
+    .thead-dark {
+      th {
+        color: #fff;
+        background-color: $dark-color;
+      }
+    }
+  }
+
+  .table-hover {
+    tbody {
+      tr:hover,
+      tr:active,
+      tr:visited,
+      tr:focus {
+        color: $dark-color;
+        background-color: $tableHoverColor;
+      }
+
+      a:hover,
+      a:active,
+      a:visited,
+      a:focus {
+        color: $primary-color-light;
+      }
+
+      .file_ic {
+        color: $primary-color-light;
+      }
+    }
+
+    .table-primary:hover {
+      color: $dark-color;
+      background-color: $tableHoverColor;
+    }
+  }
+
+  textarea:focus {
+    border-color: $primary-color-light;
+    box-shadow: 0 0 0 0.25rem rgba($color: #3d7892, $alpha: 0.25);
+  }
+
+  textarea:disabled {
+    background-color: white;
+    color: $dark-color;
+  }
+}

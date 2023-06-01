@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/patrickhener/goshs/cli"
 	"github.com/patrickhener/goshs/logger"
 )
 
@@ -121,6 +122,19 @@ func (c *Client) readPump() {
 			}
 			c.refreshClipboard()
 
+		case "command":
+			var command string
+			if err := json.Unmarshal(packet.Content, &command); err != nil {
+				logger.Errorf("Error reading json packet: %+v", err)
+			}
+			logger.Debugf("Command was: %+v", command)
+			output, err := cli.RunCMD(command)
+			if err != nil {
+				logger.Errorf("Error running command: %+v", err)
+			}
+			logger.Debugf("Output: %+v", output)
+			c.updateCLI(output)
+
 		default:
 			logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
 		}
@@ -205,6 +219,19 @@ func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 func (c *Client) refreshClipboard() {
 	sendPkg := &SendPacket{
 		Type: "refreshClipboard",
+	}
+	broadcastMessage, err := json.Marshal(sendPkg)
+	if err != nil {
+		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
+	}
+
+	c.hub.broadcast <- broadcastMessage
+}
+
+func (c *Client) updateCLI(output string) {
+	sendPkg := &SendPacket{
+		Type:    "updateCLI",
+		Content: output,
 	}
 	broadcastMessage, err := json.Marshal(sendPkg)
 	if err != nil {

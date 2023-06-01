@@ -16,11 +16,12 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.3.3"
+const goshsVersion = "v0.3.4"
 
 var (
 	port       = 8000
 	ip         = "0.0.0.0"
+	cli        = false
 	webroot    = "."
 	ssl        = false
 	selfsigned = false
@@ -52,6 +53,7 @@ Web server options:
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -si, --silent       Running without dir listing             (default: false)
+  -c,  --cli          Enable cli (only with auth and tls)     (default: false)
 
 TLS options:
   -s,  --ssl          Use TLS
@@ -75,6 +77,7 @@ Usage examples:
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
+  Start with cli enabled:               ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 
 `, goshsVersion, os.Args[0])
 	}
@@ -115,6 +118,8 @@ func init() {
 	flag.BoolVar(&silent, "silent", silent, "silent")
 	flag.StringVar(&dropuser, "u", dropuser, "user")
 	flag.StringVar(&dropuser, "user", dropuser, "user")
+	flag.BoolVar(&cli, "c", cli, "cli")
+	flag.BoolVar(&cli, "cli", cli, "cli")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -146,7 +151,11 @@ func init() {
 	// Sanity check for upload only vs read only
 	if uploadOnly && readOnly {
 		logger.Fatal("You can only select either 'upload only' or 'read only', not both.")
-		os.Exit(-1)
+	}
+
+	// Sanity check if cli mode is combined with auth and tls
+	if cli && (!ssl || basicAuth == "") {
+		logger.Fatal("With cli mode you need to enable basic auth and tls for security reasons.")
 	}
 
 	if webdav {
@@ -198,6 +207,7 @@ func main() {
 	server := &httpserver.FileServer{
 		IP:         ip,
 		Port:       port,
+		CLI:        cli,
 		Webroot:    webroot,
 		SSL:        ssl,
 		SelfSigned: selfsigned,

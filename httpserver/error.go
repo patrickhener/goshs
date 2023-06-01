@@ -22,17 +22,17 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	// Construct error for template filling
 	e.ErrorCode = status
 	e.ErrorMessage = err.Error()
-	e.AbsPath = path.Join(fs.Webroot, req.URL.Path)
+	e.Directory = &directory{
+		AbsPath: path.Join(fs.Webroot, req.URL.Path),
+	}
 	e.GoshsVersion = fs.Version
 
+	files := []string{"static/templates/error.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
+
 	// Template handling
-	file, err := static.ReadFile("static/templates/error.html")
+	t, err := template.ParseFS(static, files...)
 	if err != nil {
-		logger.Errorf("opening embedded file: %+v", err)
-	}
-	t := template.New("error")
-	if _, err := t.Parse(string(file)); err != nil {
-		logger.Errorf("parsing the template: %+v", err)
+		logger.Errorf("Error parsing templates: %+v", err)
 	}
 	if err := t.Execute(w, e); err != nil {
 		logger.Errorf("executing the template: %+v", err)
