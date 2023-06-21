@@ -16,7 +16,7 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.3.4"
+const goshsVersion = "v0.3.5"
 
 var (
 	port       = 8000
