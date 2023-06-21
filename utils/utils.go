@@ -107,5 +107,5 @@ func HashPassword() {
 	if err != nil {
 		logger.Fatalf("error hashing password: %+v", err)
 	}
-	fmt.Printf("Use the hash: %s with a username (can be empty) in your .goshs file\nFormat will be <user>:<hash>\n", string(bytes))
+	fmt.Printf("Hash: %s\n", string(bytes))
 }

@@ -244,10 +244,9 @@ You can apply file based access control lists per folder by placing a file calle
 The hash you have to use can be generated with `goshs -H` or `goshs --hash`. This will generate a bCrypt hash. The username can be left empty.
 
 ```bash
-./goshs --hash
-Enter password: ***********
-Use the hash: $2a$14$Xorba1Oj6x.LwEXFA7H6r.uChWRUEP68HVYsaw4mqoK7WD9VoEzWm with a username (can be empty) in your .goshs file
-Format will be <user>:<hash>
+goshs --hash
+Enter password: *******
+Hash: $2a$14$hh50ncgjLAOQT3KI1RlVYus3gMecE4/Ul2HakUp6iiBCnl2c5M0da
 ```
 
 The `hide` mode will only **hide** the files from the listing but will **not restrict access** to it if called directly.
