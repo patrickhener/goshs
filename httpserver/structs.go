@@ -68,3 +68,8 @@ type httperror struct {
 	GoshsVersion string
 	Statics      template.FuncMap
 }
+
+type configFile struct {
+	Auth   string   `json:"auth"`
+	Ignore []string `json:"ignore"`
+}

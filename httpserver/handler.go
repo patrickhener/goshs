@@ -123,6 +123,13 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Cleanup for Windows Paths
 	relpath = strings.TrimLeft(relpath, "\\")
 
+	// File Based Access Flag
+	fbaExist, config, err := fs.findSpecialFile(fis)
+	if err != nil {
+		logger.Errorf("error reading file based access config: %+v", err)
+		fbaExist = false
+	}
+
 	// Create empty slice
 	items := make([]item, 0, len(fis))
 	// Iterate over FileInfo of dir
