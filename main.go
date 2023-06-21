@@ -16,7 +16,7 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.3.4"
+const goshsVersion = "v0.3.5"
 
 var (
 	port       = 8000
@@ -63,6 +63,7 @@ TLS options:
 
 Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
+  -H, --hash          Hash a password for file based ACLs
 
 Misc options:
   -u  --user          Drop privs to user (unix only)          (default: current user)
@@ -120,6 +121,8 @@ func init() {
 	flag.StringVar(&dropuser, "user", dropuser, "user")
 	flag.BoolVar(&cli, "c", cli, "cli")
 	flag.BoolVar(&cli, "cli", cli, "cli")
+	hash := flag.Bool("H", false, "hash")
+	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
 
 	flag.Usage = usage()
@@ -129,6 +132,11 @@ func init() {
 	if *version {
 		fmt.Printf("goshs version is: %+v\n", goshsVersion)
 		os.Exit(0)
+	}
+
+	if *hash || *hashLong {
+		utils.HashPassword()
+		os.Exit(1)
 	}
 
 	// Check if interface name was provided as -i

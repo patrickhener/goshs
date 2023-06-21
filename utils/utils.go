@@ -9,7 +9,9 @@ import (
 	"net"
 	"strings"
 
+	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/logger"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // ByteCountDecimal generates human readable file sizes and returns a string
@@ -90,4 +92,20 @@ func GetAllIPAdresses() (map[string]string, error) {
 
 	}
 	return ifaceAddress, nil
+}
+
+// HashPassword will take a plaintext masked password and return a bcrypt hash
+// This is meant to be used with the filebased access via .goshs file
+func HashPassword() {
+	fmt.Printf("Enter password: ")
+	password, err := gopass.GetPasswdMasked()
+	if err != nil {
+		logger.Fatalf("error reading password from stdin: %+v", err)
+	}
+
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		logger.Fatalf("error hashing password: %+v", err)
+	}
+	fmt.Printf("Hash: %s\n", string(bytes))
 }

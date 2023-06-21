@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.3.4-green)
+![Version](https://img.shields.io/badge/Version-v0.3.5-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -33,6 +33,10 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
   * Light Mode
 * Command Line
   * Run Commands on the system hosting `goshs`
+* File Based ACLs
+  * You can place a `.goshs` in any folder to apply custom ACLs
+  * You can apply custom basic auth per folder
+  * You can hide files from the listing per folder
 
 # Installation
 
@@ -83,6 +87,7 @@ TLS options:
 
 Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
+  -H, --hash          Hash a password for file based ACLs
 
 Misc options:
   -u  --user          Drop privs to user (unix only)          (default: current user)
@@ -221,6 +226,30 @@ user       35976  0.0  0.1 1166136 8460 pts/0    Sl+  11:56   0:00 ./goshs -p 80
 CLI mode will let you run commands on the system hosting `goshs` and return the output to you.
 
 `goshs -b secret-user:$up3r$3cur3 -s -ss -c`
+
+**File Based ACLs**  
+You can apply file based access control lists per folder by placing a file called `.goshs` in that folder. The files content is like:
+
+```json
+{
+  "auth":"<user>:<hash>",
+  "hide":[
+    "file1",
+    "file2",
+    "folder/"
+  ]
+}
+```
+
+The hash you have to use can be generated with `goshs -H` or `goshs --hash`. This will generate a bCrypt hash. The username can be left empty.
+
+```bash
+goshs --hash
+Enter password: *******
+Hash: $2a$14$hh50ncgjLAOQT3KI1RlVYus3gMecE4/Ul2HakUp6iiBCnl2c5M0da
+```
+
+The `hide` mode will only **hide** the files from the listing but will **not restrict access** to it if called directly.
 
 # Credits
 

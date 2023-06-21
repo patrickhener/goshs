@@ -123,10 +123,40 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Cleanup for Windows Paths
 	relpath = strings.TrimLeft(relpath, "\\")
 
+	// File Based Access Flag
+	config, err := fs.findSpecialFile(fis, file)
+	if err != nil {
+		logger.Errorf("error reading file based access config: %+v", err)
+	}
+
+	// Apply Custom Auth if there
+	if config.Auth != "" {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+
+		username, password, authOK := req.BasicAuth()
+		if !authOK {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		user := strings.Split(config.Auth, ":")[0]
+		passwordHash := strings.Split(config.Auth, ":")[1]
+
+		if username != user || !checkPasswordHash(password, passwordHash) {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	// Create empty slice
 	items := make([]item, 0, len(fis))
 	// Iterate over FileInfo of dir
 	for _, fi := range fis {
+		if fi.Name() == ".goshs" {
+			logger.Debug(".goshs detected and therefore applying")
+			// Do not add it to items
+			continue
+		}
 		item := item{}
 		// Need to set this up here for directories to work
 		item.Name = fi.Name()
@@ -153,6 +183,13 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		}
 		// Add to items slice
 		items = append(items, item)
+	}
+
+	// Remove 'hide' files from items
+	if len(config.Hide) > 0 {
+		for _, i := range config.Hide {
+			items = removeItem(items, i)
+		}
 	}
 
 	// Sort slice all lowercase
@@ -252,6 +289,16 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		fs.handleError(w, req, fmt.Errorf("%s", "Download not allowed due to 'upload only' option"), http.StatusForbidden)
 		return
 	}
+
+	// Never serve .goshs file and return same error message if it was not there
+	// This way it is also not possible to enumerate
+	pathSplit := strings.Split(req.URL.Path, "/")
+	filename := pathSplit[len(pathSplit)-1]
+	if filename == ".goshs" {
+		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+		return
+	}
+
 	// Extract download parameter
 	download := req.URL.Query()
 	if _, ok := download["download"]; ok {
