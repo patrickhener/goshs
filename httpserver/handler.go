@@ -294,7 +294,6 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 	// This way it is also not possible to enumerate
 	pathSplit := strings.Split(req.URL.Path, "/")
 	filename := pathSplit[len(pathSplit)-1]
-	fmt.Println(filename)
 	if filename == ".goshs" {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
 		return
