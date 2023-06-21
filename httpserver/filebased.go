@@ -5,27 +5,33 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
-func (fs *FileServer) findSpecialFile(fis []fs.FileInfo) (bool, configFile, error) {
+func (fs *FileServer) findSpecialFile(fis []fs.FileInfo, file *os.File) (configFile, error) {
 	var config configFile
+
 	for _, fi := range fis {
 		if fi.Name() == ".goshs" {
-			configFileDisk, err := os.Open(".goshs")
+			openFile := filepath.Join(file.Name(), fi.Name())
+
+			configFileDisk, err := os.Open(openFile)
 			if err != nil {
-				return false, config, err
+				return config, err
 			}
+
 			configFileBytes, err := io.ReadAll(configFileDisk)
 			if err != nil {
-				return false, config, err
+				return config, err
 			}
 
 			if err := json.Unmarshal(configFileBytes, &config); err != nil {
-				return false, config, err
+				return config, err
 			}
 
-			return true, config, nil
+			return config, nil
 		}
 	}
-	return false, config, nil
+
+	return config, nil
 }

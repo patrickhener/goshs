@@ -70,6 +70,6 @@ type httperror struct {
 }
 
 type configFile struct {
-	Auth   string   `json:"auth"`
-	Ignore []string `json:"ignore"`
+	Auth string   `json:"auth"`
+	Hide []string `json:"hide"`
 }
