@@ -250,7 +250,7 @@ Use the hash: $2a$14$Xorba1Oj6x.LwEXFA7H6r.uChWRUEP68HVYsaw4mqoK7WD9VoEzWm with 
 Format will be <user>:<hash>
 ```
 
-The `hide` mode will only hide the files from the listing but will not restrict access to it if called directly.
+The `hide` mode will only **hide** the files from the listing but will **not restrict access** to it if called directly.
 
 # Credits
 
