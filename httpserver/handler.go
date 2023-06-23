@@ -106,13 +106,41 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// Switch and check if dir
 	stat, _ := file.Stat()
 	if stat.IsDir() {
-		fs.processDir(w, req, file, upath, json)
+		// Check if parent folder forbids access to this directory
+		parent := filepath.Dir(file.Name())
+		parentConfig, err := fs.findSpecialFile(parent)
+		if err != nil {
+			logger.Errorf("error reading file based access config: %+v", err)
+		}
+
+		// Get foldername
+		_, foldername := filepath.Split(file.Name())
+
+		for _, name := range parentConfig.Block {
+			if name == fmt.Sprintf("%s/", foldername) {
+				fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+				return
+			}
+		}
+
+		// Check if the dir has a .goshs ACL file
+		config, err := fs.findSpecialFile(file.Name())
+		if err != nil {
+			logger.Errorf("error reading file based access config: %+v", err)
+		}
+		fs.processDir(w, req, file, upath, json, config)
 	} else {
-		fs.sendFile(w, req, file)
+		// If it is a file we need to check for .goshs one directory up
+		parent := filepath.Dir(file.Name())
+		config, err := fs.findSpecialFile(parent)
+		if err != nil {
+			logger.Errorf("error reading file based access config: %+v", err)
+		}
+		fs.sendFile(w, req, file, config)
 	}
 }
 
-func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool) {
+func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
@@ -123,27 +151,21 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	// Cleanup for Windows Paths
 	relpath = strings.TrimLeft(relpath, "\\")
 
-	// File Based Access Flag
-	config, err := fs.findSpecialFile(fis, file)
-	if err != nil {
-		logger.Errorf("error reading file based access config: %+v", err)
-	}
-
 	// Apply Custom Auth if there
-	if config.Auth != "" {
+	if acl.Auth != "" {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
 			return
 		}
 
-		user := strings.Split(config.Auth, ":")[0]
-		passwordHash := strings.Split(config.Auth, ":")[1]
+		user := strings.Split(acl.Auth, ":")[0]
+		passwordHash := strings.Split(acl.Auth, ":")[1]
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
 			return
 		}
 	}
@@ -185,9 +207,9 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		items = append(items, item)
 	}
 
-	// Remove 'hide' files from items
-	if len(config.Hide) > 0 {
-		for _, i := range config.Hide {
+	// Remove 'block' files from items
+	if len(acl.Block) > 0 {
+		for _, i := range acl.Block {
 			items = removeItem(items, i)
 		}
 	}
@@ -284,10 +306,29 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 	}
 }
 
-func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *os.File) {
+func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *os.File, acl configFile) {
 	if fs.UploadOnly {
 		fs.handleError(w, req, fmt.Errorf("%s", "Download not allowed due to 'upload only' option"), http.StatusForbidden)
 		return
+	}
+
+	// Apply Custom Auth if there
+	if acl.Auth != "" {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+
+		username, password, authOK := req.BasicAuth()
+		if !authOK {
+			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
+			return
+		}
+
+		user := strings.Split(acl.Auth, ":")[0]
+		passwordHash := strings.Split(acl.Auth, ":")[1]
+
+		if username != user || !checkPasswordHash(password, passwordHash) {
+			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Never serve .goshs file and return same error message if it was not there
@@ -297,6 +338,14 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 	if filename == ".goshs" {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
 		return
+	}
+
+	// Check if file is in block list and discard
+	for _, name := range acl.Block {
+		if name == filename {
+			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+			return
+		}
 	}
 
 	// Extract download parameter

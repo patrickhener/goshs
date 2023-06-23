@@ -36,7 +36,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * File Based ACLs
   * You can place a `.goshs` in any folder to apply custom ACLs
   * You can apply custom basic auth per folder
-  * You can hide files from the listing per folder
+  * You can restrict access to specific files completely
 
 # Installation
 
@@ -233,7 +233,7 @@ You can apply file based access control lists per folder by placing a file calle
 ```json
 {
   "auth":"<user>:<hash>",
-  "hide":[
+  "block":[
     "file1",
     "file2",
     "folder/"
@@ -249,7 +249,7 @@ Enter password: *******
 Hash: $2a$14$hh50ncgjLAOQT3KI1RlVYus3gMecE4/Ul2HakUp6iiBCnl2c5M0da
 ```
 
-The `hide` mode will only **hide** the files from the listing but will **not restrict access** to it if called directly.
+The `block` mode will **hide** the folders and files from the listing **and restrict access** to them regardless. Please be aware that a file inside a blocked folder will be accessible unless you define a new `.goshs` file within that blocked folder.
 
 # Credits
 

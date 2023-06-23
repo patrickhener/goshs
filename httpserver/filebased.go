@@ -3,13 +3,22 @@ package httpserver
 import (
 	"encoding/json"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 )
 
-func (fs *FileServer) findSpecialFile(fis []fs.FileInfo, file *os.File) (configFile, error) {
+func (fs *FileServer) findSpecialFile(folder string) (configFile, error) {
 	var config configFile
+
+	file, err := os.Open(folder)
+	if err != nil {
+		return config, err
+	}
+
+	fis, err := file.Readdir(-1)
+	if err != nil {
+		return config, err
+	}
 
 	for _, fi := range fis {
 		if fi.Name() == ".goshs" {
