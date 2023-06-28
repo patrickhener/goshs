@@ -256,12 +256,14 @@
                             <div class="col-md-1">
                                 <sup><a href="#" onclick="return delClipboard('{{.ID}}')"><i
                                             class="fa-solid fa-trash del_button"></i></a></sup>
+                                <sup><a href="#" onclick="return copyToClipboard('{{.ID}}')"><i
+                                    class="fa-solid fa-copy del_button"></i></a></sup>
                             </div>
                             <div class="col-md-1">
                                 <h5>{{.ID}}</h5>
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="card-body-{{.ID}}">
                             <pre>{{.Content}}</pre>
                         </div>
                     </div>
