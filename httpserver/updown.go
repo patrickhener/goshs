@@ -31,13 +31,17 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	target := strings.Join(targetpath, "/")
 
 	// Parse request
-	if err := req.ParseMultipartForm(64 << 32); err != nil {
+	// Limit memory usage to 16MB
+	if err := req.ParseMultipartForm(1 << 24); err != nil {
 		logger.Errorf("parsing multipart request: %+v", err)
 		return
 	}
 
 	// Get ref to the parsed multipart form
 	m := req.MultipartForm
+
+	// Remove all temporary files when we return
+	defer m.RemoveAll()
 
 	for _, f := range m.File {
 		file, err := f[0].Open()
@@ -64,17 +68,29 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			fs.handleError(w, req, err, http.StatusInternalServerError)
 		}
 
-		// Read file from post body
-		fileBytes, err := io.ReadAll(file)
-		if err != nil {
-			logger.Errorf("Not able to read file from request")
-			fs.handleError(w, req, err, http.StatusInternalServerError)
-		}
+		// Write file to disk 16MB at a time
+		buffer := make([]byte, 1 << 24)
 
-		// Write file to disk
-		if err := os.WriteFile(savepath, fileBytes, os.ModePerm); err != nil {
-			logger.Errorf("Not able to write file to disk")
-			fs.handleError(w, req, err, http.StatusInternalServerError)
+		osFile, err := os.OpenFile(savepath, os.O_WRONLY | os.O_CREATE, os.ModePerm)
+		defer osFile.Close()
+
+		for {
+			// Read file from post body
+			nBytes, readErr := file.Read(buffer)
+			if readErr != nil && readErr != io.EOF {
+				logger.Errorf("Not able to read file from request")
+				fs.handleError(w, req, err, http.StatusInternalServerError)
+			}
+
+			// Write file to disk
+			if _, err := osFile.Write(buffer[:nBytes]); err != nil {
+				logger.Errorf("Not able to write file to disk")
+				fs.handleError(w, req, err, http.StatusInternalServerError)
+			}
+
+			if readErr == io.EOF {
+				break
+			}
 		}
 	}
 
