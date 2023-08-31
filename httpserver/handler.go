@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/utils"
@@ -355,7 +356,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		if err != nil {
 			logger.Errorf("reading file stats for download: %+v", err)
 		}
-		contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"", stat.Name())
+		contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"; modification-date=\"%s\"", stat.Name(), stat.ModTime().Format(time.RFC1123Z))
 		// Handle as download
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Header().Add("Content-Disposition", contentDisposition)
@@ -369,6 +370,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		filename := stat.Name()
 		contentType := utils.MimeByExtension(filename)
 		w.Header().Add("Content-Type", contentType)
+		w.Header().Add("Last-Modified", stat.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"))
 		if _, err := io.Copy(w, file); err != nil {
 			logger.Errorf("Error writing response to browser: %+v", err)
 		}
