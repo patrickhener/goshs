@@ -137,3 +137,16 @@ function copyToClipboard(id) {
 
   navigator.clipboard.writeText(textSelected);
 }
+
+function deleteFile(path) {
+  if (confirm('Do you really want to delete the file or directory?')) {
+    var url = '';
+    location.protocol !== 'https:'
+      ? (url = 'http://' + window.location.host + path + '?delete')
+      : (url = 'https://' + window.location.host + path + '?delete');
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('GET', url, false);
+    xhttp.send();
+    location.reload();
+  }
+}

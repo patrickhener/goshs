@@ -41,7 +41,7 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 
 // handler is the function which actually handles dir or file retrieval
 func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
-	// Early break for /?ws, /?cbDown, /?bulk and /?static
+	// Early break for /?ws, /?cbDown, /?bulk and /?static /?delete
 	if _, ok := req.URL.Query()["ws"]; ok {
 		fs.socket(w, req)
 		return
@@ -56,6 +56,11 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
 		fs.static(w, req)
+		return
+	}
+
+	if _, ok := req.URL.Query()["delete"]; ok {
+		fs.deleteFile(w, req)
 		return
 	}
 
@@ -380,4 +385,24 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 // socket will handle the socket connection
 func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
 	ws.ServeWS(fs.Hub, w, req)
+}
+
+// deleteFile will delete a file
+func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
+	// Get path
+	upath := req.URL.Path
+	upath = path.Clean(upath)
+	upath = filepath.Clean(upath)
+
+	logger.Infof("Hit, delete: %+v", upath)
+	logger.Infof("webroot is: %+v", fs.Webroot)
+
+	deletePath := filepath.Join(fs.Webroot, upath)
+
+	err := os.RemoveAll(deletePath)
+	if err != nil {
+		logger.Warnf("error removing %+v", deletePath)
+	}
+
+	logger.LogRequest(req, http.StatusResetContent, fs.Verbose)
 }
