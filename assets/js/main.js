@@ -131,7 +131,9 @@ $('#cliCommand').on('keydown', function (e) {
 });
 
 function copyToClipboard(id) {
-  const textSelected = document.getElementById('card-body-' + id).innerText;
+  let textSelected = document
+    .getElementById('card-body-' + id)
+    .getElementsByTagName('pre')[0].innerText;
+
   navigator.clipboard.writeText(textSelected);
-  return false;
 }
