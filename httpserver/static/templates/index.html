@@ -207,7 +207,7 @@
                                         {{ end }}
                                     </td>
                                     <td>
-                                        <a onclick="deleteFile('/{{.URI}}')"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
+                                        <a onclick="deleteFile('/{{.URI}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
                                     </td>
                                 </tr>
                                 {{ end }}
@@ -217,6 +217,9 @@
                         <input type="submit" class="btn btn-primary" id="downloadBulkButton" value="Download Selected"
                             style="display:none">
                     </form>
+                </div>
+                <div class="col">
+                    <button class="btn btn-primary" id="bulkDelete" onclick="bulkDelete()">Delete Selected</button>
                 </div>
             </div>
         </div>

@@ -394,9 +394,6 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	upath = path.Clean(upath)
 	upath = filepath.Clean(upath)
 
-	logger.Infof("Hit, delete: %+v", upath)
-	logger.Infof("webroot is: %+v", fs.Webroot)
-
 	deletePath := filepath.Join(fs.Webroot, upath)
 
 	err := os.RemoveAll(deletePath)
