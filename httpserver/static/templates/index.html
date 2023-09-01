@@ -60,6 +60,9 @@
                                     <th width="4%">
                                         <!--Direct Download button-->
                                     </th>
+                                    <th width="4%">
+                                        <!--Delete Button-->
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -71,6 +74,7 @@
                                     <td><a href="{{.Directory.Back}}">../</a></td>
                                     <td data-order="0">--</td>
                                     <td data-order="0">--</td>
+                                    <td></td>
                                     <td></td>
                                 </tr>
                                 {{ end }}
@@ -202,6 +206,9 @@
                                         <a href="/{{.URI}}?download"><i class="fa-solid fa-download fa-1x"></i></a>
                                         {{ end }}
                                     </td>
+                                    <td>
+                                        <a onclick="deleteFile('/{{.URI}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
+                                    </td>
                                 </tr>
                                 {{ end }}
                             </tbody>
@@ -210,6 +217,9 @@
                         <input type="submit" class="btn btn-primary" id="downloadBulkButton" value="Download Selected"
                             style="display:none">
                     </form>
+                </div>
+                <div class="col">
+                    <button class="btn btn-primary" id="bulkDelete" onclick="bulkDelete()">Delete Selected</button>
                 </div>
             </div>
         </div>

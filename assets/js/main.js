@@ -25,8 +25,10 @@ Array.prototype.forEach.call(checkboxes, function (cb) {
     ).length;
     if (checkedBoxes >= 1) {
       document.getElementById('downloadBulkButton').style.display = 'block';
+      document.getElementById('bulkDelete').style.display = 'block';
     } else {
       document.getElementById('downloadBulkButton').style.display = 'none';
+      document.getElementById('bulkDelete').style.display = 'none';
     }
   });
 });
@@ -36,6 +38,7 @@ function selectAll() {
     cb.checked = true;
   });
   document.getElementById('downloadBulkButton').style.display = 'block';
+  document.getElementById('bulkDelete').style.display = 'block';
 }
 
 function selectNone() {
@@ -43,6 +46,7 @@ function selectNone() {
     cb.checked = false;
   });
   document.getElementById('downloadBulkButton').style.display = 'none';
+  document.getElementById('bulkDelete').style.display = 'none';
 }
 
 var wsURL = '';
@@ -131,7 +135,37 @@ $('#cliCommand').on('keydown', function (e) {
 });
 
 function copyToClipboard(id) {
-  const textSelected = document.getElementById('card-body-' + id).innerText;
+  let textSelected = document
+    .getElementById('card-body-' + id)
+    .getElementsByTagName('pre')[0].innerText;
+
   navigator.clipboard.writeText(textSelected);
-  return false;
+}
+
+function deleteFile(path, bulk) {
+  let ok;
+  !bulk
+    ? (ok = confirm('Do you really want to delete the file or directory?'))
+    : (ok = true);
+
+  if (ok) {
+    var url = '';
+    location.protocol !== 'https:'
+      ? (url = 'http://' + window.location.host + path + '?delete')
+      : (url = 'https://' + window.location.host + path + '?delete');
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('GET', url, false);
+    xhttp.send();
+    location.reload();
+  }
+}
+
+function bulkDelete() {
+  if (confirm('Do you really want to delete the file or directory?')) {
+    // collect all checked checkboxes and do delete the file for each occurance
+    $('.downloadBulkCheckbox:checkbox:checked').each(function () {
+      var sThisVal = this.checked ? $(this).val() : '';
+      deleteFile(decodeURIComponent(sThisVal), true);
+    });
+  }
 }
