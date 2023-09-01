@@ -191,5 +191,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	// Close Zip Writer and Flush to http.ResponseWriter
 	if err := resultZip.Close(); err != nil {
 		logger.Error(err)
+	} else {
+		logger.LogRequest(req, http.StatusOK, fs.Verbose)
 	}
 }
