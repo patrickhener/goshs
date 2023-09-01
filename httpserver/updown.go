@@ -167,7 +167,12 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		// so we are stripping fs.Webroot again from the structure of the zip file
 		// Leaving us with the relative path of the file
 		zippath := strings.ReplaceAll(filepath, fs.Webroot, "")
-		f, err := resultZip.Create(zippath[1:])
+		header := &zip.FileHeader{
+			Name:     zippath[1:],
+			Method:   zip.Deflate,
+			Modified: info.ModTime(),
+		}
+		f, err := resultZip.CreateHeader(header)
 		if err != nil {
 			return err
 		}
