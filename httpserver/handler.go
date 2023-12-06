@@ -60,8 +60,10 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if _, ok := req.URL.Query()["delete"]; ok {
-		fs.deleteFile(w, req)
-		return
+		if !fs.ReadOnly && !fs.UploadOnly {
+			fs.deleteFile(w, req)
+			return
+		}
 	}
 
 	// Define if to return json instead of html parsing
@@ -201,6 +203,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		item.SortSize = fi.Size()
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
 		item.SortLastModified = fi.ModTime().UTC().UnixMilli()
+		item.ReadOnly = fs.ReadOnly
 		// Check and resolve symlink
 		if fi.Mode()&os.ModeSymlink != 0 {
 			item.IsSymlink = true

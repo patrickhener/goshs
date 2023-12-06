@@ -207,7 +207,10 @@
                                         {{ end }}
                                     </td>
                                     <td>
+                                        {{ if .ReadOnly }}
+                                        {{ else }}
                                         <a onclick="deleteFile('/{{.URI}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
+                                        {{ end }}
                                     </td>
                                 </tr>
                                 {{ end }}

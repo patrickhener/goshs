@@ -33,6 +33,7 @@ type item struct {
 	SortSize            int64  `json:"size_bytes"`
 	DisplayLastModified string `json:"-"`
 	SortLastModified    int64  `json:"last_modified"`
+	ReadOnly            bool
 }
 
 // FileServer holds the fileserver information
