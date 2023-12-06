@@ -69,9 +69,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Write file to disk 16MB at a time
-		buffer := make([]byte, 1 << 24)
+		buffer := make([]byte, 1<<24)
 
-		osFile, err := os.OpenFile(savepath, os.O_WRONLY | os.O_CREATE, os.ModePerm)
+		osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			logger.Warnf("Error opening file: %+v", err)
+		}
 		defer osFile.Close()
 
 		for {

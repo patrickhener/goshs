@@ -397,7 +397,13 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	upath = path.Clean(upath)
 	upath = filepath.Clean(upath)
 
-	deletePath := filepath.Join(fs.Webroot, upath)
+	fileCleaned, _ := url.QueryUnescape(upath)
+	if strings.Contains(fileCleaned, "..") {
+		w.WriteHeader(500)
+		w.Write([]byte("Cannot delete file"))
+	}
+
+	deletePath := filepath.Join(fs.Webroot, fileCleaned)
 
 	err := os.RemoveAll(deletePath)
 	if err != nil {
