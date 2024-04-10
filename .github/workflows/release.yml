@@ -2,8 +2,9 @@ name: goreleaser
 
 on:
   push:
-    tags:
-      - "*"
+      tags:
+        - "*"
+  workflow_dispatch:
 
 jobs:
   goreleaser:
