@@ -45,6 +45,7 @@ type FileServer struct {
 	Webroot        string
 	SSL            bool
 	SelfSigned     bool
+	LetsEncrypt    bool
 	MyKey          string
 	MyCert         string
 	User           string

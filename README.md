@@ -22,6 +22,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 * Basic Authentication
 * Transport Layer Security (HTTPS)
   * self-signed
+  * let's encrypt
   * provide own certificate
 * Non persistent clipboard
   * Download clipboard entries as .json file
@@ -83,10 +84,16 @@ Web server options:
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
 
 TLS options:
-  -s,  --ssl          Use TLS
-  -ss, --self-signed  Use a self-signed certificate
-  -sk, --server-key   Path to server key
-  -sc, --server-cert  Path to server certificate
+  -s,  --ssl           Use TLS
+  -ss, --self-signed   Use a self-signed certificate
+  -sk, --server-key    Path to server key
+  -sc, --server-cert   Path to server certificate
+  -sl,  --lets-encrypt Use Let's Encrypt as certification service
+  -sld, --le-domains   Domain(s) to request from Let's Encrypt		(comma separated list)
+  -sle, --le-email     Email to use with Let's Encrypt
+  -slh, --le-http      Port to use for Let's Encrypt HTTP Challenge	(default: 80)
+  -slt, --le-tls       Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
+
 
 Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
@@ -102,10 +109,11 @@ Usage examples:
   Start with wevdav support:    	./goshs -w
   Start with different port:    	./goshs -p 8080
   Start with self-signed cert:  	./goshs -s -ss
+  Start with let's encrypt:		    ./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
-  Start with cli enabled:               ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
+  Start with cli enabled:           ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 ```
 
 # Examples
@@ -138,6 +146,20 @@ Usage examples:
 
 `goshs -s -ss`
 
+*Let's encrypt*
+
+`./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com`
+
+You will have to make sure that your IP is reachable via the domain name by creating an A entry with you DNS service provider first.
+
+Then the example command will create two files called `key` and `cert` if the request for a certificate is successful. *Please note:* for this to work let's encrypt needs to reach goshs at port 80 and 443. So you will need to start it as root. There are several options you can choose from to circumvent running goshs as root after obtaining a valid certificate:
+  
+  - Drop user privileges using `-u` (preferred)
+  - Run it once as root until you obtain the certificate. Then stop it and rerun it using `key` and `cert` like: `./goshs -s -sk key -sc cert` as non-root user
+  - Use `-slh` and `-slt` to choose different challenge ports and proxy port 80 and 443 to them
+  
+ After stopping goshs you can reuse the files `key` and `cert` to restart the server with a valid certificate like: `./goshs -s -sk key -sc -cert` until they are invalidated due to certificate lifetime (90 days).
+
 *Provide own certificate*
 
 `goshs -s -sk server.key -sc server.crt`
@@ -149,6 +171,8 @@ This mode will omit the dir listing on the web interface. Also you will not have
 
 **Retrieve the directory listing in json format**  
 You can now retrieve the directory listing in *json* format. This is meant to be used with curl for example in environments where you do not have a browser on hand.
+
+
 
 ```bash
 curl -s localhost:8000/?json | jq

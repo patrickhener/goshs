@@ -3,14 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
+	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/utils"
@@ -19,22 +18,27 @@ import (
 const goshsVersion = "v0.3.7"
 
 var (
-	port       = 8000
-	ip         = "0.0.0.0"
-	cli        = false
-	webroot    = "."
-	ssl        = false
-	selfsigned = false
-	myKey      = ""
-	myCert     = ""
-	basicAuth  = ""
-	webdav     = false
-	webdavPort = 8001
-	uploadOnly = false
-	readOnly   = false
-	verbose    = false
-	silent     = false
-	dropuser   = ""
+	port        = 8000
+	ip          = "0.0.0.0"
+	cli         = false
+	webroot     = "."
+	ssl         = false
+	selfsigned  = false
+	letsencrypt = false
+	myKey       = ""
+	myCert      = ""
+	basicAuth   = ""
+	webdav      = false
+	webdavPort  = 8001
+	uploadOnly  = false
+	readOnly    = false
+	verbose     = false
+	silent      = false
+	dropuser    = ""
+	leEmail     = ""
+	leDomains   = ""
+	leHTTPPort  = "80"
+	leTLSPort   = "443"
 )
 
 // Man page
@@ -56,10 +60,15 @@ Web server options:
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
 
 TLS options:
-  -s,  --ssl          Use TLS
-  -ss, --self-signed  Use a self-signed certificate
-  -sk, --server-key   Path to server key
-  -sc, --server-cert  Path to server certificate
+  -s,   --ssl          Use TLS
+  -ss,  --self-signed  Use a self-signed certificate
+  -sk,  --server-key   Path to server key
+  -sc,  --server-cert  Path to server certificate
+  -sl,  --lets-encrypt Use Let's Encrypt as certification service
+  -sld, --le-domains   Domain(s) to request from Let's Encrypt		(comma separated list)
+  -sle, --le-email     Email to use with Let's Encrypt
+  -slh, --le-http      Port to use for Let's Encrypt HTTP Challenge	(default: 80)
+  -slt, --le-tls       Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
 
 Authentication options:
   -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
@@ -75,10 +84,11 @@ Usage examples:
   Start with wevdav support:    	./goshs -w
   Start with different port:    	./goshs -p 8080
   Start with self-signed cert:  	./goshs -s -ss
+  Start with let's encrypt:		./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
-  Start with cli enabled:               ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
+  Start with cli enabled:           	./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 
 `, goshsVersion, os.Args[0])
 	}
@@ -121,6 +131,16 @@ func init() {
 	flag.StringVar(&dropuser, "user", dropuser, "user")
 	flag.BoolVar(&cli, "c", cli, "cli")
 	flag.BoolVar(&cli, "cli", cli, "cli")
+	flag.BoolVar(&letsencrypt, "sl", letsencrypt, "letsencrypt")
+	flag.BoolVar(&letsencrypt, "lets-encrypt", letsencrypt, "letsencrypt")
+	flag.StringVar(&leDomains, "sld", leDomains, "")
+	flag.StringVar(&leDomains, "le-domains", leDomains, "")
+	flag.StringVar(&leEmail, "sle", leEmail, "")
+	flag.StringVar(&leEmail, "le-email", leEmail, "")
+	flag.StringVar(&leHTTPPort, "slh", leHTTPPort, "")
+	flag.StringVar(&leHTTPPort, "le-http", leHTTPPort, "")
+	flag.StringVar(&leTLSPort, "slt", leTLSPort, "")
+	flag.StringVar(&leTLSPort, "le-tls", leTLSPort, "")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
@@ -209,26 +229,32 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	// Random Seed generation (used for CA serial)
-	rand.Seed(time.Now().UnixNano())
+	// If Let's Encrypt is in play we need to fetch the key and cert, write them to disc and set their path in MyKey and MyCert
+	if letsencrypt {
+		ca.GetLECertificateAndKey(leEmail, strings.Split(leDomains, ","), leHTTPPort, leTLSPort)
+		myCert = "cert"
+		myKey = "key"
+	}
+
 	// Setup the custom file server
 	server := &httpserver.FileServer{
-		IP:         ip,
-		Port:       port,
-		CLI:        cli,
-		Webroot:    webroot,
-		SSL:        ssl,
-		SelfSigned: selfsigned,
-		MyCert:     myCert,
-		MyKey:      myKey,
-		User:       user,
-		Pass:       pass,
-		DropUser:   dropuser,
-		UploadOnly: uploadOnly,
-		ReadOnly:   readOnly,
-		Silent:     silent,
-		Verbose:    verbose,
-		Version:    goshsVersion,
+		IP:          ip,
+		Port:        port,
+		CLI:         cli,
+		Webroot:     webroot,
+		SSL:         ssl,
+		SelfSigned:  selfsigned,
+		LetsEncrypt: letsencrypt,
+		MyCert:      myCert,
+		MyKey:       myKey,
+		User:        user,
+		Pass:        pass,
+		DropUser:    dropuser,
+		UploadOnly:  uploadOnly,
+		ReadOnly:    readOnly,
+		Silent:      silent,
+		Verbose:     verbose,
+		Version:     goshsVersion,
 	}
 
 	go server.Start("web")

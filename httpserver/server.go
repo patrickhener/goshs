@@ -3,7 +3,7 @@ package httpserver
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -60,7 +60,7 @@ func (fs *FileServer) Start(what string) {
 		// Addr:              addr,
 		Handler:           http.AllowQuerySemicolons(mux),
 		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
-		ErrorLog:          log.New(ioutil.Discard, "", 0),
+		ErrorLog:          log.New(io.Discard, "", 0),
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
@@ -102,7 +102,6 @@ func (fs *FileServer) Start(what string) {
 			fs.dropPrivs()
 
 			logger.Panic(server.ServeTLS(listener, "", ""))
-			// logger.Panic(server.ListenAndServeTLS("", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
 				logger.Fatal("You need to provide server.key and server.crt if -s and not -ss")
@@ -131,7 +130,6 @@ func (fs *FileServer) Start(what string) {
 			fs.dropPrivs()
 
 			logger.Panic(server.ServeTLS(listener, "", ""))
-			//logger.Panic(server.ListenAndServeTLS(fs.MyCert, fs.MyKey))
 		}
 	} else {
 		fs.logStart(what)
@@ -140,6 +138,6 @@ func (fs *FileServer) Start(what string) {
 		fs.dropPrivs()
 
 		logger.Panic(server.Serve(listener))
-		//logger.Panic(server.ListenAndServe())
 	}
+
 }
