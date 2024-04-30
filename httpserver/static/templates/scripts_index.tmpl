@@ -22,7 +22,7 @@
 
 <script>
     let myDropzone = new Dropzone("div#mydropzone", {
-        autoProcessQueue: false,
+        autoProcessQueue: true,
         paramName: "files",
         method: "post",
         url: url,
@@ -30,15 +30,6 @@
         parallelUploads: 100,
         maxFiles: 100,
         maxFilesize: 10240,
-
-        init: function () {
-            document.querySelector("button[type=submit]#submit-dropzone").addEventListener("click", function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                myDropzone.processQueue();
-            })
-
-        }
     });
 
     myDropzone.on("successmultiple", function () {
