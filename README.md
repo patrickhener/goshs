@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.3.7-green)
+![Version](https://img.shields.io/badge/Version-v0.3.8-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -109,11 +109,11 @@ Usage examples:
   Start with wevdav support:    	./goshs -w
   Start with different port:    	./goshs -p 8080
   Start with self-signed cert:  	./goshs -s -ss
-  Start with let's encrypt:		    ./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com
+  Start with let's encrypt:		./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
   Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
   Start with basic auth empty user:	./goshs -b :$up3r$3cur3
-  Start with cli enabled:           ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
+  Start with cli enabled:               ./goshs -b secret-user:$up3r$3cur3 -s -ss -c
 ```
 
 # Examples
