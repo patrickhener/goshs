@@ -282,7 +282,7 @@ The `block` mode will **hide** the folders and files from the listing **and rest
 
 **Embed files on compile time**
 
-You can embed files at compile time and ship them with your version of `goshs`. Any file that is in the folder `embed` will be compiled into the binary and will be available while running. There is a file called `example.txt` in the folder by default to demonstrate the feature.
+You can embed files at compile time and ship them with your version of `goshs`. Any file that is in the folder `embedded` will be compiled into the binary and will be available while running. There is a file called `example.txt` in the folder by default to demonstrate the feature.
 
 To compile just use `make build-<os>`, like for example `make build-linux` for a version running on linux. Be sure to checkout and understand the section [Build yourself](#build-yourself).
 
