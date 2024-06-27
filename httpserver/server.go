@@ -85,6 +85,9 @@ func (fs *FileServer) Start(what string) {
 		logger.Info("Serving in silent mode - no dir listing available at HTTP Listener")
 	}
 
+	// Print all embedded files as info to the console
+	fs.PrintEmbeddedFiles()
+
 	// Check if ssl
 	if fs.SSL {
 		// Check if selfsigned

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,11 +20,35 @@ import (
 	"github.com/patrickhener/goshs/ws"
 )
 
+// embedded will give additional embedded content shipped with the binary
+func (fs *FileServer) embedded(w http.ResponseWriter, req *http.Request) error {
+	path := "embedded" + req.URL.Path
+	// Load file from embed package
+
+	embeddedFile, err := embedded.ReadFile(path)
+	if err != nil {
+		logger.Errorf("embedded file: %+v cannot be loaded: %+v", path, err)
+		return err
+	}
+
+	// Get mimetype from extension
+	contentType := utils.MimeByExtension(path)
+
+	// Set mimetype and deliver to browser
+	w.Header().Add("Content-Type", contentType)
+	if _, err := w.Write(embeddedFile); err != nil {
+		logger.Errorf("Error writing response to browser: %+v", err)
+		return err
+	}
+
+	return nil
+}
+
 // static will give static content for style and function
 func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	// Construct static path to file
 	path := "static" + req.URL.Path
-	// Load file with parcello
+	// Load file from embed package
 	staticFile, err := static.ReadFile(path)
 	if err != nil {
 		logger.Errorf("static file: %+v cannot be loaded: %+v", path, err)
@@ -58,7 +83,14 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 		fs.static(w, req)
 		return
 	}
-
+	if _, ok := req.URL.Query()["embedded"]; ok {
+		if err := fs.embedded(w, req); err != nil {
+			logger.LogRequest(req, http.StatusNotFound, fs.Verbose)
+			return
+		}
+		logger.LogRequest(req, http.StatusOK, fs.Verbose)
+		return
+	}
 	if _, ok := req.URL.Query()["delete"]; ok {
 		if !fs.ReadOnly && !fs.UploadOnly {
 			fs.deleteFile(w, req)
@@ -148,11 +180,11 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
+func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
-		fs.handleError(w, req, err, http.StatusNotFound)
+		fileS.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
 
@@ -165,7 +197,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {
-			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
+			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
 			return
 		}
 
@@ -173,7 +205,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		passwordHash := strings.Split(acl.Auth, ":")[1]
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
-			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
+			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
 			return
 		}
 	}
@@ -203,11 +235,11 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		item.SortSize = fi.Size()
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
 		item.SortLastModified = fi.ModTime().UTC().UnixMilli()
-		item.ReadOnly = fs.ReadOnly
+		item.ReadOnly = fileS.ReadOnly
 		// Check and resolve symlink
 		if fi.Mode()&os.ModeSymlink != 0 {
 			item.IsSymlink = true
-			item.SymlinkTarget, err = os.Readlink(path.Join(fs.Webroot, relpath, fi.Name()))
+			item.SymlinkTarget, err = os.Readlink(path.Join(fileS.Webroot, relpath, fi.Name()))
 			if err != nil {
 				logger.Errorf("resolving symlink: %+v", err)
 			}
@@ -228,6 +260,35 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
 	})
 
+	// Construct Items for embedded files
+	embeddedItems := make([]item, 0)
+	// Iterate over FileInfo of embedded FS
+	err = fs.WalkDir(embedded, ".",
+		func(pathS string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// Set item fields
+			item := item{}
+			if !d.IsDir() {
+				name_temp := url.PathEscape(pathS)
+				name_temp = strings.TrimPrefix(name_temp, "embedded")
+				item.Name = strings.ReplaceAll(name_temp, "%2F", "/")
+				item.Ext = strings.ToLower(utils.ReturnExt(d.Name()))
+				uri_temp := url.PathEscape(pathS)
+				uri_temp = strings.TrimPrefix(uri_temp, "embedded")
+				item.URI = fmt.Sprintf("%s?embedded", uri_temp)
+
+				// Add to items slice
+				embeddedItems = append(embeddedItems, item)
+			}
+
+			return nil
+		})
+	if err != nil {
+		logger.Errorf("error compiling list for embedded files: %+v", err)
+	}
+
 	// if ?json output json listing
 	if jsonOutput {
 		w.Header().Add("Content-Type", "application/json")
@@ -242,9 +303,9 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		return
 	}
 
-	if fs.Silent {
+	if fileS.Silent {
 		tem := &baseTemplate{
-			GoshsVersion: fs.Version,
+			GoshsVersion: fileS.Version,
 			Directory:    &directory{AbsPath: "silent mode"},
 		}
 
@@ -268,7 +329,7 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 		// Construct directory for template
 		d := &directory{
 			RelPath: relpath,
-			AbsPath: filepath.Join(fs.Webroot, relpath),
+			AbsPath: filepath.Join(fileS.Webroot, relpath),
 			Content: items,
 		}
 		if relpath != "/" {
@@ -289,17 +350,27 @@ func (fs *FileServer) processDir(w http.ResponseWriter, req *http.Request, file 
 			d.IsSubdirectory = false
 		}
 
+		// Construct directory for embedded files
+		e := &directory{
+			RelPath: fileS.Webroot,
+			AbsPath: fileS.Webroot,
+			Content: embeddedItems,
+		}
+
 		// upload only mode empty directory
-		if fs.UploadOnly {
+		if fileS.UploadOnly {
 			d = &directory{}
+			e = &directory{}
 		}
 
 		// Construct template
 		tem := &baseTemplate{
-			Directory:    d,
-			GoshsVersion: fs.Version,
-			Clipboard:    fs.Clipboard,
-			CLI:          fs.CLI,
+			Directory:       d,
+			GoshsVersion:    fileS.Version,
+			Clipboard:       fileS.Clipboard,
+			CLI:             fileS.CLI,
+			Embedded:        fileS.Embedded,
+			EmbeddedContent: e,
 		}
 
 		files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}

@@ -1,4 +1,4 @@
-.PHONY: build
+.PHONY: build-all
 
 # uglify-js and sass needed
 generate:
@@ -7,6 +7,9 @@ generate:
 	@uglifyjs -o httpserver/static/js/color-modes.min.js assets/js/color-modes.js
 	@sass --no-source-map -s compressed assets/css/style.scss httpserver/static/css/style.css
 	@echo "[OK] Done minifying and compiling things"
+	@echo "[*] Copying embedded files to target location"
+	@rm -rf httpserver/embedded
+	@cp -r embedded httpserver/
 
 security:
 	@echo "[*] Checking with gosec"
@@ -14,7 +17,7 @@ security:
 	@echo "[OK] No issues detected"
 
 
-build: clean generate security
+build-all: clean generate
 	@echo "[*] go mod dowload"
 	@go mod download
 	@echo "[*] Building for linux"
@@ -25,6 +28,39 @@ build: clean generate security
 	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
 	@echo "[*] Building for mac"
 	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
+	@echo "[*] Building for arm"
+	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/arm_5/goshs
+	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/arm_6/goshs
+	@GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/arm_7/goshs
+	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
+	@echo "[OK] App binary was created!"
+
+build-linux: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for linux"
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux_amd64/goshs
+	@GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/linux_386/goshs
+	@echo "[OK] App binary was created!"
+
+build-mac: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for mac"
+	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
+	@echo "[OK] App binary was created!"
+
+build-windows: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for windows"
+	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows_amd64/goshs.exe
+	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
+	@echo "[OK] App binary was created!"
+
+build-arm: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
 	@echo "[*] Building for arm"
 	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/arm_5/goshs
 	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/arm_6/goshs

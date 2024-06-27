@@ -39,6 +39,7 @@ var (
 	leDomains   = ""
 	leHTTPPort  = "80"
 	leTLSPort   = "443"
+	embedded    = false
 )
 
 // Man page
@@ -58,6 +59,7 @@ Web server options:
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -si, --silent       Running without dir listing             (default: false)
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
+  -e,  --embedded     Show embedded files in UI               (default: false)
 
 TLS options:
   -s,   --ssl          Use TLS
@@ -141,6 +143,8 @@ func init() {
 	flag.StringVar(&leHTTPPort, "le-http", leHTTPPort, "")
 	flag.StringVar(&leTLSPort, "slt", leTLSPort, "")
 	flag.StringVar(&leTLSPort, "le-tls", leTLSPort, "")
+	flag.BoolVar(&embedded, "e", embedded, "")
+	flag.BoolVar(&embedded, "embedded", embedded, "")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
@@ -253,6 +257,7 @@ func main() {
 		UploadOnly:  uploadOnly,
 		ReadOnly:    readOnly,
 		Silent:      silent,
+		Embedded:    embedded,
 		Verbose:     verbose,
 		Version:     goshsVersion,
 	}

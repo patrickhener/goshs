@@ -8,10 +8,12 @@ import (
 )
 
 type baseTemplate struct {
-	Clipboard    *clipboard.Clipboard
-	GoshsVersion string
-	Directory    *directory
-	CLI          bool
+	Clipboard       *clipboard.Clipboard
+	GoshsVersion    string
+	Directory       *directory
+	EmbeddedContent *directory
+	CLI             bool
+	Embedded        bool
 }
 
 type directory struct {
@@ -57,6 +59,7 @@ type FileServer struct {
 	UploadOnly     bool
 	ReadOnly       bool
 	Silent         bool
+	Embedded       bool
 	Verbose        bool
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
