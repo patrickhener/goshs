@@ -41,6 +41,7 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
   * You can place a `.goshs` in any folder to apply custom ACLs
   * You can apply custom basic auth per folder
   * You can restrict access to specific files completely
+* Embed files on compile time
 
 # Installation
 
@@ -61,7 +62,7 @@ Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) a
 ```bash
 git clone https://github.com/patrickhener/goshs.git
 cd goshs
-make build
+make build-all
 ```
 
 # Usage
@@ -82,6 +83,7 @@ Web server options:
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -si, --silent       Running without dir listing             (default: false)
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
+  -e,  --embedded     Show embedded files in UI               (default: false)
 
 TLS options:
   -s,  --ssl           Use TLS
@@ -277,6 +279,28 @@ Hash: $2a$14$hh50ncgjLAOQT3KI1RlVYus3gMecE4/Ul2HakUp6iiBCnl2c5M0da
 ```
 
 The `block` mode will **hide** the folders and files from the listing **and restrict access** to them regardless. Please be aware that a file inside a blocked folder will be accessible unless you define a new `.goshs` file within that blocked folder.
+
+**Embed files on compile time**
+
+You can embed files at compile time and ship them with your version of `goshs`. Any file that is in the folder `embed` will be compiled into the binary and will be available while running. There is a file called `example.txt` in the folder by default to demonstrate the feature.
+
+To compile just use `make build-<os>`, like for example `make build-linux` for a version running on linux. Be sure to checkout and understand the section [Build yourself](#build-yourself).
+
+You can then retrieve the file browsing to `/file/path?embedded` or use the flag `-e` / `--embedded` to show the embedded files in the frontend.
+
+```
+user@host:~$ ./goshs -e
+INFO   [2024-06-27 18:50:03] Download embedded file at: /example.txt?embedded 
+INFO   [2024-06-27 18:50:03] Serving on interface eth0 bound to 10.137.0.27:8000 
+INFO   [2024-06-27 18:50:03] Serving on interface lo bound to 127.0.0.1:8000 
+INFO   [2024-06-27 18:50:03] Serving HTTP from /
+INFO   [2024-06-27 18:50:56] 127.0.0.1:48784 - [200] - "GET /example.txt?embedded HTTP/1.1" 
+```
+
+```
+user@host:~$ curl http://127.0.0.1:8000/example.txt?embedded
+This is an example for an embedded file on compilation time. If you place any other file here before compiling using the Makefile, then it will be added to the goshs binary and will be available when running it.
+```
 
 # Credits
 

@@ -282,6 +282,35 @@
                     {{ end }}
                 </div>
             </div>
+            {{ if .Embedded }}
+            <!-- Embedded Heading Row -->
+            <div class="row">
+                <div class="col mb-2">
+                    <h1>Embedded files</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col mb-2">
+                    <table id="tableDataEmbedded" class="table table-striped table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            {{ range .EmbeddedContent.Content }}
+            <tr>
+                <td>
+                    <!-- Name -->
+                    <a href="/{{.URI}}" target="_blank">{{.Name}}</a>
+                </td>
+            </tr>
+            {{ end }}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {{ end }}
             {{ if .CLI }}
             <!-- CLI Heading Row -->
             <div class="row">

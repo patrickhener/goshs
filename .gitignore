@@ -4,3 +4,4 @@
 /goshs
 *.exe
 *resource.go
+/httpserver/embedded
