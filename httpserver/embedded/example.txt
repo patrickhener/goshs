@@ -1,0 +1,1 @@
+This is an example for an embedded file on compilation time. If you place any other file here before compiling using the Makefile, then it will be added to the goshs binary and will be available when running it.
