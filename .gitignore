@@ -4,5 +4,7 @@
 /goshs
 *.exe
 *resource.go
+/embedded/*
+!embedded/example.txt
 /httpserver/embedded/*
 !httpserver/embedded/example.txt
