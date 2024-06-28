@@ -53,7 +53,11 @@ func (fs *FileServer) Start(what string) {
 	if err != nil {
 		logger.Fatalf("Error binding to listener '%s': %+v", addr, err)
 	}
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			logger.Errorf("error closing tcp listener: %+v", err)
+		}
+	}()
 
 	// construct server
 	server := http.Server{

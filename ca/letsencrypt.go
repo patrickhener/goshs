@@ -130,12 +130,12 @@ func GetLECertificateAndKey(email string, domains []string, httpPort string, tls
 
 	key, cert := letsencryptUser.RequestCertificate()
 
-	err := os.WriteFile("key", key, 0644)
+	err := os.WriteFile("key", key, 0600)
 	if err != nil {
 		logger.Fatalf("error writing file 'key': %+v", err)
 	}
 
-	err = os.WriteFile("cert", cert, 0644)
+	err = os.WriteFile("cert", cert, 0600)
 	if err != nil {
 		logger.Fatalf("error writing file 'cert': %+v", err)
 	}

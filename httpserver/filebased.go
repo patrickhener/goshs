@@ -10,6 +10,8 @@ import (
 func (fs *FileServer) findSpecialFile(folder string) (configFile, error) {
 	var config configFile
 
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// #nosec G304
 	file, err := os.Open(folder)
 	if err != nil {
 		return config, err
@@ -24,6 +26,8 @@ func (fs *FileServer) findSpecialFile(folder string) (configFile, error) {
 		if fi.Name() == ".goshs" {
 			openFile := filepath.Join(file.Name(), fi.Name())
 
+			// disable G304 (CWE-22): Potential file inclusion via variable
+			// #nosec G304
 			configFileDisk, err := os.Open(openFile)
 			if err != nil {
 				return config, err

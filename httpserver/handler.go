@@ -120,7 +120,6 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 
 	// Check if you are in a dir
 	// disable G304 (CWE-22): Potential file inclusion via variable
-	// as we want a file inclusion here
 	// #nosec G304
 	file, err := os.Open(open)
 	if os.IsNotExist(err) {
@@ -471,7 +470,10 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	fileCleaned, _ := url.QueryUnescape(upath)
 	if strings.Contains(fileCleaned, "..") {
 		w.WriteHeader(500)
-		w.Write([]byte("Cannot delete file"))
+		_, err := w.Write([]byte("Cannot delete file"))
+		if err != nil {
+			logger.Errorf("error writing answer to client: %+v", err)
+		}
 	}
 
 	deletePath := filepath.Join(fs.Webroot, fileCleaned)

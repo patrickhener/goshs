@@ -61,7 +61,6 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 		// Create file to write to
 		// disable G304 (CWE-22): Potential file inclusion via variable
-		// as we want a file inclusion here
 		// #nosec G304
 		if _, err := os.Create(savepath); err != nil {
 			logger.Errorf("Not able to create file on disk")
@@ -71,11 +70,17 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		// Write file to disk 16MB at a time
 		buffer := make([]byte, 1<<24)
 
+		// disable G304 (CWE-22): Potential file inclusion via variable
+		// #nosec G304
 		osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 		if err != nil {
 			logger.Warnf("Error opening file: %+v", err)
 		}
-		defer osFile.Close()
+		defer func() {
+			if err := osFile.Close(); err != nil {
+				logger.Errorf("error closing file: %+v", err)
+			}
+		}()
 
 		for {
 			// Read file from post body
@@ -155,7 +160,6 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// disable G304 (CWE-22): Potential file inclusion via variable
-		// as we want a file inclusion here
 		// #nosec G304
 		file, err := os.Open(filepath)
 		if err != nil {
