@@ -26,12 +26,12 @@
       document.documentElement.setAttribute('data-bs-theme', 'dark');
       document
         .getElementById('goshslogo')
-        .setAttribute('src', '/images/goshs-logo-dark.png?static');
+        .setAttribute('src', '/images/banner-dark.png?static');
     } else {
       document.documentElement.setAttribute('data-bs-theme', theme);
       document
         .getElementById('goshslogo')
-        .setAttribute('src', '/images/goshs-logo-light.png?static');
+        .setAttribute('src', '/images/banner-light.png?static');
     }
   };
 

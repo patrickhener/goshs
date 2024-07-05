@@ -108,7 +108,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	upath := req.URL.Path
 
 	// Ignore default browser call to /favicon.ico
-	if upath == "/favicon.ico" {
+	if upath == "/favicon.png" {
 		return
 	}
 
