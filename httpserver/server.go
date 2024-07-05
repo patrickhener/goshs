@@ -123,7 +123,7 @@ func (fs *FileServer) Start(what string) {
 			var fingerprint256, fingerprint1 string
 
 			if fs.MyP12 != "" {
-				p12, err := os.ReadFile("cert.p12")
+				p12, err := os.ReadFile(fs.MyP12)
 				if err != nil {
 					logger.Fatalf("Error reading pkcs12 file: %+v", err)
 				}
