@@ -5,7 +5,7 @@
 ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/patrickhener/goshs)](https://goreportcard.com/report/github.com/patrickhener/goshs)
 
-<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png" alt="goshs-logo" width="85">
+<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png" alt="goshs-logo" height="100">
 
 goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
 
