@@ -71,7 +71,7 @@ func (fs *FileServer) logStart(what string) {
 				logger.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
 				logger.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)
 			} else {
-				logger.Infof("Serving %s from %+v with ssl enabled server key: %+v, server cert: %+v\n", protocol, fs.Webroot, fs.MyKey, fs.MyCert)
+				logger.Infof("Serving %s from %+v with ssl enabled server key: %+v, server cert: %+v, server p12: %+v\n", protocol, fs.Webroot, fs.MyKey, fs.MyCert, fs.MyP12)
 				logger.Info("You provided a certificate and might want to check the fingerprint nonetheless")
 				logger.Infof("SHA-256 Fingerprint: %+v\n", fs.Fingerprint256)
 				logger.Infof("SHA-1   Fingerprint: %+v\n", fs.Fingerprint1)

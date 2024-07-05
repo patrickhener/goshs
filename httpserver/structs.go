@@ -50,6 +50,7 @@ type FileServer struct {
 	LetsEncrypt    bool
 	MyKey          string
 	MyCert         string
+	MyP12          string
 	User           string
 	Pass           string
 	DropUser       string
