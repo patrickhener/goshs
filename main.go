@@ -27,6 +27,7 @@ var (
 	letsencrypt = false
 	myKey       = ""
 	myCert      = ""
+	myP12       = ""
 	basicAuth   = ""
 	webdav      = false
 	webdavPort  = 8001
@@ -66,6 +67,7 @@ TLS options:
   -ss,  --self-signed  Use a self-signed certificate
   -sk,  --server-key   Path to server key
   -sc,  --server-cert  Path to server certificate
+  -p12, --pkcs12       Path to server p12
   -sl,  --lets-encrypt Use Let's Encrypt as certification service
   -sld, --le-domains   Domain(s) to request from Let's Encrypt		(comma separated list)
   -sle, --le-email     Email to use with Let's Encrypt
@@ -115,6 +117,8 @@ func init() {
 	flag.StringVar(&myKey, "server-key", myKey, "server key")
 	flag.StringVar(&myCert, "sc", myCert, "server cert")
 	flag.StringVar(&myCert, "server-cert", myCert, "server cert")
+	flag.StringVar(&myP12, "p12", myP12, "server p12")
+	flag.StringVar(&myP12, "pkcs12", myP12, "server p12")
 	flag.StringVar(&basicAuth, "b", basicAuth, "basic auth")
 	flag.StringVar(&basicAuth, "basic-auth", basicAuth, "basic auth")
 	flag.BoolVar(&webdav, "w", webdav, "enable webdav")
@@ -251,6 +255,7 @@ func main() {
 		LetsEncrypt: letsencrypt,
 		MyCert:      myCert,
 		MyKey:       myKey,
+		MyP12:       myP12,
 		User:        user,
 		Pass:        pass,
 		DropUser:    dropuser,

@@ -12,6 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.21.0
 	golang.org/x/net v0.23.0
+	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
 
 require (

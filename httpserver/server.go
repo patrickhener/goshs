@@ -7,14 +7,17 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // Start will start the file server
@@ -111,17 +114,47 @@ func (fs *FileServer) Start(what string) {
 			logger.Panic(server.ServeTLS(listener, "", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
-				logger.Fatal("You need to provide server.key and server.crt if -s and not -ss")
+				if fs.MyP12 == "" {
+					logger.Fatal("You need to provide either server.key and server.crt or server.p12 if -s and not -ss")
+				}
 			}
 
-			fingerprint256, fingerprint1, err := ca.ParseAndSum(fs.MyCert)
-			if err != nil {
-				logger.Fatalf("Unable to start SSL enabled server: %+v\n", err)
-			}
+			var cert tls.Certificate
+			var fingerprint256, fingerprint1 string
 
-			cert, err := tls.LoadX509KeyPair(fs.MyCert, fs.MyKey)
-			if err != nil {
-				logger.Fatalf("Failed to load provided key or certificate: %+v\n", err)
+			if fs.MyP12 != "" {
+				p12, err := os.ReadFile("cert.p12")
+				if err != nil {
+					logger.Fatalf("Error reading pkcs12 file: %+v", err)
+				}
+
+				fmt.Printf("Enter password for %+v: ", fs.MyP12)
+				password, err := gopass.GetPasswdMasked()
+				if err != nil {
+					logger.Fatalf("error reading password from stdin: %+v", err)
+				}
+				privKey, certificate, err := pkcs12.Decode(p12, string(password))
+				if err != nil {
+					logger.Fatalf("error parsing the p12 file: %+v", err)
+				}
+
+				cert = tls.Certificate{
+					Certificate: [][]byte{certificate.Raw},
+					PrivateKey:  privKey,
+					Leaf:        certificate,
+				}
+
+				fingerprint256, fingerprint1 = ca.Sum(certificate.Raw)
+			} else {
+				fingerprint256, fingerprint1, err = ca.ParseAndSum(fs.MyCert)
+				if err != nil {
+					logger.Fatalf("Unable to start SSL enabled server: %+v\n", err)
+				}
+
+				cert, err = tls.LoadX509KeyPair(fs.MyCert, fs.MyKey)
+				if err != nil {
+					logger.Fatalf("Failed to load provided key or certificate: %+v\n", err)
+				}
 			}
 
 			server.TLSConfig = &tls.Config{
