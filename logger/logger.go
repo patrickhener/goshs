@@ -30,38 +30,41 @@ func LogRequest(req *http.Request, status int, verbose bool) {
 		}
 	}
 	if verbose {
-		logger.Infof("User Agent: %s", req.UserAgent())
-		auth := req.Header.Get("Authorization")
-		if auth != "" {
-			logger.Infof("Authorization Header: %s", auth)
-			if strings.Contains(auth, "Basic") {
-				decodedAuth, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(auth, "Basic ", ""))
-				if err != nil {
-					logger.Warnf("error decoding basic auth: %s", err)
-					return
-				}
-				logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
+		logVerbose(req)
+	}
+}
+
+func logVerbose(req *http.Request) {
+	logger.Infof("User Agent: %s", req.UserAgent())
+	auth := req.Header.Get("Authorization")
+	if auth != "" {
+		logger.Infof("Authorization Header: %s", auth)
+		if strings.Contains(auth, "Basic") {
+			decodedAuth, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(auth, "Basic ", ""))
+			if err != nil {
+				logger.Warnf("error decoding basic auth: %s", err)
+				return
 			}
+			logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
 		}
-		for k, v := range req.URL.Query() {
-			logger.Infof("Parameter %s is", k)
-			var x struct{}
-			if err := json.Unmarshal([]byte(v[0]), &x); err != nil {
+	}
+	for k, v := range req.URL.Query() {
+		logger.Infof("Parameter %s is", k)
+		var x struct{}
+		if err := json.Unmarshal([]byte(v[0]), &x); err != nil {
+			logger.Debug("Not JSON format printing plain")
+			fmt.Println(v[0])
+		} else {
+			dst := &bytes.Buffer{}
+			err := json.Indent(dst, []byte(v[0]), "", "  ")
+			if err != nil {
 				logger.Debug("Not JSON format printing plain")
 				fmt.Println(v[0])
 			} else {
-				dst := &bytes.Buffer{}
-				err := json.Indent(dst, []byte(v[0]), "", "  ")
-				if err != nil {
-					logger.Debug("Not JSON format printing plain")
-					fmt.Println(v[0])
-				} else {
-					logger.Debug("It is JSON - pretty print")
-					// fmt.Println(v[0])
-					fmt.Println(dst.String())
-				}
+				logger.Debug("It is JSON - pretty print")
+				// fmt.Println(v[0])
+				fmt.Println(dst.String())
 			}
-
 		}
 	}
 }

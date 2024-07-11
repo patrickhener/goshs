@@ -90,55 +90,61 @@ func (c *Client) readPump() {
 			break
 		}
 
-		// Switch here over possible socket events and pull in handlers
-		switch packet.Type {
-		case "newEntry":
-			var entry string
-			if err := json.Unmarshal(packet.Content, &entry); err != nil {
-				logger.Errorf("Error reading json packet: %+v", err)
-			}
-			if err := c.hub.cb.AddEntry(entry); err != nil {
-				logger.Errorf("Error creating Clipboard entry: %+v", err)
-			}
-			c.refreshClipboard()
-
-		case "delEntry":
-			var id string
-			if err := json.Unmarshal(packet.Content, &id); err != nil {
-				logger.Errorf("Error reading json packet: %+v", err)
-			}
-			iid, err := strconv.Atoi(id)
-			if err != nil {
-				logger.Errorf("Error reading json packet: %+v", err)
-			}
-			if err := c.hub.cb.DeleteEntry(iid); err != nil {
-				logger.Errorf("Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
-			}
-			c.refreshClipboard()
-
-		case "clearClipboard":
-			if err := c.hub.cb.ClearClipboard(); err != nil {
-				logger.Errorf("Error clearing clipboard: %+v", err)
-			}
-			c.refreshClipboard()
-
-		case "command":
-			var command string
-			if err := json.Unmarshal(packet.Content, &command); err != nil {
-				logger.Errorf("Error reading json packet: %+v", err)
-			}
-			logger.Debugf("Command was: %+v", command)
-			output, err := cli.RunCMD(command)
-			if err != nil {
-				logger.Errorf("Error running command: %+v", err)
-			}
-			logger.Debugf("Output: %+v", output)
-			c.updateCLI(output)
-
-		default:
-			logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
-		}
+		// Switch over possible socket events
+		c.dispatchReadPump(packet)
 	}
+}
+
+func (c *Client) dispatchReadPump(packet Packet) {
+	// Switch here over possible socket events and pull in handlers
+	switch packet.Type {
+	case "newEntry":
+		var entry string
+		if err := json.Unmarshal(packet.Content, &entry); err != nil {
+			logger.Errorf("Error reading json packet: %+v", err)
+		}
+		if err := c.hub.cb.AddEntry(entry); err != nil {
+			logger.Errorf("Error creating Clipboard entry: %+v", err)
+		}
+		c.refreshClipboard()
+
+	case "delEntry":
+		var id string
+		if err := json.Unmarshal(packet.Content, &id); err != nil {
+			logger.Errorf("Error reading json packet: %+v", err)
+		}
+		iid, err := strconv.Atoi(id)
+		if err != nil {
+			logger.Errorf("Error reading json packet: %+v", err)
+		}
+		if err := c.hub.cb.DeleteEntry(iid); err != nil {
+			logger.Errorf("Error to delete Clipboard entry with id: %s: %+v", string(packet.Content), err)
+		}
+		c.refreshClipboard()
+
+	case "clearClipboard":
+		if err := c.hub.cb.ClearClipboard(); err != nil {
+			logger.Errorf("Error clearing clipboard: %+v", err)
+		}
+		c.refreshClipboard()
+
+	case "command":
+		var command string
+		if err := json.Unmarshal(packet.Content, &command); err != nil {
+			logger.Errorf("Error reading json packet: %+v", err)
+		}
+		logger.Debugf("Command was: %+v", command)
+		output, err := cli.RunCMD(command)
+		if err != nil {
+			logger.Errorf("Error running command: %+v", err)
+		}
+		logger.Debugf("Output: %+v", output)
+		c.updateCLI(output)
+
+	default:
+		logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
+	}
+
 }
 
 // writePump pumps messages from the hub to the websocket connection.
