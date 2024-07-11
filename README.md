@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v0.4.0-green)
+![Version](https://img.shields.io/badge/Version-v0.4.1-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -26,7 +26,9 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Delete files
   * Individually
   * Bulk delete
-* Basic Authentication
+* Authentication
+  * Basic Authentication
+  * Certificate Based Authentication via Client Certificate
 * Transport Layer Security (HTTPS)
   * self-signed
   * let's encrypt

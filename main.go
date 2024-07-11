@@ -15,7 +15,7 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.4.0"
+const goshsVersion = "v0.4.1"
 
 var (
 	port        = 8000
@@ -29,6 +29,7 @@ var (
 	myCert      = ""
 	myP12       = ""
 	basicAuth   = ""
+	certAuth    = ""
 	webdav      = false
 	webdavPort  = 8001
 	uploadOnly  = false
@@ -75,8 +76,9 @@ TLS options:
   -slt, --le-tls       Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
 
 Authentication options:
-  -b, --basic-auth    Use basic authentication (user:pass - user can be empty)
-  -H, --hash          Hash a password for file based ACLs
+  -b,  --basic-auth    Use basic authentication (user:pass - user can be empty)
+  -ca, --cert-auth     Use certificate based authentication - provide ca certificate
+  -H,  --hash          Hash a password for file based ACLs
 
 Misc options:
   -u  --user          Drop privs to user (unix only)          (default: current user)
@@ -121,6 +123,8 @@ func init() {
 	flag.StringVar(&myP12, "pkcs12", myP12, "server p12")
 	flag.StringVar(&basicAuth, "b", basicAuth, "basic auth")
 	flag.StringVar(&basicAuth, "basic-auth", basicAuth, "basic auth")
+	flag.StringVar(&certAuth, "ca", certAuth, "cert auth")
+	flag.StringVar(&certAuth, "cert-auth", certAuth, "cert auth")
 	flag.BoolVar(&webdav, "w", webdav, "enable webdav")
 	flag.BoolVar(&webdav, "webdav", webdav, "enable webdav")
 	flag.IntVar(&webdavPort, "wp", webdavPort, "webdav port")
@@ -191,7 +195,14 @@ func init() {
 
 	// Sanity check if cli mode is combined with auth and tls
 	if cli && (!ssl || basicAuth == "") {
-		logger.Fatal("With cli mode you need to enable basic auth and tls for security reasons.")
+		if cli && (!ssl || certAuth == "") {
+			logger.Fatal("With cli mode you need to enable basic/cert auth and tls for security reasons.")
+		}
+	}
+
+	// Sanity check if CA mode enabled you will also need TLS enabled in some way
+	if certAuth != "" && !ssl {
+		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")
 	}
 
 	if webdav {
@@ -258,6 +269,7 @@ func main() {
 		MyP12:       myP12,
 		User:        user,
 		Pass:        pass,
+		CACert:      certAuth,
 		DropUser:    dropuser,
 		UploadOnly:  uploadOnly,
 		ReadOnly:    readOnly,

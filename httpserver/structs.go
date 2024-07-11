@@ -53,6 +53,7 @@ type FileServer struct {
 	MyP12          string
 	User           string
 	Pass           string
+	CACert         string
 	DropUser       string
 	Version        string
 	Fingerprint256 string
