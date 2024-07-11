@@ -104,6 +104,12 @@ func (fs *FileServer) Start(what string) {
 				logger.Fatalf("Unable to start SSL enabled server: %+v\n", err)
 			}
 			server.TLSConfig = serverTLSConf
+
+			// If client-cert auth add it to TLS Config of server
+			if fs.CACert != "" {
+				fs.AddCertAuth(&server)
+			}
+
 			fs.Fingerprint256 = fingerprint256
 			fs.Fingerprint1 = fingerprint1
 			fs.logStart(what)
@@ -160,6 +166,11 @@ func (fs *FileServer) Start(what string) {
 			server.TLSConfig = &tls.Config{
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS12,
+			}
+
+			// If client-cert auth add it to TLS Config of server
+			if fs.CACert != "" {
+				fs.AddCertAuth(&server)
 			}
 
 			fs.Fingerprint256 = fingerprint256
