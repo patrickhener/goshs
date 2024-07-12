@@ -147,6 +147,52 @@ func (c *Client) dispatchReadPump(packet Packet) {
 
 }
 
+func (c *Client) doWriteSelect(ticker *time.Ticker) {
+	select {
+	case message, ok := <-c.send:
+		if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+			return
+		}
+		if !ok {
+			// The hub closed the channel.
+			if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+				return
+			}
+			return
+		}
+
+		w, err := c.conn.NextWriter(websocket.TextMessage)
+		if err != nil {
+			return
+		}
+		if _, err := w.Write(message); err != nil {
+			return
+		}
+
+		// Add queued chat messages to the current websocket message.
+		n := len(c.send)
+		for i := 0; i < n; i++ {
+			if _, err := w.Write(newline); err != nil {
+				return
+			}
+			if _, err := w.Write(<-c.send); err != nil {
+				return
+			}
+		}
+
+		if err := w.Close(); err != nil {
+			return
+		}
+	case <-ticker.C:
+		if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+			return
+		}
+		if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			return
+		}
+	}
+}
+
 // writePump pumps messages from the hub to the websocket connection.
 //
 // A goroutine running writePump is started for each connection. The
@@ -161,49 +207,7 @@ func (c *Client) writePump() {
 		}
 	}()
 	for {
-		select {
-		case message, ok := <-c.send:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return
-			}
-			if !ok {
-				// The hub closed the channel.
-				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					return
-				}
-				return
-			}
-
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			if _, err := w.Write(message); err != nil {
-				return
-			}
-
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				if _, err := w.Write(newline); err != nil {
-					return
-				}
-				if _, err := w.Write(<-c.send); err != nil {
-					return
-				}
-			}
-
-			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return
-			}
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
-		}
+		c.doWriteSelect(ticker)
 	}
 }
 
