@@ -100,11 +100,9 @@ Usage examples:
 	}
 }
 
-// Flag handling
-func init() {
+func flags() (*bool, *bool, *bool) {
 	wd, _ := os.Getwd()
 
-	// flags
 	flag.StringVar(&ip, "i", ip, "ip")
 	flag.StringVar(&ip, "ip", ip, "ip")
 	flag.IntVar(&port, "p", port, "port")
@@ -161,16 +159,10 @@ func init() {
 
 	flag.Parse()
 
-	if *version {
-		fmt.Printf("goshs version is: %+v\n", goshsVersion)
-		os.Exit(0)
-	}
+	return hash, hashLong, version
+}
 
-	if *hash || *hashLong {
-		utils.HashPassword()
-		os.Exit(1)
-	}
-
+func resolveInterface() {
 	// Check if interface name was provided as -i
 	// If so, resolve to ip address of interface
 	if !strings.Contains(ip, ".") {
@@ -187,7 +179,9 @@ func init() {
 
 		ip = addr
 	}
+}
 
+func sanityChecks() {
 	// Sanity check for upload only vs read only
 	if uploadOnly && readOnly {
 		logger.Fatal("You can only select either 'upload only' or 'read only', not both.")
@@ -204,6 +198,30 @@ func init() {
 	if certAuth != "" && !ssl {
 		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")
 	}
+}
+
+// Flag handling
+func init() {
+	wd, _ := os.Getwd()
+
+	// flags
+	hash, hashLong, version := flags()
+
+	if *version {
+		fmt.Printf("goshs version is: %+v\n", goshsVersion)
+		os.Exit(0)
+	}
+
+	if *hash || *hashLong {
+		utils.HashPassword()
+		os.Exit(1)
+	}
+
+	// Resolve Interface
+	resolveInterface()
+
+	// Sanity checks
+	sanityChecks()
 
 	if webdav {
 		logger.Warn("upload/read-only mode deactivated due to use of 'webdav' mode")

@@ -20,12 +20,8 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 )
 
-// Start will start the file server
-func (fs *FileServer) Start(what string) {
+func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 	var addr string
-	// Setup routing with gorilla/mux
-	mux := mux.NewRouter()
-
 	switch what {
 	case modeWeb:
 		mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
@@ -51,34 +47,10 @@ func (fs *FileServer) Start(what string) {
 	default:
 	}
 
-	// construct and bind listener
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		logger.Fatalf("Error binding to listener '%s': %+v", addr, err)
-	}
-	defer func() {
-		if err := listener.Close(); err != nil {
-			logger.Errorf("error closing tcp listener: %+v", err)
-		}
-	}()
+	return addr
+}
 
-	// construct server
-	server := http.Server{
-		// Addr:              addr,
-		Handler:           http.AllowQuerySemicolons(mux),
-		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
-		ErrorLog:          log.New(io.Discard, "", 0),
-		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
-	}
-
-	// init clipboard
-	fs.Clipboard = clipboard.New()
-
-	// init websocket hub
-	fs.Hub = ws.NewHub(fs.Clipboard)
-	go fs.Hub.Run()
-
-	// Check BasicAuth and use middleware
+func (fs *FileServer) PrintInfoUseBasicAuth(mux *mux.Router, what string) {
 	if (fs.User != "" || fs.Pass != "") && what == modeWeb {
 		if !fs.SSL {
 			logger.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
@@ -94,7 +66,10 @@ func (fs *FileServer) Start(what string) {
 
 	// Print all embedded files as info to the console
 	fs.PrintEmbeddedFiles()
+}
 
+func (fs *FileServer) StartListener(server http.Server, what string, listener net.Listener) {
+	var err error
 	// Check if ssl
 	if fs.SSL {
 		// Check if selfsigned
@@ -190,5 +165,45 @@ func (fs *FileServer) Start(what string) {
 
 		logger.Panic(server.Serve(listener))
 	}
+}
 
+// Start will start the file server
+func (fs *FileServer) Start(what string) {
+	// Setup routing with gorilla/mux
+	mux := mux.NewRouter()
+
+	addr := fs.SetupMux(mux, what)
+
+	// construct and bind listener
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		logger.Fatalf("Error binding to listener '%s': %+v", addr, err)
+	}
+	defer func() {
+		if err := listener.Close(); err != nil {
+			logger.Errorf("error closing tcp listener: %+v", err)
+		}
+	}()
+
+	// construct server
+	server := http.Server{
+		// Addr:              addr,
+		Handler:           http.AllowQuerySemicolons(mux),
+		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
+		ErrorLog:          log.New(io.Discard, "", 0),
+		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
+	}
+
+	// init clipboard
+	fs.Clipboard = clipboard.New()
+
+	// init websocket hub
+	fs.Hub = ws.NewHub(fs.Clipboard)
+	go fs.Hub.Run()
+
+	// Check BasicAuth and use middleware
+	fs.PrintInfoUseBasicAuth(mux, what)
+
+	// Start listener
+	fs.StartListener(server, what, listener)
 }

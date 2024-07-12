@@ -64,38 +64,81 @@ func (fs *FileServer) static(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// handler is the function which actually handles dir or file retrieval
-func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
-	// Early break for /?ws, /?cbDown, /?bulk and /?static /?delete
+func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Request, upath string, json bool) {
+	// Check if parent folder forbids access to this directory
+	parent := filepath.Dir(file.Name())
+	parentConfig, err := fs.findSpecialFile(parent)
+	if err != nil {
+		logger.Errorf("error reading file based access config: %+v", err)
+	}
+
+	// Get foldername
+	_, foldername := filepath.Split(file.Name())
+
+	for _, name := range parentConfig.Block {
+		if name == fmt.Sprintf("%s/", foldername) {
+			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+			return
+		}
+	}
+
+	// Check if the dir has a .goshs ACL file
+	config, err := fs.findSpecialFile(file.Name())
+	if err != nil {
+		logger.Errorf("error reading file based access config: %+v", err)
+	}
+	fs.processDir(w, req, file, upath, json, config)
+}
+
+func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Request) {
+	// If it is a file we need to check for .goshs one directory up
+	parent := filepath.Dir(file.Name())
+	config, err := fs.findSpecialFile(parent)
+	if err != nil {
+		logger.Errorf("error reading file based access config: %+v", err)
+	}
+	fs.sendFile(w, req, file, config)
+}
+
+func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
 	if _, ok := req.URL.Query()["ws"]; ok {
 		fs.socket(w, req)
-		return
+		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
 		fs.cbDown(w, req)
-		return
+		return true
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
 		fs.bulkDownload(w, req)
-		return
+		return true
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
 		fs.static(w, req)
-		return
+		return true
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
 		if err := fs.embedded(w, req); err != nil {
 			logger.LogRequest(req, http.StatusNotFound, fs.Verbose)
-			return
+			return true
 		}
 		logger.LogRequest(req, http.StatusOK, fs.Verbose)
-		return
+		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
 		if !fs.ReadOnly && !fs.UploadOnly {
 			fs.deleteFile(w, req)
-			return
+			return true
 		}
+	}
+	return false
+}
+
+// handler is the function which actually handles dir or file retrieval
+func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
+	// Early break for /?ws, /?cbDown, /?bulk, /?static /?delete, ?embedded
+	if ok := fs.earlyBreakParameters(w, req); ok {
+		return
 	}
 
 	// Define if to return json instead of html parsing
@@ -145,52 +188,14 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// Switch and check if dir
 	stat, _ := file.Stat()
 	if stat.IsDir() {
-		// Check if parent folder forbids access to this directory
-		parent := filepath.Dir(file.Name())
-		parentConfig, err := fs.findSpecialFile(parent)
-		if err != nil {
-			logger.Errorf("error reading file based access config: %+v", err)
-		}
-
-		// Get foldername
-		_, foldername := filepath.Split(file.Name())
-
-		for _, name := range parentConfig.Block {
-			if name == fmt.Sprintf("%s/", foldername) {
-				fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
-				return
-			}
-		}
-
-		// Check if the dir has a .goshs ACL file
-		config, err := fs.findSpecialFile(file.Name())
-		if err != nil {
-			logger.Errorf("error reading file based access config: %+v", err)
-		}
-		fs.processDir(w, req, file, upath, json, config)
+		fs.doDir(file, w, req, upath, json)
 	} else {
-		// If it is a file we need to check for .goshs one directory up
-		parent := filepath.Dir(file.Name())
-		config, err := fs.findSpecialFile(parent)
-		if err != nil {
-			logger.Errorf("error reading file based access config: %+v", err)
-		}
-		fs.sendFile(w, req, file, config)
+		fs.doFile(file, w, req)
 	}
 }
 
-func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
-	// Read directory FileInfo
-	fis, err := file.Readdir(-1)
-	if err != nil {
-		fileS.handleError(w, req, err, http.StatusNotFound)
-		return
-	}
-
-	// Cleanup for Windows Paths
-	relpath = strings.TrimLeft(relpath, "\\")
-
-	// Apply Custom Auth if there
+// Applies custom auth for file based acls
+func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Request, acl configFile) {
 	if acl.Auth != "" {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
 
@@ -208,7 +213,139 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 			return
 		}
 	}
+}
 
+func (fileS *FileServer) constructEmbedded() []item {
+	var err error
+	// Construct Items for embedded files
+	embeddedItems := make([]item, 0)
+	// Iterate over FileInfo of embedded FS
+	err = fs.WalkDir(embedded, ".",
+		func(pathS string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// Set item fields
+			item := item{}
+			if !d.IsDir() {
+				name_temp := url.PathEscape(pathS)
+				name_temp = strings.TrimPrefix(name_temp, "embedded")
+				item.Name = strings.ReplaceAll(name_temp, "%2F", "/")
+				item.Ext = strings.ToLower(utils.ReturnExt(d.Name()))
+				uri_temp := url.PathEscape(pathS)
+				uri_temp = strings.TrimPrefix(uri_temp, "embedded")
+				item.URI = fmt.Sprintf("%s?embedded", uri_temp)
+
+				// Add to items slice
+				embeddedItems = append(embeddedItems, item)
+			}
+
+			return nil
+		})
+	if err != nil {
+		logger.Errorf("error compiling list for embedded files: %+v", err)
+	}
+
+	return embeddedItems
+}
+
+func returnJsonDirListing(w http.ResponseWriter, items []item) {
+	w.Header().Add("Content-Type", "application/json")
+	resJson, err := json.Marshal(items)
+	if err != nil {
+		logger.Errorf("error marshaling items to json: %+v", err)
+	}
+	_, err = w.Write(resJson)
+	if err != nil {
+		logger.Errorf("error writing json as response: %+v", err)
+	}
+}
+
+func (fileS *FileServer) constructSilent(w http.ResponseWriter) {
+	tem := &baseTemplate{
+		GoshsVersion: fileS.Version,
+		Directory:    &directory{AbsPath: "silent mode"},
+	}
+
+	files := []string{"static/templates/silent.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
+
+	t, err := template.ParseFS(static, files...)
+	if err != nil {
+		logger.Errorf("Error parsing templates: %+v", err)
+	}
+
+	if err := t.Execute(w, tem); err != nil {
+		logger.Errorf("Error executing template: %+v", err)
+	}
+}
+
+func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string, items []item, embeddedItems []item) {
+	// Windows upload compatibility
+	if relpath == "\\" {
+		relpath = "/"
+	}
+
+	// Construct directory for template
+	d := &directory{
+		RelPath: relpath,
+		AbsPath: filepath.Join(fileS.Webroot, relpath),
+		Content: items,
+	}
+	if relpath != "/" {
+		d.IsSubdirectory = true
+		pathSlice := strings.Split(relpath, "/")
+		if len(pathSlice) > 2 {
+			pathSlice = pathSlice[1 : len(pathSlice)-1]
+
+			var backString string
+			for _, part := range pathSlice {
+				backString += "/" + part
+			}
+			d.Back = backString
+		} else {
+			d.Back = "/"
+		}
+	} else {
+		d.IsSubdirectory = false
+	}
+
+	// Construct directory for embedded files
+	e := &directory{
+		RelPath: fileS.Webroot,
+		AbsPath: fileS.Webroot,
+		Content: embeddedItems,
+	}
+
+	// upload only mode empty directory
+	if fileS.UploadOnly {
+		d = &directory{}
+		e = &directory{}
+	}
+
+	// Construct template
+	tem := &baseTemplate{
+		Directory:       d,
+		GoshsVersion:    fileS.Version,
+		Clipboard:       fileS.Clipboard,
+		CLI:             fileS.CLI,
+		Embedded:        fileS.Embedded,
+		EmbeddedContent: e,
+	}
+
+	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
+
+	t, err := template.ParseFS(static, files...)
+	if err != nil {
+		logger.Errorf("Error parsing templates: %+v", err)
+	}
+
+	if err := t.Execute(w, tem); err != nil {
+		logger.Errorf("Error executing template: %+v", err)
+	}
+}
+
+func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl configFile) []item {
+	var err error
 	// Create empty slice
 	items := make([]item, 0, len(fis))
 	// Iterate over FileInfo of dir
@@ -259,129 +396,40 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
 	})
 
-	// Construct Items for embedded files
-	embeddedItems := make([]item, 0)
-	// Iterate over FileInfo of embedded FS
-	err = fs.WalkDir(embedded, ".",
-		func(pathS string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			// Set item fields
-			item := item{}
-			if !d.IsDir() {
-				name_temp := url.PathEscape(pathS)
-				name_temp = strings.TrimPrefix(name_temp, "embedded")
-				item.Name = strings.ReplaceAll(name_temp, "%2F", "/")
-				item.Ext = strings.ToLower(utils.ReturnExt(d.Name()))
-				uri_temp := url.PathEscape(pathS)
-				uri_temp = strings.TrimPrefix(uri_temp, "embedded")
-				item.URI = fmt.Sprintf("%s?embedded", uri_temp)
+	return items
 
-				// Add to items slice
-				embeddedItems = append(embeddedItems, item)
-			}
+}
 
-			return nil
-		})
+func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
+	// Read directory FileInfo
+	fis, err := file.Readdir(-1)
 	if err != nil {
-		logger.Errorf("error compiling list for embedded files: %+v", err)
+		fileS.handleError(w, req, err, http.StatusNotFound)
+		return
 	}
+
+	// Cleanup for Windows Paths
+	relpath = strings.TrimLeft(relpath, "\\")
+
+	// Apply Custom Auth if there is any due to file based acl
+	fileS.applyCustomAuth(w, req, acl)
+
+	// Construct items list
+	items := fileS.constructItems(fis, relpath, acl)
+
+	// Handle embedded files
+	embeddedItems := fileS.constructEmbedded()
 
 	// if ?json output json listing
 	if jsonOutput {
-		w.Header().Add("Content-Type", "application/json")
-		resJson, err := json.Marshal(items)
-		if err != nil {
-			logger.Errorf("error marshaling items to json: %+v", err)
-		}
-		_, err = w.Write(resJson)
-		if err != nil {
-			logger.Errorf("error writing json as response: %+v", err)
-		}
+		returnJsonDirListing(w, items)
 		return
 	}
 
 	if fileS.Silent {
-		tem := &baseTemplate{
-			GoshsVersion: fileS.Version,
-			Directory:    &directory{AbsPath: "silent mode"},
-		}
-
-		files := []string{"static/templates/silent.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
-
-		t, err := template.ParseFS(static, files...)
-		if err != nil {
-			logger.Errorf("Error parsing templates: %+v", err)
-		}
-
-		if err := t.Execute(w, tem); err != nil {
-			logger.Errorf("Error executing template: %+v", err)
-		}
-
+		fileS.constructSilent(w)
 	} else {
-		// Windows upload compatibility
-		if relpath == "\\" {
-			relpath = "/"
-		}
-
-		// Construct directory for template
-		d := &directory{
-			RelPath: relpath,
-			AbsPath: filepath.Join(fileS.Webroot, relpath),
-			Content: items,
-		}
-		if relpath != "/" {
-			d.IsSubdirectory = true
-			pathSlice := strings.Split(relpath, "/")
-			if len(pathSlice) > 2 {
-				pathSlice = pathSlice[1 : len(pathSlice)-1]
-
-				var backString string
-				for _, part := range pathSlice {
-					backString += "/" + part
-				}
-				d.Back = backString
-			} else {
-				d.Back = "/"
-			}
-		} else {
-			d.IsSubdirectory = false
-		}
-
-		// Construct directory for embedded files
-		e := &directory{
-			RelPath: fileS.Webroot,
-			AbsPath: fileS.Webroot,
-			Content: embeddedItems,
-		}
-
-		// upload only mode empty directory
-		if fileS.UploadOnly {
-			d = &directory{}
-			e = &directory{}
-		}
-
-		// Construct template
-		tem := &baseTemplate{
-			Directory:       d,
-			GoshsVersion:    fileS.Version,
-			Clipboard:       fileS.Clipboard,
-			CLI:             fileS.CLI,
-			Embedded:        fileS.Embedded,
-			EmbeddedContent: e,
-		}
-
-		files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
-
-		t, err := template.ParseFS(static, files...)
-		if err != nil {
-			logger.Errorf("Error parsing templates: %+v", err)
-		}
-
-		if err := t.Execute(w, tem); err != nil {
-			logger.Errorf("Error executing template: %+v", err)
-		}
+		fileS.constructDefault(w, relpath, items, embeddedItems)
 	}
 }
 
