@@ -77,6 +77,9 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			logger.Warnf("Error opening file: %+v", err)
 		}
 		defer func() {
+			if err := osFile.Sync(); err != nil {
+				logger.Errorf("error syncing file: %+v", err)
+			}
 			if err := osFile.Close(); err != nil {
 				logger.Errorf("error closing file: %+v", err)
 			}

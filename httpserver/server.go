@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -24,7 +25,11 @@ func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 	var addr string
 	switch what {
 	case modeWeb:
-		mux.Methods(http.MethodPost).HandlerFunc(fs.upload)
+		mux.Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fs.upload(w, r)
+			// Run garbage collector to make sure file handle is synced and close properly
+			runtime.GC()
+		})
 		mux.PathPrefix("/").HandlerFunc(fs.handler)
 
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
