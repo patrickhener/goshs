@@ -64,6 +64,12 @@ go get -u github.com/patrickhener/goshs
 go install github.com/patrickhener/goshs@latest
 ```
 
+## Scoop (Windows)
+
+```bash
+scoop install https://raw.githubusercontent.com/patrickhener/goshs/main/scoop/goshs.json
+```
+
 ## Build yourself
 
 Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing this packages you can easily just:
