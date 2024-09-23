@@ -74,7 +74,22 @@ cd goshs
 make build-all
 ```
 
+## Kali repositories
 
+When using kali you can easily just install it via cli, if it is not already installed:
+
+```
+sudo apt install goshs
+```
+
+## Windows scoop package
+
+If you are using the [scoop package manager](https://scoop.sh/) under Windows, you can install goshs this way:
+
+```
+scoop bucket add extras
+scoop install extras/goshs
+```
 
 # Credits
 
