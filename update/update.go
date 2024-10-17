@@ -1,10 +1,14 @@
 package update
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v42/github"
@@ -15,14 +19,14 @@ import (
 const (
 	owner             = "patrickhener"
 	repo              = "goshs"
-	GOSHS_WINDOWS_64  = "goshs_windows_x86_64.exe"
-	GOSHS_WINDOWS_32  = "goshs_windows_386.exe"
-	GOSHS_WINDOWS_ARM = "goshs_windows_arm64.exe"
-	GOSHS_LINUX_64    = "goshs_linux_x86_64"
-	GOSHS_LINUX_32    = "goshs_linux_386"
-	GOSHS_LINUX_ARM   = "goshs_linux_arm64"
-	GOSHS_DARWIN_64   = "goshs_darwin_x86_64"
-	GOSHS_DARWIN_ARM  = "goshs_darwin_arm64"
+	GOSHS_WINDOWS_64  = "goshs_windows_x86_64.tar.gz"
+	GOSHS_WINDOWS_32  = "goshs_windows_386.tar.gz"
+	GOSHS_WINDOWS_ARM = "goshs_windows_arm64.tar.gz"
+	GOSHS_LINUX_64    = "goshs_linux_x86_64.tar.gz"
+	GOSHS_LINUX_32    = "goshs_linux_386.tar.gz"
+	GOSHS_LINUX_ARM   = "goshs_linux_arm64.tar.gz"
+	GOSHS_DARWIN_64   = "goshs_darwin_x86_64.tar.gz"
+	GOSHS_DARWIN_ARM  = "goshs_darwin_arm64.tar.gz"
 )
 
 func CheckForUpdates(version string) (bool, string) {
@@ -94,10 +98,16 @@ func applyUpdate(assetURL string) error {
 	}
 	defer resp.Body.Close()
 
-	err = update.Apply(resp.Body, update.Options{})
+	goshsReader, err := tarXVZF(resp)
+	if err != nil {
+		return fmt.Errorf("failed to decompress the downloaded file: %+v", err)
+	}
+
+	err = update.Apply(goshsReader, update.Options{})
 	if err != nil {
 		return fmt.Errorf("failed to apply update: %+v", err)
 	}
+
 	return nil
 }
 
@@ -110,4 +120,31 @@ func assetMatchesOSAndArch(assetName string) bool {
 		(runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && assetName == GOSHS_LINUX_ARM) ||
 		(runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" && assetName == GOSHS_DARWIN_64) ||
 		(runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && assetName == GOSHS_DARWIN_ARM)
+}
+
+func tarXVZF(response *http.Response) (io.Reader, error) {
+	gzipReader, err := gzip.NewReader(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		if strings.Contains(header.Name, "goshs") {
+			return io.LimitReader(tarReader, header.Size), nil
+		}
+	}
+
+	return nil, fmt.Errorf("%s", "end of function - should not happen")
 }
