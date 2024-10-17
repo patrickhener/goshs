@@ -1,19 +1,28 @@
+version: 2
+
 before:
   hooks:
     - go mod download
 builds:
   - env:
       - CGO_ENABLED=0
+    binary: goshs
     goos:
       - linux
       - windows
       - darwin
+    goarch:
+      - "amd64"
+      - "386"
+      - "arm64"
+
 archives:
   - name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:

@@ -8,3 +8,4 @@
 !embedded/example.txt
 /httpserver/embedded/*
 !httpserver/embedded/example.txt
+*.bak
