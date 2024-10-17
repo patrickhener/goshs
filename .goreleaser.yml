@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 before:
   hooks:
@@ -26,7 +26,7 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  version_template: "{{ .Tag }}-next"
+  name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
