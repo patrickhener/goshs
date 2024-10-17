@@ -6,6 +6,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    binary: goshs
     goos:
       - linux
       - windows
@@ -16,7 +17,6 @@ builds:
       - "arm64"
 
 archives:
-  - format: binary
   - name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
@@ -26,7 +26,7 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
