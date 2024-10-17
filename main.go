@@ -83,7 +83,7 @@ Authentication options:
 
 Misc options:
   -u  --user          Drop privs to user (unix only)          (default: current user)
-      --update		  Update goshs to most recent version
+      --update        Update goshs to most recent version
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 

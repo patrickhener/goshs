@@ -51,6 +51,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * You can apply custom basic auth per folder
   * You can restrict access to specific files completely
 * Embed files on compile time
+* Self updating binary
 
 # Installation
 
