@@ -12,10 +12,12 @@ import (
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v0.4.1"
+// const goshsVersion = "v0.4.1"
+const goshsVersion = "v0.4.0"
 
 var (
 	port        = 8000
@@ -82,6 +84,7 @@ Authentication options:
 
 Misc options:
   -u  --user          Drop privs to user (unix only)          (default: current user)
+      --update		  Update goshs to most recent version
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
@@ -100,7 +103,7 @@ Usage examples:
 	}
 }
 
-func flags() (*bool, *bool, *bool) {
+func flags() (*bool, *bool, *bool, *bool) {
 	wd, _ := os.Getwd()
 
 	flag.StringVar(&ip, "i", ip, "ip")
@@ -151,6 +154,7 @@ func flags() (*bool, *bool, *bool) {
 	flag.StringVar(&leTLSPort, "le-tls", leTLSPort, "")
 	flag.BoolVar(&embedded, "e", embedded, "")
 	flag.BoolVar(&embedded, "embedded", embedded, "")
+	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
@@ -159,7 +163,7 @@ func flags() (*bool, *bool, *bool) {
 
 	flag.Parse()
 
-	return hash, hashLong, version
+	return hash, hashLong, version, updateGoshs
 }
 
 func resolveInterface() {
@@ -205,7 +209,14 @@ func init() {
 	wd, _ := os.Getwd()
 
 	// flags
-	hash, hashLong, version := flags()
+	hash, hashLong, version, updateGoshs := flags()
+
+	if *updateGoshs {
+		err := update.UpdateTool(goshsVersion)
+		if err != nil {
+			logger.Fatalf("Failed to update tool: %+v", err)
+		}
+	}
 
 	if *version {
 		fmt.Printf("goshs version is: %+v\n", goshsVersion)
@@ -255,6 +266,16 @@ func parseBasicAuth() (string, string) {
 }
 
 func main() {
+	if yes, out := update.CheckForUpdates(goshsVersion); yes {
+		logger.Warnf("There is a newer Version (%s) of goshs available. Run --update to update goshs.", out)
+	} else {
+		if out != "" {
+			logger.Warnf("Failed to check for updates: %+v", out)
+		} else {
+			logger.Infof("You are running the newest version (%s) of goshs", goshsVersion)
+		}
+	}
+
 	user := ""
 	pass := ""
 
