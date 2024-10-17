@@ -15,7 +15,6 @@ builds:
       - "386"
       - "arm64"
 
-
 archives:
   - format: binary
   - name_template: >-
