@@ -15,14 +15,14 @@ import (
 const (
 	owner             = "patrickhener"
 	repo              = "goshs"
-	GOSHS_WINDOWS_64  = "goshs_windows_x86_64.tar.gz"
-	GOSHS_WINDOWS_32  = "goshs_windows_386.tar.gz"
-	GOSHS_WINDOWS_ARM = "goshs_windows_arm64.tar.gz"
-	GOSHS_LINUX_64    = "goshs_linux_x86_64.tar.gz"
-	GOSHS_LINUX_32    = "goshs_linux_386.tar.gz"
-	GOSHS_LINUX_ARM   = "goshs_linux_arm64.tar.gz"
-	GOSHS_DARWIN_64   = "goshs_darwin_x86_64.tar.gz"
-	GOSHS_DARWIN_ARM  = "goshs_darwin_arm64.tar.gz"
+	GOSHS_WINDOWS_64  = "goshs_windows_x86_64.exe"
+	GOSHS_WINDOWS_32  = "goshs_windows_386.exe"
+	GOSHS_WINDOWS_ARM = "goshs_windows_arm64.exe"
+	GOSHS_LINUX_64    = "goshs_linux_x86_64"
+	GOSHS_LINUX_32    = "goshs_linux_386"
+	GOSHS_LINUX_ARM   = "goshs_linux_arm64"
+	GOSHS_DARWIN_64   = "goshs_darwin_x86_64"
+	GOSHS_DARWIN_ARM  = "goshs_darwin_arm64"
 )
 
 func CheckForUpdates(version string) (bool, string) {
