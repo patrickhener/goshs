@@ -47,7 +47,12 @@ func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 			},
 		}
 
-		mux.PathPrefix("/").Handler(wdHandler)
+		if fs.User != "" || fs.Pass != "" {
+			authHandler := fs.BasicAuthMiddleware(wdHandler)
+			mux.PathPrefix("/").Handler(authHandler)
+		} else {
+			mux.PathPrefix("/").Handler(wdHandler)
+		}
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.WebdavPort)
 	default:
 	}
