@@ -26,9 +26,17 @@ func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 	switch what {
 	case modeWeb:
 		mux.Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fs.upload(w, r)
-			// Run garbage collector to make sure file handle is synced and close properly
-			runtime.GC()
+			logger.Debug("POST request incoming")
+			logger.Debug(r.URL.Path)
+			if r.URL.Path == "/upload" {
+				logger.Debug("This is a valid upload request")
+				fs.upload(w, r)
+				// Run garbage collector to make sure file handle is synced and close properly
+				runtime.GC()
+			} else {
+				logger.Debug("This is meant to be used with verbose logging")
+				fs.logOnly(w, r)
+			}
 		})
 		mux.PathPrefix("/").HandlerFunc(fs.handler)
 

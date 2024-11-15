@@ -6,15 +6,36 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
+func isBase64(s string) bool {
+	_, err := base64.StdEncoding.DecodeString(s)
+	return err == nil
+}
+
+func validateAndParseJSON(input []byte) (bool, interface{}) {
+	var data interface{}
+
+	// Attempt to unmarshal the input
+	err := json.Unmarshal(input, &data)
+	if err != nil {
+		return false, nil
+	}
+
+	// If successful, return true and the parsed JSON
+	return true, data
+}
+
 // LogRequest will log the request in a uniform way
 func LogRequest(req *http.Request, status int, verbose bool) {
+	logger.Debug("We are about to log a request")
 	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized {
 		logger.Errorf("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
 	} else if status == http.StatusSeeOther || status == http.StatusMovedPermanently || status == http.StatusTemporaryRedirect || status == http.StatusPermanentRedirect {
@@ -30,12 +51,15 @@ func LogRequest(req *http.Request, status int, verbose bool) {
 		}
 	}
 	if verbose {
+		logger.Debug("We are using verbose logging")
 		logVerbose(req)
 	}
 }
 
 func logVerbose(req *http.Request) {
+	// User Agent
 	logger.Infof("User Agent: %s", req.UserAgent())
+	// Authentication
 	auth := req.Header.Get("Authorization")
 	if auth != "" {
 		logger.Infof("Authorization Header: %s", auth)
@@ -48,23 +72,62 @@ func logVerbose(req *http.Request) {
 			logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
 		}
 	}
+	// URL Parameter
 	for k, v := range req.URL.Query() {
 		logger.Infof("Parameter %s is", k)
-		var x struct{}
-		if err := json.Unmarshal([]byte(v[0]), &x); err != nil {
-			logger.Debug("Not JSON format printing plain")
-			fmt.Println(v[0])
-		} else {
+		input, err := url.QueryUnescape(v[0])
+		if err != nil {
+			logger.Warnf("error unescaping url parameter: %+v", err)
+		}
+		isValid, _ := validateAndParseJSON([]byte(input))
+		if isValid {
+			logger.Debug("JSON format detected")
 			dst := &bytes.Buffer{}
-			err := json.Indent(dst, []byte(v[0]), "", "  ")
-			if err != nil {
-				logger.Debug("Not JSON format printing plain")
-				fmt.Println(v[0])
-			} else {
-				logger.Debug("It is JSON - pretty print")
-				// fmt.Println(v[0])
-				fmt.Println(dst.String())
+			json.Indent(dst, []byte(v[0]), "", "  ")
+			fmt.Println(dst.String())
+			continue
+		}
+
+		if isBase64(v[0]) {
+			logger.Debug("Base64 detected")
+			logger.Info("Decoding Base64 before printing")
+			decodedBytes, _ := base64.StdEncoding.DecodeString(v[0])
+			fmt.Println(string(decodedBytes))
+
+			continue
+		}
+
+		logger.Debug("Neither JSON nor Base64 parameter, so printing plain")
+		fmt.Println(v[0])
+	}
+
+	// Body
+	if req.Body != nil {
+		logger.Debug("Body is detected")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			Warnf("error reading body: %+v", err)
+		}
+		defer req.Body.Close()
+
+		if len(body) > 0 {
+			logger.Debug("Body is actually not empty")
+			if req.Header.Get("Content-Type") == "application/json" {
+				var prettyJson bytes.Buffer
+				err := json.Indent(&prettyJson, body, "", "  ")
+				if err != nil {
+					Warnf("error printing pretty json body: %+v", err)
+				}
+				logger.Infof("JSON Request Body: \n%s\n", prettyJson.String())
+				return
 			}
+			if isBase64(string(body)) {
+				decodedBytes, _ := base64.StdEncoding.DecodeString(string(body))
+				logger.Infof("Base64 Request Body: \n%s\n", decodedBytes)
+				return
+			}
+
+			logger.Infof("Request Body: \n%s\n", body)
 		}
 	}
 }
