@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,52 @@ import (
 
 	"github.com/patrickhener/goshs/logger"
 )
+
+// put handles the PUT request to upload files
+func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
+	// Get url so you can extract Headline and title
+	upath := req.URL.Path
+
+	filename := strings.Split(upath, "/")
+	outName := filename[len(filename)-1]
+
+	// construct target path
+	targetpath := strings.Split(upath, "/")
+	targetpath = targetpath[:len(targetpath)-1]
+	target := strings.Join(targetpath, "/")
+
+	savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, outName)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		logger.Errorf("unable to read PUT request body: %+v", err)
+		return
+	}
+	defer req.Body.Close()
+
+	// Create file to write to
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// #nosec G304
+	if _, err := os.Create(savepath); err != nil {
+		logger.Errorf("Not able to create file on disk")
+		fs.handleError(w, req, err, http.StatusInternalServerError)
+	}
+
+	reader := bytes.NewReader(body)
+
+	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		logger.Warnf("Error opening file: %+v", err)
+	}
+
+	if _, err := io.Copy(osFile, reader); err != nil {
+		logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
+		fs.handleError(w, req, err, http.StatusInternalServerError)
+	}
+
+	// Log request
+	logger.LogRequest(req, http.StatusOK, fs.Verbose)
+}
 
 // upload handles the POST request to upload files
 func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {

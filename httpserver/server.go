@@ -38,6 +38,10 @@ func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 				fs.logOnly(w, r)
 			}
 		})
+		mux.Methods(http.MethodPut).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger.Debug("Received PUT request")
+			fs.put(w, r)
+		})
 		mux.PathPrefix("/").HandlerFunc(fs.handler)
 
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
