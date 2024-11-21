@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -43,6 +44,7 @@ var (
 	leHTTPPort  = "80"
 	leTLSPort   = "443"
 	embedded    = false
+	output      = ""
 )
 
 // Man page
@@ -63,6 +65,7 @@ Web server options:
   -si, --silent       Running without dir listing             (default: false)
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded     Show embedded files in UI               (default: false)
+  -o,  --output       Write output to logfile                 (default: false)
 
 TLS options:
   -s,   --ssl          Use TLS
@@ -153,6 +156,8 @@ func flags() (*bool, *bool, *bool, *bool) {
 	flag.StringVar(&leTLSPort, "le-tls", leTLSPort, "")
 	flag.BoolVar(&embedded, "e", embedded, "")
 	flag.BoolVar(&embedded, "embedded", embedded, "")
+	flag.StringVar(&output, "o", output, "")
+	flag.StringVar(&output, "output", output, "")
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
@@ -250,6 +255,7 @@ func init() {
 			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
 	}
+
 }
 
 // Sanity checks if basic auth has the right format
@@ -291,6 +297,23 @@ func main() {
 		ca.GetLECertificateAndKey(leEmail, strings.Split(leDomains, ","), leHTTPPort, leTLSPort)
 		myCert = "cert"
 		myKey = "key"
+	}
+
+	// If a logpath/-file is provided via -o/--output set the multiwriter to output both
+	if output != "" {
+		if !filepath.IsAbs(output) {
+			// If the provided path is not an abspath then merge with CWD
+			wd, _ := os.Getwd()
+			output = filepath.Join(wd, output)
+		}
+
+		logFile, err := os.OpenFile(output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+		if err != nil {
+			logger.Panicf("Cannot open file to write output logfile: %s - %+v", output, err)
+		}
+
+		multiWriter := io.MultiWriter(os.Stdout, logFile)
+		logger.LogFile(multiWriter)
 	}
 
 	// Setup the custom file server

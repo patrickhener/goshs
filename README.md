@@ -52,6 +52,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * You can restrict access to specific files completely
 * Embed files on compile time
 * Self updating binary
+* Write output to a log file
 
 # Installation
 

@@ -168,12 +168,11 @@ func NewLogger() *StandardLogger {
 		// standardLogger.SetReportCaller(true)
 	}
 
-	// We could transform the errors into a JSON format, for external log SaaS tools such as splunk or logstash
-	// standardLogger.Formatter = &logrus.JSONFormatter{
-	//   PrettyPrint: true,
-	// }
-
 	return standardLogger
+}
+
+func LogFile(multiwriter io.Writer) {
+	logger.SetOutput(multiwriter)
 }
 
 // Declare variables to store log messages as new Events
