@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v1.0.0-green)
+![Version](https://img.shields.io/badge/Version-v1.0.1-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -22,7 +22,10 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 # Features
 * Download or view files
   * Bulk download as .zip file
-* Upload files (Drag & Drop)
+* Upload files
+  * POST request
+  * PUT request
+  * Drag & Drop in web interface
 * Delete files
   * Individually
   * Bulk delete
