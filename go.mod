@@ -13,7 +13,7 @@ require (
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.25.0
+	golang.org/x/net v0.33.0
 	software.sslmate.com/src/go-pkcs12 v0.4.0
 )
 
