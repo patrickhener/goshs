@@ -45,6 +45,7 @@ var (
 	leTLSPort   = "443"
 	embedded    = false
 	output      = ""
+	noClipboard = false
 )
 
 // Man page
@@ -66,6 +67,7 @@ Web server options:
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded     Show embedded files in UI               (default: false)
   -o,  --output       Write output to logfile                 (default: false)
+  -nc, --no-clipboard Disable the clipboard sharing           (default: false)
 
 TLS options:
   -s,   --ssl          Use TLS
@@ -158,6 +160,8 @@ func flags() (*bool, *bool, *bool, *bool) {
 	flag.BoolVar(&embedded, "embedded", embedded, "")
 	flag.StringVar(&output, "o", output, "")
 	flag.StringVar(&output, "output", output, "")
+	flag.BoolVar(&noClipboard, "nc", noClipboard, "")
+	flag.BoolVar(&noClipboard, "no-clipboard", noClipboard, "")
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
@@ -338,6 +342,7 @@ func main() {
 		Embedded:    embedded,
 		Verbose:     verbose,
 		Version:     goshsVersion,
+		NoClipboard: noClipboard,
 	}
 
 	go server.Start("web")

@@ -106,8 +106,10 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
-		fs.cbDown(w, req)
-		return true
+		if !fs.NoClipboard {
+			fs.cbDown(w, req)
+			return true
+		}
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
 		fs.bulkDownload(w, req)
@@ -330,6 +332,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		CLI:             fileS.CLI,
 		Embedded:        fileS.Embedded,
 		EmbeddedContent: e,
+		NoClipboard:     fileS.NoClipboard,
 	}
 
 	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
