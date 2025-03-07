@@ -96,6 +96,13 @@ scoop bucket add extras
 scoop install extras/goshs
 ```
 
+# Code Contributors
+
+These are the awesome code contributors of `goshs`:
+
+[![](https://github.com/aWZHY0yQH81uOYvH.png?size=50)](https://github.com/aWZHY0yQH81uOYvH)
+[![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
+
 # Credits
 
 A special thank you goes to *sc0tfree* for inspiring this project with his project [updog](https://github.com/sc0tfree/updog) written in Python.
