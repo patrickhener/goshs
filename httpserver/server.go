@@ -3,6 +3,7 @@ package httpserver
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/patrickhener/goshs/ws"
 	"io"
 	"log"
 	"net"
@@ -16,7 +17,6 @@ import (
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
@@ -217,11 +217,13 @@ func (fs *FileServer) Start(what string) {
 	}
 
 	// init clipboard
-	fs.Clipboard = clipboard.New()
+	if !fs.NoClipboard {
+		fs.Clipboard = clipboard.New()
 
-	// init websocket hub
-	fs.Hub = ws.NewHub(fs.Clipboard)
-	go fs.Hub.Run()
+		// init websocket hub
+		fs.Hub = ws.NewHub(fs.Clipboard)
+		go fs.Hub.Run()
+	}
 
 	// Check BasicAuth and use middleware
 	fs.PrintInfoUseBasicAuth(mux, what)

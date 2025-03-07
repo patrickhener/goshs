@@ -226,6 +226,7 @@
         <!-- 6: Clipboard and CLI-->
         <div class="col-xl-6 h-100">
             <!-- Clipboard Heading Row -->
+            {{ if not .NoClipboard }}
             <div class="row">
                 <div class="col mb-2">
                     <h1>Clipboard</h1>
@@ -280,6 +281,7 @@
                     {{ end }}
                 </div>
             </div>
+            {{ end }}
             {{ if .Embedded }}
             <!-- Embedded Heading Row -->
             <div class="row">

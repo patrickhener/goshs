@@ -14,6 +14,7 @@ type baseTemplate struct {
 	EmbeddedContent *directory
 	CLI             bool
 	Embedded        bool
+	NoClipboard     bool
 }
 
 type directory struct {
@@ -65,6 +66,7 @@ type FileServer struct {
 	Verbose        bool
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
+	NoClipboard    bool
 }
 
 type httperror struct {
