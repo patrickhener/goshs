@@ -217,11 +217,13 @@ func (fs *FileServer) Start(what string) {
 	}
 
 	// init clipboard
-	fs.Clipboard = clipboard.New()
+	if !fs.NoClipboard {
+		fs.Clipboard = clipboard.New()
 
-	// init websocket hub
-	fs.Hub = ws.NewHub(fs.Clipboard)
-	go fs.Hub.Run()
+		// init websocket hub
+		fs.Hub = ws.NewHub(fs.Clipboard)
+		go fs.Hub.Run()
+	}
 
 	// Check BasicAuth and use middleware
 	fs.PrintInfoUseBasicAuth(mux, what)

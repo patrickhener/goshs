@@ -14,6 +14,7 @@ type baseTemplate struct {
 	EmbeddedContent *directory
 	CLI             bool
 	Embedded        bool
+	NoClipboard     bool
 }
 
 type directory struct {
@@ -60,6 +61,7 @@ type FileServer struct {
 	Fingerprint1   string
 	UploadOnly     bool
 	ReadOnly       bool
+	NoClipboard    bool
 	Silent         bool
 	Embedded       bool
 	Verbose        bool

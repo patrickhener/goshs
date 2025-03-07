@@ -17,7 +17,7 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v1.0.1"
+const goshsVersion = "v1.0.2"
 
 var (
 	port        = 8000
@@ -36,6 +36,7 @@ var (
 	webdavPort  = 8001
 	uploadOnly  = false
 	readOnly    = false
+	noClipboard = false
 	verbose     = false
 	silent      = false
 	dropuser    = ""
@@ -62,6 +63,7 @@ Web server options:
   -wp, --webdav-port  The port to listen on for webdav        (default: 8001)
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
+  -nc, --no-clipboard Disable the clipboard sharing           (default: false)
   -si, --silent       Running without dir listing             (default: false)
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded     Show embedded files in UI               (default: false)
@@ -136,6 +138,8 @@ func flags() (*bool, *bool, *bool, *bool) {
 	flag.BoolVar(&uploadOnly, "upload-only", uploadOnly, "upload only")
 	flag.BoolVar(&readOnly, "ro", readOnly, "read only")
 	flag.BoolVar(&readOnly, "read-only", readOnly, "read only")
+	flag.BoolVar(&noClipboard, "nc", noClipboard, "")
+	flag.BoolVar(&noClipboard, "no-clipboard", noClipboard, "")
 	flag.BoolVar(&verbose, "V", verbose, "verbose")
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flag.BoolVar(&silent, "si", silent, "silent")
@@ -334,6 +338,7 @@ func main() {
 		DropUser:    dropuser,
 		UploadOnly:  uploadOnly,
 		ReadOnly:    readOnly,
+		NoClipboard: noClipboard,
 		Silent:      silent,
 		Embedded:    embedded,
 		Verbose:     verbose,
