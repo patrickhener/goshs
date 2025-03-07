@@ -3,7 +3,6 @@ package httpserver
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/patrickhener/goshs/ws"
 	"io"
 	"log"
 	"net"
@@ -17,6 +16,7 @@ import (
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
