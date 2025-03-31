@@ -102,6 +102,7 @@ These are the awesome code contributors of `goshs`:
 
 [![](https://github.com/aWZHY0yQH81uOYvH.png?size=50)](https://github.com/aWZHY0yQH81uOYvH)
 [![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
+[![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
 
 # Credits
 
