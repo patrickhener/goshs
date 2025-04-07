@@ -96,6 +96,12 @@ scoop bucket add extras
 scoop install extras/goshs
 ```
 
+## Run with docker
+
+```
+docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd
+```
+
 # Code Contributors
 
 These are the awesome code contributors of `goshs`:
