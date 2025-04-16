@@ -94,9 +94,9 @@ func GetAllIPAdresses() (map[string]string, error) {
 	return ifaceAddress, nil
 }
 
-// HashPassword will take a plaintext masked password and return a bcrypt hash
+// GenerateHashPassword will take a plaintext masked password and return a bcrypt hash
 // This is meant to be used with the filebased access via .goshs file
-func HashPassword() {
+func GenerateHashedPassword() {
 	fmt.Printf("Enter password: ")
 	password, err := gopass.GetPasswdMasked()
 	if err != nil {

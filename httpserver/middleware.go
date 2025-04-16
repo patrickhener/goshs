@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	authCache      = make(map[string]bool)
+	authCacheMutex = sync.RWMutex{}
 )
 
 // BasicAuthMiddleware is a middleware to handle the basic auth
@@ -13,16 +20,57 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
-		username, password, authOK := r.BasicAuth()
-		if !authOK {
+		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, "Basic ") {
+			fmt.Println("No Authorization header")
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
 
-		if username != fs.User || password != fs.Pass {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
+		authVal := auth[len("Basic "):]
+		// Cache check
+		authCacheMutex.RLock()
+		cachedOK := authCache[authVal]
+		authCacheMutex.RUnlock()
+
+		if cachedOK {
+			next.ServeHTTP(w, r)
 			return
 		}
+
+		//Check if provided password is a bcrypt hash
+		if strings.HasPrefix(fs.Pass, "$2a$") {
+			username, password, authOK := r.BasicAuth()
+			if !authOK {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+
+			if username != fs.User {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+
+			if err := bcrypt.CompareHashAndPassword([]byte(fs.Pass), []byte(password)); err != nil {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			username, password, authOK := r.BasicAuth()
+			if !authOK {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+
+			if username != fs.User || password != fs.Pass {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		authCacheMutex.Lock()
+		authCache[authVal] = true
+		authCacheMutex.Unlock()
 
 		next.ServeHTTP(w, r)
 	})
