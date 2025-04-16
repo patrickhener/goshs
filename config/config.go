@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/patrickhener/goshs/logger"
 )
 
 type Config struct {
@@ -87,4 +91,23 @@ func PrintExample() {
 		panic(err)
 	}
 	fmt.Println(string(b))
+}
+
+func SanityChecks(webroot string, configpath string, AuthPassword string) error {
+	if webroot == filepath.Dir(configpath) {
+		logger.Warn("You are hosting your config file in the webroot of goshs. This is not recommended.")
+		// Check if the process user can write the config file
+		file, err := os.OpenFile(configpath, os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return nil
+		}
+		file.Close()
+		return fmt.Errorf("%s", "The config file is accessible via goshs and is writeable by the user running goshs. This is a security issue. Read the docs at https://goshs.de/en/usage/config/index.html")
+	}
+
+	if !strings.HasPrefix(AuthPassword, "$2a$") {
+		logger.Warn("The password in the config file is not hashed. This is not recommended. Use goshs -H to hash the password.")
+	}
+
+	return nil
 }

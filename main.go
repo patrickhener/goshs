@@ -221,6 +221,7 @@ func sanityChecks() {
 	if certAuth != "" && !ssl {
 		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")
 	}
+
 }
 
 // Flag handling
@@ -252,6 +253,63 @@ func init() {
 		os.Exit(0)
 	}
 
+	if configFile != "" {
+		cfg, err := config.Load(configFile)
+		if err != nil {
+			logger.Fatalf("Failed to load config file: %+v", err)
+		}
+
+		absPath, err := filepath.Abs(configFile)
+		if err != nil {
+			logger.Fatalf("Failed to get absolute path of config file: %+v", err)
+		}
+		logger.Infof("Using config file %s", absPath)
+
+		// Set the config values
+		ip = cfg.Interface
+		port = cfg.Port
+		webroot = cfg.Directory
+		ssl = cfg.SSL
+		selfsigned = cfg.SelfSigned
+		myKey = cfg.PrivateKey
+		myCert = cfg.Certificate
+		myP12 = cfg.P12
+		letsencrypt = cfg.LetsEncrypt
+		leDomains = cfg.LetsEncryptDomain
+		leEmail = cfg.LetsEncryptEmail
+		leHTTPPort = cfg.LetsEncryptHTTPPort
+		leTLSPort = cfg.LetsEncryptTLSPort
+		basicAuth = cfg.AuthUsername + ":" + cfg.AuthPassword
+		certAuth = cfg.CertificateAuth
+		webdav = cfg.Webdav
+		webdavPort = cfg.WebdavPort
+		uploadOnly = cfg.UploadOnly
+		readOnly = cfg.ReadOnly
+		noClipboard = cfg.NoClipboard
+		verbose = cfg.Verbose
+		silent = cfg.Silent
+		dropuser = cfg.RunningUser
+		cli = cfg.CLI
+		embedded = cfg.Embedded
+		output = cfg.Output
+
+		// Abspath for webroot
+		// Trim trailing / for linux/mac and \ for windows
+		webroot = strings.TrimSuffix(webroot, "/")
+		webroot = strings.TrimSuffix(webroot, "\\")
+		if !filepath.IsAbs(webroot) {
+			webroot, err = filepath.Abs(filepath.Join(wd, webroot))
+			if err != nil {
+				logger.Fatalf("Webroot cannot be constructed: %+v", err)
+			}
+		}
+
+		// Sanity checking the config file
+		if err := config.SanityChecks(webroot, absPath, cfg.AuthPassword); err != nil {
+			logger.Fatal(err)
+		}
+	}
+
 	// Resolve Interface
 	resolveInterface()
 
@@ -275,7 +333,6 @@ func init() {
 			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
 	}
-
 }
 
 // Sanity checks if basic auth has the right format

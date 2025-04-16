@@ -22,7 +22,6 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 
 		auth := r.Header.Get("Authorization")
 		if !strings.HasPrefix(auth, "Basic ") {
-			fmt.Println("No Authorization header")
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
