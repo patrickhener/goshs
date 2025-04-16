@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"fmt"
 	"net/http"
+	"runtime"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,6 +24,15 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ServerHeaderMiddleware sets a custom Server header for all responses
+func (fs *FileServer) ServerHeaderMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serverHeader := fmt.Sprintf("goshs/%s (%s; %s)", fs.Version, runtime.GOOS, runtime.Version())
+		w.Header().Set("Server", serverHeader)
 		next.ServeHTTP(w, r)
 	})
 }
