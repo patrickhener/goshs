@@ -228,6 +228,9 @@ func (fs *FileServer) Start(what string) {
 	// Check BasicAuth and use middleware
 	fs.PrintInfoUseBasicAuth(mux, what)
 
+	// Add custom Server header
+	mux.Use(fs.ServerHeaderMiddleware)
+
 	// Start listener
 	fs.StartListener(server, what, listener)
 }
