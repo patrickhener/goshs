@@ -11,13 +11,14 @@ import (
 	"syscall"
 
 	"github.com/patrickhener/goshs/ca"
+	"github.com/patrickhener/goshs/config"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
 )
 
-const goshsVersion = "v1.0.2"
+const goshsVersion = "v1.0.3"
 
 var (
 	port        = 8000
@@ -46,6 +47,8 @@ var (
 	leTLSPort   = "443"
 	embedded    = false
 	output      = ""
+	configFile  = ""
+	printConfig = false
 )
 
 // Man page
@@ -87,6 +90,8 @@ Authentication options:
   -H,  --hash          Hash a password for file based ACLs
 
 Misc options:
+  -C  --config        Provide config file path                (default: false)
+  -P  --print-config  Print sample config to STDOUT           (default: false)
   -u  --user          Drop privs to user (unix only)          (default: current user)
       --update        Update goshs to most recent version
   -V  --verbose       Activate verbose log output             (default: false)
@@ -94,22 +99,26 @@ Misc options:
 
 Usage examples:
   Start with default values:    	./goshs
+  Start with config file:    	        ./goshs -C /path/to/config.yaml
   Start with wevdav support:    	./goshs -w
   Start with different port:    	./goshs -p 8080
   Start with self-signed cert:  	./goshs -s -ss
   Start with let's encrypt:		./goshs -s -sl -sle your@mail.com -sld your.domain.com,your.seconddomain.com
   Start with custom cert:       	./goshs -s -sk <path to key> -sc <path to cert>
-  Start with basic auth:        	./goshs -b secret-user:$up3r$3cur3
-  Start with basic auth empty user:	./goshs -b :$up3r$3cur3
-  Start with cli enabled:           	./goshs -b secret-user:$up3r$3cur3 -s -ss -c
+  Start with basic auth:        	./goshs -b 'secret-user:$up3r$3cur3'
+  Start with basic auth bcrypt hash:   	./goshs -b 'secret-user:$2a$14$ydRJ//Ob4SctB/D7o.rvU.LmPs/vwXkeXCbtpCqzgOJDSShLgiY52'
+  Start with basic auth empty user:	./goshs -b ':$up3r$3cur3'
+  Start with cli enabled:           	./goshs -b 'secret-user:$up3r$3cur3' -s -ss -c
 
 `, goshsVersion, os.Args[0])
 	}
 }
 
-func flags() (*bool, *bool, *bool, *bool) {
+func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	wd, _ := os.Getwd()
 
+	flag.StringVar(&configFile, "C", configFile, "config")
+	flag.StringVar(&configFile, "config", configFile, "config")
 	flag.StringVar(&ip, "i", ip, "ip")
 	flag.StringVar(&ip, "ip", ip, "ip")
 	flag.IntVar(&port, "p", port, "port")
@@ -166,12 +175,14 @@ func flags() (*bool, *bool, *bool, *bool) {
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
+	printConfig := flag.Bool("P", false, "print config")
+	printConfigLong := flag.Bool("print-config", false, "print config")
 
 	flag.Usage = usage()
 
 	flag.Parse()
 
-	return hash, hashLong, version, updateGoshs
+	return hash, hashLong, version, updateGoshs, printConfig, printConfigLong
 }
 
 func resolveInterface() {
@@ -210,6 +221,7 @@ func sanityChecks() {
 	if certAuth != "" && !ssl {
 		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")
 	}
+
 }
 
 // Flag handling
@@ -217,7 +229,7 @@ func init() {
 	wd, _ := os.Getwd()
 
 	// flags
-	hash, hashLong, version, updateGoshs := flags()
+	hash, hashLong, version, updateGoshs, printConfig, printConfigLong := flags()
 
 	if *updateGoshs {
 		err := update.UpdateTool(goshsVersion)
@@ -232,8 +244,70 @@ func init() {
 	}
 
 	if *hash || *hashLong {
-		utils.HashPassword()
-		os.Exit(1)
+		utils.GenerateHashedPassword()
+		os.Exit(0)
+	}
+
+	if *printConfig || *printConfigLong {
+		config.PrintExample()
+		os.Exit(0)
+	}
+
+	if configFile != "" {
+		cfg, err := config.Load(configFile)
+		if err != nil {
+			logger.Fatalf("Failed to load config file: %+v", err)
+		}
+
+		absPath, err := filepath.Abs(configFile)
+		if err != nil {
+			logger.Fatalf("Failed to get absolute path of config file: %+v", err)
+		}
+		logger.Infof("Using config file %s", absPath)
+
+		// Set the config values
+		ip = cfg.Interface
+		port = cfg.Port
+		webroot = cfg.Directory
+		ssl = cfg.SSL
+		selfsigned = cfg.SelfSigned
+		myKey = cfg.PrivateKey
+		myCert = cfg.Certificate
+		myP12 = cfg.P12
+		letsencrypt = cfg.LetsEncrypt
+		leDomains = cfg.LetsEncryptDomain
+		leEmail = cfg.LetsEncryptEmail
+		leHTTPPort = cfg.LetsEncryptHTTPPort
+		leTLSPort = cfg.LetsEncryptTLSPort
+		basicAuth = cfg.AuthUsername + ":" + cfg.AuthPassword
+		certAuth = cfg.CertificateAuth
+		webdav = cfg.Webdav
+		webdavPort = cfg.WebdavPort
+		uploadOnly = cfg.UploadOnly
+		readOnly = cfg.ReadOnly
+		noClipboard = cfg.NoClipboard
+		verbose = cfg.Verbose
+		silent = cfg.Silent
+		dropuser = cfg.RunningUser
+		cli = cfg.CLI
+		embedded = cfg.Embedded
+		output = cfg.Output
+
+		// Abspath for webroot
+		// Trim trailing / for linux/mac and \ for windows
+		webroot = strings.TrimSuffix(webroot, "/")
+		webroot = strings.TrimSuffix(webroot, "\\")
+		if !filepath.IsAbs(webroot) {
+			webroot, err = filepath.Abs(filepath.Join(wd, webroot))
+			if err != nil {
+				logger.Fatalf("Webroot cannot be constructed: %+v", err)
+			}
+		}
+
+		// Sanity checking the config file
+		if err := config.SanityChecks(webroot, absPath, cfg.AuthPassword); err != nil {
+			logger.Fatal(err)
+		}
 	}
 
 	// Resolve Interface
@@ -259,7 +333,6 @@ func init() {
 			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
 	}
-
 }
 
 // Sanity checks if basic auth has the right format

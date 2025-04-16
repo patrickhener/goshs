@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v1.0.2-green)
+![Version](https://img.shields.io/badge/Version-v1.0.3-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -56,6 +56,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Embed files on compile time
 * Self updating binary
 * Write output to a log file
+* Control via config file
 
 # Installation
 
