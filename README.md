@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v1.0.3-green)
+![Version](https://img.shields.io/badge/Version-v1.0.4-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -32,7 +32,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Authentication
   * Basic Authentication
   * Certificate Based Authentication via Client Certificate
-* Transport Layer Security (HTTPS)
+* Transport Layer Security (HTTPS
   * self-signed
   * let's encrypt
   * provide own certificate
@@ -57,6 +57,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Self updating binary
 * Write output to a log file
 * Control via config file
+* Send notifications via webhook
 
 # Installation
 
