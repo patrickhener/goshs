@@ -170,6 +170,9 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 			// Drop privs if needed
 			fs.dropPrivs()
 
+			// Webhook message
+			fs.HandleWebhookSend(fmt.Sprintf("goshs started on %s", listener.Addr()), "started")
+
 			logger.Panic(server.ServeTLS(listener, "", ""))
 		}
 	} else {
@@ -177,6 +180,9 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 
 		// Drop privs if needed
 		fs.dropPrivs()
+
+		// Webhook message
+		fs.HandleWebhookSend(fmt.Sprintf("goshs started on %s", listener.Addr()), "started")
 
 		logger.Panic(server.Serve(listener))
 	}
