@@ -32,6 +32,7 @@ type Config struct {
 	UploadOnly          bool   `json:"upload_only"`
 	ReadOnly            bool   `json:"read_only"`
 	NoClipboard         bool   `json:"no_clipboard"`
+	NoDelete            bool   `json:"no_delete"`
 	Verbose             bool   `json:"verbose"`
 	Silent              bool   `json:"silent"`
 	RunningUser         string `json:"running_user"`
@@ -78,6 +79,7 @@ func PrintExample() {
 		UploadOnly:          false,
 		ReadOnly:            false,
 		NoClipboard:         false,
+		NoDelete:            false,
 		Verbose:             false,
 		Silent:              false,
 		RunningUser:         "",

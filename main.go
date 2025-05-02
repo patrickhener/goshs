@@ -38,6 +38,7 @@ var (
 	uploadOnly  = false
 	readOnly    = false
 	noClipboard = false
+	noDelete    = false
 	verbose     = false
 	silent      = false
 	dropuser    = ""
@@ -67,6 +68,7 @@ Web server options:
   -ro, --read-only    Read only mode, no upload possible      (default: false)
   -uo, --upload-only  Upload only mode, no download possible  (default: false)
   -nc, --no-clipboard Disable the clipboard sharing           (default: false)
+  -nd, --no-delete    Disable the delete option               (default: false)
   -si, --silent       Running without dir listing             (default: false)
   -c,  --cli          Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded     Show embedded files in UI               (default: false)
@@ -149,6 +151,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&readOnly, "read-only", readOnly, "read only")
 	flag.BoolVar(&noClipboard, "nc", noClipboard, "")
 	flag.BoolVar(&noClipboard, "no-clipboard", noClipboard, "")
+	flag.BoolVar(&noDelete, "nd", noDelete, "")
+	flag.BoolVar(&noDelete, "no-delete", noDelete, "")
 	flag.BoolVar(&verbose, "V", verbose, "verbose")
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose")
 	flag.BoolVar(&silent, "si", silent, "silent")
@@ -286,6 +290,7 @@ func init() {
 		uploadOnly = cfg.UploadOnly
 		readOnly = cfg.ReadOnly
 		noClipboard = cfg.NoClipboard
+		noDelete = cfg.NoDelete
 		verbose = cfg.Verbose
 		silent = cfg.Silent
 		dropuser = cfg.RunningUser
@@ -412,6 +417,7 @@ func main() {
 		UploadOnly:  uploadOnly,
 		ReadOnly:    readOnly,
 		NoClipboard: noClipboard,
+		NoDelete:    noDelete,
 		Silent:      silent,
 		Embedded:    embedded,
 		Verbose:     verbose,

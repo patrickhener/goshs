@@ -15,6 +15,7 @@ type baseTemplate struct {
 	CLI             bool
 	Embedded        bool
 	NoClipboard     bool
+	NoDelete        bool
 }
 
 type directory struct {
@@ -37,6 +38,7 @@ type item struct {
 	DisplayLastModified string `json:"-"`
 	SortLastModified    int64  `json:"last_modified"`
 	ReadOnly            bool
+	NoDelete            bool
 }
 
 // FileServer holds the fileserver information
@@ -62,6 +64,7 @@ type FileServer struct {
 	UploadOnly     bool
 	ReadOnly       bool
 	NoClipboard    bool
+	NoDelete       bool
 	Silent         bool
 	Embedded       bool
 	Verbose        bool
