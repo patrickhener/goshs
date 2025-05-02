@@ -21,35 +21,40 @@ import (
 const goshsVersion = "v1.0.3"
 
 var (
-	port        = 8000
-	ip          = "0.0.0.0"
-	cli         = false
-	webroot     = "."
-	ssl         = false
-	selfsigned  = false
-	letsencrypt = false
-	myKey       = ""
-	myCert      = ""
-	myP12       = ""
-	basicAuth   = ""
-	certAuth    = ""
-	webdav      = false
-	webdavPort  = 8001
-	uploadOnly  = false
-	readOnly    = false
-	noClipboard = false
-	noDelete    = false
-	verbose     = false
-	silent      = false
-	dropuser    = ""
-	leEmail     = ""
-	leDomains   = ""
-	leHTTPPort  = "80"
-	leTLSPort   = "443"
-	embedded    = false
-	output      = ""
-	configFile  = ""
-	printConfig = false
+	port                = 8000
+	ip                  = "0.0.0.0"
+	cli                 = false
+	webroot             = "."
+	ssl                 = false
+	selfsigned          = false
+	letsencrypt         = false
+	myKey               = ""
+	myCert              = ""
+	myP12               = ""
+	basicAuth           = ""
+	certAuth            = ""
+	webdav              = false
+	webdavPort          = 8001
+	uploadOnly          = false
+	readOnly            = false
+	noClipboard         = false
+	noDelete            = false
+	verbose             = false
+	silent              = false
+	dropuser            = ""
+	leEmail             = ""
+	leDomains           = ""
+	leHTTPPort          = "80"
+	leTLSPort           = "443"
+	embedded            = false
+	output              = ""
+	configFile          = ""
+	printConfig         = false
+	webhookEnable       = false
+	webhookURL          = ""
+	webhookEvents       = "all"
+	webhookProvider     = "Discord"
+	webhookEventsParsed = []string{}
 )
 
 // Man page
@@ -90,6 +95,14 @@ Authentication options:
   -b,  --basic-auth    Use basic authentication (user:pass - user can be empty)
   -ca, --cert-auth     Use certificate based authentication - provide ca certificate
   -H,  --hash          Hash a password for file based ACLs
+
+Webhook options:
+  -W,  --webhook            Enable webhook support                                      (default: false)
+  -Wu, --webhook-url        URL to send webhook requests to
+  -We, --webhook-events     Comma separated list of events to notify
+                            [all, upload, delete, download, view, verbose]              (default: all)
+  -Wp, --webhook-provider   Webhook provider
+                            [Discord, Mattermost, Slack]                                (default: Discord)
 
 Misc options:
   -C  --config        Provide config file path                (default: false)
@@ -175,6 +188,14 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&embedded, "embedded", embedded, "")
 	flag.StringVar(&output, "o", output, "")
 	flag.StringVar(&output, "output", output, "")
+	flag.BoolVar(&webhookEnable, "Wh", webhookEnable, "")
+	flag.BoolVar(&webhookEnable, "webhook", webhookEnable, "")
+	flag.StringVar(&webhookURL, "Wu", webhookURL, "")
+	flag.StringVar(&webhookURL, "webhook-url", webhookURL, "")
+	flag.StringVar(&webhookEvents, "We", webhookEvents, "")
+	flag.StringVar(&webhookEvents, "webhook-events", webhookEvents, "")
+	flag.StringVar(&webhookProvider, "Wp", webhookProvider, "")
+	flag.StringVar(&webhookProvider, "webhook-provider", webhookProvider, "")
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
@@ -234,6 +255,13 @@ func init() {
 
 	// flags
 	hash, hashLong, version, updateGoshs, printConfig, printConfigLong := flags()
+
+	// Parse WebhookEvents to a slice
+	webhookEventsParsed = strings.Split(webhookEvents, ",")
+
+	for i, event := range webhookEventsParsed {
+		webhookEventsParsed[i] = strings.TrimSpace(strings.ToLower(event))
+	}
 
 	if *updateGoshs {
 		err := update.UpdateTool(goshsVersion)
@@ -297,6 +325,10 @@ func init() {
 		cli = cfg.CLI
 		embedded = cfg.Embedded
 		output = cfg.Output
+		webhookEnable = cfg.WebhookEnabled
+		webhookURL = cfg.WebhookURL
+		webhookProvider = cfg.WebhookProvider
+		webhookEventsParsed = cfg.WebhookEvents
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -400,28 +432,32 @@ func main() {
 
 	// Setup the custom file server
 	server := &httpserver.FileServer{
-		IP:          ip,
-		Port:        port,
-		CLI:         cli,
-		Webroot:     webroot,
-		SSL:         ssl,
-		SelfSigned:  selfsigned,
-		LetsEncrypt: letsencrypt,
-		MyCert:      myCert,
-		MyKey:       myKey,
-		MyP12:       myP12,
-		User:        user,
-		Pass:        pass,
-		CACert:      certAuth,
-		DropUser:    dropuser,
-		UploadOnly:  uploadOnly,
-		ReadOnly:    readOnly,
-		NoClipboard: noClipboard,
-		NoDelete:    noDelete,
-		Silent:      silent,
-		Embedded:    embedded,
-		Verbose:     verbose,
-		Version:     goshsVersion,
+		IP:              ip,
+		Port:            port,
+		CLI:             cli,
+		Webroot:         webroot,
+		SSL:             ssl,
+		SelfSigned:      selfsigned,
+		LetsEncrypt:     letsencrypt,
+		MyCert:          myCert,
+		MyKey:           myKey,
+		MyP12:           myP12,
+		User:            user,
+		Pass:            pass,
+		CACert:          certAuth,
+		DropUser:        dropuser,
+		UploadOnly:      uploadOnly,
+		ReadOnly:        readOnly,
+		NoClipboard:     noClipboard,
+		NoDelete:        noDelete,
+		Silent:          silent,
+		Embedded:        embedded,
+		WebhookEnable:   webhookEnable,
+		WebhookURL:      webhookURL,
+		WebhookEvents:   webhookEventsParsed,
+		WebhookProvider: webhookProvider,
+		Verbose:         verbose,
+		Version:         goshsVersion,
 	}
 
 	go server.Start("web")

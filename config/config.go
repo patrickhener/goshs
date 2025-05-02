@@ -11,34 +11,38 @@ import (
 )
 
 type Config struct {
-	Interface           string `json:"interface"`
-	Port                int    `json:"port"`
-	Directory           string `json:"directory"`
-	SSL                 bool   `json:"ssl"`
-	SelfSigned          bool   `json:"self_signed"`
-	PrivateKey          string `json:"private_key"`
-	Certificate         string `json:"certificate"`
-	P12                 string `json:"p12"`
-	LetsEncrypt         bool   `json:"letsencrypt"`
-	LetsEncryptDomain   string `json:"letsencrypt_domain"`
-	LetsEncryptEmail    string `json:"letsencrypt_email"`
-	LetsEncryptHTTPPort string `json:"letsencrypt_http_port"`
-	LetsEncryptTLSPort  string `json:"letsencrypt_tls_port"`
-	AuthUsername        string `json:"auth_username"`
-	AuthPassword        string `json:"auth_password"`
-	CertificateAuth     string `json:"certificate_auth"`
-	Webdav              bool   `json:"webdav"`
-	WebdavPort          int    `json:"webdav_port"`
-	UploadOnly          bool   `json:"upload_only"`
-	ReadOnly            bool   `json:"read_only"`
-	NoClipboard         bool   `json:"no_clipboard"`
-	NoDelete            bool   `json:"no_delete"`
-	Verbose             bool   `json:"verbose"`
-	Silent              bool   `json:"silent"`
-	RunningUser         string `json:"running_user"`
-	CLI                 bool   `json:"cli"`
-	Embedded            bool   `json:"embedded"`
-	Output              string `json:"output"`
+	Interface           string   `json:"interface"`
+	Port                int      `json:"port"`
+	Directory           string   `json:"directory"`
+	SSL                 bool     `json:"ssl"`
+	SelfSigned          bool     `json:"self_signed"`
+	PrivateKey          string   `json:"private_key"`
+	Certificate         string   `json:"certificate"`
+	P12                 string   `json:"p12"`
+	LetsEncrypt         bool     `json:"letsencrypt"`
+	LetsEncryptDomain   string   `json:"letsencrypt_domain"`
+	LetsEncryptEmail    string   `json:"letsencrypt_email"`
+	LetsEncryptHTTPPort string   `json:"letsencrypt_http_port"`
+	LetsEncryptTLSPort  string   `json:"letsencrypt_tls_port"`
+	AuthUsername        string   `json:"auth_username"`
+	AuthPassword        string   `json:"auth_password"`
+	CertificateAuth     string   `json:"certificate_auth"`
+	Webdav              bool     `json:"webdav"`
+	WebdavPort          int      `json:"webdav_port"`
+	UploadOnly          bool     `json:"upload_only"`
+	ReadOnly            bool     `json:"read_only"`
+	NoClipboard         bool     `json:"no_clipboard"`
+	NoDelete            bool     `json:"no_delete"`
+	Verbose             bool     `json:"verbose"`
+	Silent              bool     `json:"silent"`
+	RunningUser         string   `json:"running_user"`
+	CLI                 bool     `json:"cli"`
+	Embedded            bool     `json:"embedded"`
+	Output              string   `json:"output"`
+	WebhookEnabled      bool     `json:"webhook_enabled"`
+	WebhookURL          string   `json:"webhook_url"`
+	WebhookProvider     string   `json:"webhook_provider"`
+	WebhookEvents       []string `json:"webhook_events"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -86,6 +90,10 @@ func PrintExample() {
 		CLI:                 false,
 		Embedded:            false,
 		Output:              "",
+		WebhookEnabled:      false,
+		WebhookURL:          "",
+		WebhookProvider:     "discord",
+		WebhookEvents:       []string{"all"},
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")
