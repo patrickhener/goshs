@@ -1,12 +1,13 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 	"github.com/patrickhener/goshs/cli"
 	"github.com/patrickhener/goshs/logger"
 )
@@ -37,15 +38,6 @@ const (
 	maxMessageSize = 8000000
 )
 
-var newline = []byte{'\n'}
-
-var wsupgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	// Acceppt Any
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *Hub
@@ -65,29 +57,19 @@ type Client struct {
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		if err := c.conn.Close(); err != nil {
+		if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			return
 		}
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		return
-	}
-	// disable G104 (CWE-703): Errors unhandled
-	// #nosec G104
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-	for {
-		var packet Packet
-		if err := c.conn.ReadJSON(&packet); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logger.Errorf("%v", err)
-			}
-			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				break
-			}
 
-			logger.Errorf("reading message: %v", err)
+	for {
+		_, data, err := c.conn.Read(context.Background())
+		if err != nil {
 			break
+		}
+		var packet Packet
+		if err := json.Unmarshal(data, &packet); err != nil {
+			continue
 		}
 
 		// Switch over possible socket events
@@ -147,73 +129,20 @@ func (c *Client) dispatchReadPump(packet Packet) {
 
 }
 
-func (c *Client) doWriteSelect(ticker *time.Ticker) {
-	select {
-	case message, ok := <-c.send:
-		if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-			return
-		}
-		if !ok {
-			// The hub closed the channel.
-			if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-				return
-			}
-			return
-		}
-
-		w, err := c.conn.NextWriter(websocket.TextMessage)
-		if err != nil {
-			return
-		}
-		if _, err := w.Write(message); err != nil {
-			return
-		}
-
-		// Add queued chat messages to the current websocket message.
-		n := len(c.send)
-		for i := 0; i < n; i++ {
-			if _, err := w.Write(newline); err != nil {
-				return
-			}
-			if _, err := w.Write(<-c.send); err != nil {
-				return
-			}
-		}
-
-		if err := w.Close(); err != nil {
-			return
-		}
-	case <-ticker.C:
-		if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-			return
-		}
-		if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			return
-		}
-	}
-}
-
 // writePump pumps messages from the hub to the websocket connection.
 //
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-		if err := c.conn.Close(); err != nil {
-			return
-		}
-	}()
-	for {
-		c.doWriteSelect(ticker)
+	for sendPacket := range c.send {
+		c.conn.Write(context.Background(), websocket.MessageText, sendPacket)
 	}
 }
 
 // ServeWS will handle the socket connections
 func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := wsupgrader.Upgrade(w, r, nil)
+	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		logger.Errorf("Failed to upgrade ws: %+v", err)
 		return
