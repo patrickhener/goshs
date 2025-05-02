@@ -8,7 +8,6 @@ require (
 	github.com/coder/websocket v1.8.13
 	github.com/go-acme/lego/v4 v4.20.4
 	github.com/google/go-github/v42 v42.0.0
-	github.com/gorilla/mux v1.8.1
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/sirupsen/logrus v1.9.3

@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
@@ -21,28 +20,35 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 )
 
-func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
+func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 	var addr string
 	switch what {
 	case modeWeb:
-		mux.Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger.Debug("POST request incoming")
-			logger.Debug(r.URL.Path)
-			if r.URL.Path == "/upload" {
-				logger.Debug("This is a valid upload request")
-				fs.upload(w, r)
-				// Run garbage collector to make sure file handle is synced and close properly
-				runtime.GC()
-			} else {
-				logger.Debug("This is meant to be used with verbose logging")
-				fs.logOnly(w, r)
+		// Check Basic Auth and use middleware
+		if (fs.User != "" || fs.Pass != "") && what == modeWeb {
+			if !fs.SSL {
+				logger.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
 			}
+			logger.Infof("Using basic auth with user '%s' and password '%s'", fs.User, fs.Pass)
+			// Use middleware
+			mux.Use(fs.BasicAuthMiddleware)
+		}
+
+		// Add custom server header middleware
+		mux.Use(fs.ServerHeaderMiddleware)
+
+		// Define routes
+		mux.HandleFunc("POST /upload", func(w http.ResponseWriter, r *http.Request) {
+			fs.upload(w, r)
+			runtime.GC()
 		})
-		mux.Methods(http.MethodPut).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger.Debug("Received PUT request")
+		mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
+			fs.logOnly(w, r)
+		})
+		mux.HandleFunc("PUT /", func(w http.ResponseWriter, r *http.Request) {
 			fs.put(w, r)
 		})
-		mux.PathPrefix("/").HandlerFunc(fs.handler)
+		mux.HandleFunc("/", fs.handler)
 
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	case "webdav":
@@ -61,33 +67,15 @@ func (fs *FileServer) SetupMux(mux *mux.Router, what string) string {
 
 		if fs.User != "" || fs.Pass != "" {
 			authHandler := fs.BasicAuthMiddleware(wdHandler)
-			mux.PathPrefix("/").Handler(authHandler)
+			mux.Handle("/", authHandler)
 		} else {
-			mux.PathPrefix("/").Handler(wdHandler)
+			mux.Handle("/", wdHandler)
 		}
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.WebdavPort)
 	default:
 	}
 
 	return addr
-}
-
-func (fs *FileServer) PrintInfoUseBasicAuth(mux *mux.Router, what string) {
-	if (fs.User != "" || fs.Pass != "") && what == modeWeb {
-		if !fs.SSL {
-			logger.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
-		}
-		logger.Infof("Using basic auth with user '%s' and password '%s'", fs.User, fs.Pass)
-		// Use middleware
-		mux.Use(fs.BasicAuthMiddleware)
-	}
-
-	if fs.Silent {
-		logger.Info("Serving in silent mode - no dir listing available at HTTP Listener")
-	}
-
-	// Print all embedded files as info to the console
-	fs.PrintEmbeddedFiles()
 }
 
 func (fs *FileServer) StartListener(server http.Server, what string, listener net.Listener) {
@@ -192,7 +180,8 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 // Start will start the file server
 func (fs *FileServer) Start(what string) {
 	// Setup routing with gorilla/mux
-	mux := mux.NewRouter()
+	// mux := mux.NewRouter()
+	mux := NewCustomMux()
 
 	addr := fs.SetupMux(mux, what)
 
@@ -225,11 +214,13 @@ func (fs *FileServer) Start(what string) {
 		go fs.Hub.Run()
 	}
 
-	// Check BasicAuth and use middleware
-	fs.PrintInfoUseBasicAuth(mux, what)
+	// Print silent banner
+	if fs.Silent {
+		logger.Info("Serving in silent mode - no dir listing available at HTTP Listener")
+	}
 
-	// Add custom Server header
-	mux.Use(fs.ServerHeaderMiddleware)
+	// Print all embedded files as info to the console
+	fs.PrintEmbeddedFiles()
 
 	// Start listener
 	fs.StartListener(server, what, listener)
