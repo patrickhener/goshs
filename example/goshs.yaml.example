@@ -26,5 +26,11 @@
   "running_user": "",
   "cli": false,
   "embedded": false,
-  "output": ""
+  "output": "",
+  "webhook_enabled": false,
+  "webhook_url": "",
+  "webhook_provider": "discord",
+  "webhook_events": [
+    "all"
+  ]
 }

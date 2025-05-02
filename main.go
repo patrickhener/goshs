@@ -325,6 +325,10 @@ func init() {
 		cli = cfg.CLI
 		embedded = cfg.Embedded
 		output = cfg.Output
+		webhookEnable = cfg.WebhookEnabled
+		webhookURL = cfg.WebhookURL
+		webhookProvider = cfg.WebhookProvider
+		webhookEventsParsed = cfg.WebhookEvents
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
