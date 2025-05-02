@@ -20,6 +20,7 @@
   "upload_only": false,
   "read_only": false,
   "no_clipboard": false,
+  "no_delete": false,
   "verbose": false,
   "silent": false,
   "running_user": "",
