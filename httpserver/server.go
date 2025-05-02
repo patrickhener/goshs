@@ -180,7 +180,6 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 // Start will start the file server
 func (fs *FileServer) Start(what string) {
 	// Setup routing with gorilla/mux
-	// mux := mux.NewRouter()
 	mux := NewCustomMux()
 
 	addr := fs.SetupMux(mux, what)
