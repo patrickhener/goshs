@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"html/template"
+	"net/http"
 
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/ws"
@@ -84,4 +85,11 @@ type httperror struct {
 type configFile struct {
 	Auth  string   `json:"auth"`
 	Block []string `json:"block"`
+}
+
+type Middleware func(http.Handler) http.Handler
+
+type CustomMux struct {
+	mux        *http.ServeMux
+	middleware []Middleware
 }
