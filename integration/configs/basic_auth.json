@@ -1,0 +1,6 @@
+{
+    "interface": "0.0.0.0",
+    "port": 8001,
+    "auth_username": "admin",
+    "auth_password": "admin"
+  }
