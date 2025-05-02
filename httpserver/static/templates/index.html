@@ -206,7 +206,7 @@
                                         {{ end }}
                                     </td>
                                     <td>
-                                        {{ if .ReadOnly }}
+                                        {{ if or .ReadOnly .NoDelete }}
                                         {{ else }}
                                         <a onclick="deleteFile('/{{.URI}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
                                         {{ end }}
@@ -219,7 +219,9 @@
                         <input type="submit" class="btn btn-primary" id="downloadBulkButton" value="Download Selected"
                             style="display:none">
                     </form>
+                    {{ if not .NoDelete }}
                     <button class="btn btn-primary" id="bulkDelete" onclick="bulkDelete()" style="display:none">Delete Selected</button>
+                    {{ end }}
                 </div>
             </div>
         </div>

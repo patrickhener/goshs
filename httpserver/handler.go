@@ -128,8 +128,11 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
-		if !fs.ReadOnly && !fs.UploadOnly {
+		if !fs.ReadOnly && !fs.UploadOnly && !fs.NoDelete {
 			fs.deleteFile(w, req)
+			return true
+		} else {
+			fs.handleError(w, req, fmt.Errorf("delete not allowed"), http.StatusForbidden)
 			return true
 		}
 	}
@@ -333,6 +336,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		Embedded:        fileS.Embedded,
 		EmbeddedContent: e,
 		NoClipboard:     fileS.NoClipboard,
+		NoDelete:        fileS.NoDelete,
 	}
 
 	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
@@ -375,6 +379,7 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
 		item.SortLastModified = fi.ModTime().UTC().UnixMilli()
 		item.ReadOnly = fileS.ReadOnly
+		item.NoDelete = fileS.NoDelete
 		// Check and resolve symlink
 		if fi.Mode()&os.ModeSymlink != 0 {
 			item.IsSymlink = true

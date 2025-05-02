@@ -36,7 +36,7 @@ func validateAndParseJSON(input []byte) (bool, interface{}) {
 // LogRequest will log the request in a uniform way
 func LogRequest(req *http.Request, status int, verbose bool) {
 	logger.Debug("We are about to log a request")
-	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized {
+	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized || status == http.StatusForbidden || status == http.StatusBadRequest {
 		logger.Errorf("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
 	} else if status == http.StatusSeeOther || status == http.StatusMovedPermanently || status == http.StatusTemporaryRedirect || status == http.StatusPermanentRedirect {
 		logger.Infof("%s - [\x1b[1;34m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
