@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
@@ -220,6 +222,28 @@ func (fs *FileServer) Start(what string) {
 
 	// Print all embedded files as info to the console
 	fs.PrintEmbeddedFiles()
+
+	// Register webhook
+	if fs.WebhookEnable {
+		switch strings.ToLower(fs.WebhookProvider) {
+		case "discord":
+			fs.Webhook = &webhook.DiscordWebhook{
+				URL:      fs.WebhookURL,
+				Username: "goshs",
+			}
+		case "slack":
+			fs.Webhook = &webhook.SlackWebhook{
+				URL: fs.WebhookURL,
+			}
+		case "mattermost":
+			fs.Webhook = &webhook.MattermostWebhook{
+				URL:      fs.WebhookURL,
+				Username: "goshs",
+			}
+		default:
+			logger.Fatalf("Webhook provider '%s' not supported", fs.WebhookProvider)
+		}
+	}
 
 	// Start listener
 	fs.StartListener(server, what, listener)

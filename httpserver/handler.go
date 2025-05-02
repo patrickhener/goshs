@@ -498,6 +498,10 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		if _, err := io.Copy(w, file); err != nil {
 			logger.Errorf("Error writing response to browser: %+v", err)
 		}
+
+		// Send webhook message
+		fs.HandleWebhookSend(fmt.Sprintf("File downloaded: %s", filepath.Join(fs.Webroot, req.URL.Path)), "download")
+
 	} else {
 		// Write to browser
 		stat, _ := file.Stat()
@@ -508,6 +512,9 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		if _, err := io.Copy(w, file); err != nil {
 			logger.Errorf("Error writing response to browser: %+v", err)
 		}
+
+		// Send webhook message
+		fs.HandleWebhookSend(fmt.Sprintf("File viewed: %s", filepath.Join(fs.Webroot, req.URL.Path)), "view")
 	}
 }
 
@@ -538,6 +545,9 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.Warnf("error removing %+v", deletePath)
 	}
+
+	// Send webhook message
+	fs.HandleWebhookSend(fmt.Sprintf("File deleted: %s", deletePath), "delete")
 
 	logger.LogRequest(req, http.StatusResetContent, fs.Verbose)
 }

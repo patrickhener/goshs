@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/patrickhener/goshs/clipboard"
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 )
 
@@ -44,33 +45,38 @@ type item struct {
 
 // FileServer holds the fileserver information
 type FileServer struct {
-	IP             string
-	Port           int
-	CLI            bool
-	WebdavPort     int
-	Webroot        string
-	SSL            bool
-	SelfSigned     bool
-	LetsEncrypt    bool
-	MyKey          string
-	MyCert         string
-	MyP12          string
-	User           string
-	Pass           string
-	CACert         string
-	DropUser       string
-	Version        string
-	Fingerprint256 string
-	Fingerprint1   string
-	UploadOnly     bool
-	ReadOnly       bool
-	NoClipboard    bool
-	NoDelete       bool
-	Silent         bool
-	Embedded       bool
-	Verbose        bool
-	Hub            *ws.Hub
-	Clipboard      *clipboard.Clipboard
+	IP              string
+	Port            int
+	CLI             bool
+	WebdavPort      int
+	Webroot         string
+	SSL             bool
+	SelfSigned      bool
+	LetsEncrypt     bool
+	MyKey           string
+	MyCert          string
+	MyP12           string
+	User            string
+	Pass            string
+	CACert          string
+	DropUser        string
+	Version         string
+	Fingerprint256  string
+	Fingerprint1    string
+	UploadOnly      bool
+	ReadOnly        bool
+	NoClipboard     bool
+	NoDelete        bool
+	Silent          bool
+	Embedded        bool
+	Verbose         bool
+	Webhook         webhook.Webhook
+	WebhookEnable   bool
+	WebhookURL      string
+	WebhookEvents   []string
+	WebhookProvider string
+	Hub             *ws.Hub
+	Clipboard       *clipboard.Clipboard
 }
 
 type httperror struct {

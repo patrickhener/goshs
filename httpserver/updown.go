@@ -150,6 +150,9 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 		}
+
+		// Send webhook notification
+		fs.HandleWebhookSend(fmt.Sprintf("File uploaded: %s", savepath), "upload")
 	}
 
 	// Log request
