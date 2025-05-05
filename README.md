@@ -112,6 +112,12 @@ These are the awesome code contributors of `goshs`:
 [![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
 [![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
 
+# Community
+
+Join the Discord Community and start connecting.
+
+[![Join Discord](https://invidget.switchblade.xyz/3ZnskY8HcJ)](https://discord.gg/3ZnskY8HcJ)
+
 # Credits
 
 A special thank you goes to *sc0tfree* for inspiring this project with his project [updog](https://github.com/sc0tfree/updog) written in Python.
