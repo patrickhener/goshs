@@ -65,7 +65,7 @@ goshs %s
 Usage: %s [options]
 
 Web server options:
-  -i,  --ip           The ip/if-name to listen on             (default: 0.0.0.0)
+  -i,  --ip           IP or Interface to listen on            (default: 0.0.0.0)
   -p,  --port         The port to listen on                   (default: 8000)
   -d,  --dir          The web root directory                  (default: current working path)
   -w,  --webdav       Also serve using webdav protocol        (default: false)
