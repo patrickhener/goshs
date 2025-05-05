@@ -69,6 +69,7 @@ build-arm: clean generate
 	@echo "[OK] App binary was created!"
 
 run-integration:
+	@mkdir -p ./integration/docker-storage
 	@go test -v  ./integration -count=1
 
 clean-integration:

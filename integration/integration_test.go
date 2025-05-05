@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	goshsContainer = "patrickhener/goshs:latest"
-	storageVolume  = fmt.Sprintf("%s/docker-storage/", os.Getenv("PWD"))
+	dockerfilePath = fmt.Sprintf("%s/../", os.Getenv("PWD"))
+	storageVolume  = fmt.Sprintf("%s/files/", os.Getenv("PWD"))
 )
 
 type volumeSource struct {
@@ -29,7 +29,6 @@ func (v *volumeSource) Source() string {
 
 func (v *volumeSource) Type() testcontainers.MountType {
 	return testcontainers.MountType(v.mountType)
-
 }
 
 const (
@@ -38,10 +37,9 @@ const (
 	UnsecuredServerPort = 8001
 )
 
-// TestUnsecureServer
-func TestUnsecureServer(t *testing.T) {
-	// fetch the unsecured server config
-	configPath := fmt.Sprintf("%s/configs/unsecured.json", os.Getenv("PWD"))
+func spawnTestContainer(t *testing.T, config string) (nat.Port, testcontainers.Container, error) {
+	// fetch the server config
+	configPath := fmt.Sprintf(config, os.Getenv("PWD"))
 
 	r, err := os.Open(configPath)
 	require.NoError(t, err)
@@ -53,7 +51,10 @@ func TestUnsecureServer(t *testing.T) {
 
 	ctx := context.Background()
 	testContainer := testcontainers.ContainerRequest{
-		Image:        goshsContainer,
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:    dockerfilePath,
+			Dockerfile: "Dockerfile",
+		},
 		ExposedPorts: []string{testPort},
 		// mount a volume to the container; this will allow you to
 		// use a behavior analagous to docker run -v "$PWD:/pwd"
@@ -85,27 +86,45 @@ func TestUnsecureServer(t *testing.T) {
 	port, err := goshsServer.MappedPort(ctx, testPortNat)
 	require.NoError(t, err)
 
-	/*
-		Now we can do integration tests: http test this container
-		write files/read them
-		verify secure servers are working properly with basic auth, signed certs, unsigned certs, etc
-	*/
+	return port, goshsServer, nil
+}
+
+func cleanupContainer(t *testing.T, container testcontainers.Container) {
+	testcontainers.CleanupContainer(t, container)
+}
+
+// TestUnsecureServer tests all functionality of the unsecured server
+func TestUnsecureServer(t *testing.T) {
+	// spawn a test container
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/unsecured.json")
+
+	// Test connection
 	path := fmt.Sprintf("http://localhost:%d/", port.Int())
 	resp, err := http.Get(path)
 	require.NoError(t, err)
 
 	require.Equal(t, resp.Status, "200 OK")
 
-	// if you fetched a file, you can verify its contents by reading the response;
-	// or by reading the object retrieved from the filesystem
-
-	testcontainers.CleanupContainer(t, goshsServer)
+	// Test View
+	path = fmt.Sprintf("http://localhost:%d/test_data.txt", port.Int())
+	resp, err = http.Get(path)
 	require.NoError(t, err)
+
+	require.Equal(t, resp.Status, "200 OK")
+	require.Equal(t, resp.Header.Get("Content-Type"), "text/plain")
+
+	// Test Upload via HTTP PUT, POST
+
+	// Test Bulk Download
+
+	// Test File Removal
+
+	// Test Clipboard add, download, delete
+
+	// Cleanup Container
+	cleanupContainer(t, goshsServer)
 }
 
-/*
-	This is a stub; we can match the pattern above and use
-*/
 // TestBasicAuthServer test that basic auth is working
 func TestBasicAuthServer(t *testing.T) {
 	// stub; fetch basic_auth, mirror pattern above
