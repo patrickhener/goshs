@@ -68,6 +68,13 @@ build-arm: clean generate
 	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
+run-integration:
+	@go test -v  ./integration -count=1
+
+clean-integration:
+	@rm -f ./integration/docker-storage/*
+	@echo "cleaned ./integration/docker-storage/* ..."
+
 run:
 	@go run main.go
 
@@ -78,3 +85,4 @@ install:
 clean:
 	@rm -rf ./dist
 	@echo "[OK] Cleaned up!"
+
