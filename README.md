@@ -32,7 +32,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Authentication
   * Basic Authentication
   * Certificate Based Authentication via Client Certificate
-* Transport Layer Security (HTTPS
+* Transport Layer Security (HTTPS)
   * self-signed
   * let's encrypt
   * provide own certificate
