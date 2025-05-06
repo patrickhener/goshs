@@ -220,7 +220,7 @@ func (fs *FileServer) Start(what string) {
 		fs.Clipboard = clipboard.New()
 
 		// init websocket hub
-		fs.Hub = ws.NewHub(fs.Clipboard)
+		fs.Hub = ws.NewHub(fs.Clipboard, fs.CLI)
 		go fs.Hub.Run()
 	}
 

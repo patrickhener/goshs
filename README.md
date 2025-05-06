@@ -112,6 +112,12 @@ These are the awesome code contributors of `goshs`:
 [![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
 [![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
 
+# Security issues shout out
+
+These are the awesome contributors that made `goshs` even more secure :heart:
+
+- [Guilhem7](https://github.com/Guilhem7)
+
 # Community
 
 Join the Discord Community and start connecting.

@@ -111,17 +111,19 @@ func (c *Client) dispatchReadPump(packet Packet) {
 		c.refreshClipboard()
 
 	case "command":
-		var command string
-		if err := json.Unmarshal(packet.Content, &command); err != nil {
-			logger.Errorf("Error reading json packet: %+v", err)
+		if c.hub.cliEnabled {
+			var command string
+			if err := json.Unmarshal(packet.Content, &command); err != nil {
+				logger.Errorf("Error reading json packet: %+v", err)
+			}
+			logger.Debugf("Command was: %+v", command)
+			output, err := cli.RunCMD(command)
+			if err != nil {
+				logger.Errorf("Error running command: %+v", err)
+			}
+			logger.Debugf("Output: %+v", output)
+			c.updateCLI(output)
 		}
-		logger.Debugf("Command was: %+v", command)
-		output, err := cli.RunCMD(command)
-		if err != nil {
-			logger.Errorf("Error running command: %+v", err)
-		}
-		logger.Debugf("Output: %+v", output)
-		c.updateCLI(output)
 
 	default:
 		logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)

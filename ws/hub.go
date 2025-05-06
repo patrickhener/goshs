@@ -21,16 +21,20 @@ type Hub struct {
 
 	// Handle clipboard
 	cb *clipboard.Clipboard
+
+	// CLI Enabled
+	cliEnabled bool
 }
 
 // NewHub will create a new hub
-func NewHub(cb *clipboard.Clipboard) *Hub {
+func NewHub(cb *clipboard.Clipboard, cliEnabled bool) *Hub {
 	return &Hub{
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
 		cb:         cb,
+		cliEnabled: cliEnabled,
 	}
 }
 
