@@ -19,6 +19,10 @@ import (
 
 // put handles the PUT request to upload files
 func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
+	if fs.ReadOnly {
+		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
+		return
+	}
 	// Get url so you can extract Headline and title
 	upath := req.URL.Path
 
