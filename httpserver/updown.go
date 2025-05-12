@@ -81,82 +81,87 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	targetpath = targetpath[:len(targetpath)-1]
 	target := strings.Join(targetpath, "/")
 
-	// Parse request
-	// Limit memory usage to 16MB
-	if err := req.ParseMultipartForm(1 << 24); err != nil {
-		logger.Errorf("parsing multipart request: %+v", err)
+	reader, err := req.MultipartReader()
+	if err != nil {
+		logger.Errorf("reading multipart request: %+v", err)
 		return
 	}
 
-	// Get ref to the parsed multipart form
-	m := req.MultipartForm
-
-	// Remove all temporary files when we return
-	defer m.RemoveAll()
-
-	for _, f := range m.File {
-		file, err := f[0].Open()
-		if err != nil {
-			logger.Errorf("retrieving the file: %+v\n", err)
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
 		}
-		defer file.Close()
+		if err != nil {
+			logger.Errorf("reading multipart part: %+v", err)
+			return
+		}
+		if part.FileName() == "" {
+			continue // skip form fields
+		}
 
-		filename := f[0].Filename
-
-		// Sanitize filename (No path traversal)
-		filenameSlice := strings.Split(filename, "/")
+		// sanitize filename (No path traversal)
+		filenameSlice := strings.Split(part.FileName(), "/")
 		filenameClean := filenameSlice[len(filenameSlice)-1]
 
-		// Construct absolute savepath
-		savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, filenameClean)
+		// Prepare destination file paths
+		finalPath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, filenameClean)
+		tempPath := finalPath + "~"
 
-		// Create file to write to
-		// disable G304 (CWE-22): Potential file inclusion via variable
-		// #nosec G304
-		if _, err := os.Create(savepath); err != nil {
-			logger.Errorf("Not able to create file on disk")
-			fs.handleError(w, req, err, http.StatusInternalServerError)
-		}
-
-		// Write file to disk 16MB at a time
-		buffer := make([]byte, 1<<24)
-
-		// disable G304 (CWE-22): Potential file inclusion via variable
-		// #nosec G304
-		osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		// Create temp file
+		dst, err := os.Create(tempPath)
 		if err != nil {
-			logger.Warnf("Error opening file: %+v", err)
+			logger.Errorf("creating temp file: %+v", err)
+			return
 		}
-		defer func() {
-			if err := osFile.Sync(); err != nil {
-				logger.Errorf("error syncing file: %+v", err)
-			}
-			if err := osFile.Close(); err != nil {
-				logger.Errorf("error closing file: %+v", err)
-			}
-		}()
 
+		// Write in chunks
+		buf := make([]byte, chunkSize)
+		var totalWritten int64
 		for {
-			// Read file from post body
-			nBytes, readErr := file.Read(buffer)
-			if readErr != nil && readErr != io.EOF {
-				logger.Errorf("Not able to read file from request")
-				fs.handleError(w, req, err, http.StatusInternalServerError)
+			n, readErr := part.Read(buf)
+			if n > 0 {
+				written, writeErr := dst.Write(buf[:n])
+				if writeErr != nil || written != n {
+					dst.Close()
+					os.Remove(tempPath)
+					logger.Errorf("writing file to disk: %+v", writeErr)
+					return
+				}
+				totalWritten += int64(written)
 			}
-
-			// Write file to disk
-			if _, err := osFile.Write(buffer[:nBytes]); err != nil {
-				logger.Errorf("Not able to write file to disk")
-				fs.handleError(w, req, err, http.StatusInternalServerError)
-			}
-
 			if readErr == io.EOF {
 				break
 			}
+			if readErr != nil {
+				dst.Close()
+				os.Remove(tempPath)
+				logger.Errorf("reading uploaded data: %+v", readErr)
+				return
+			}
 		}
 
-		// Send webhook notification
-		fs.HandleWebhookSend(fmt.Sprintf("File uploaded: %s", savepath), "upload")
+		// Ensure file is flushed and closed
+		if err := dst.Sync(); err != nil {
+			dst.Close()
+			os.Remove(tempPath)
+			logger.Errorf("syncing file: %+v", err)
+			return
+		}
+		if err := dst.Close(); err != nil {
+			os.Remove(tempPath)
+			logger.Errorf("closing file: %+v", err)
+			return
+		}
+
+		// Atomically rename to final path
+		if err := os.Rename(tempPath, finalPath); err != nil {
+			logger.Errorf("renaming file: %+v", err)
+			return
+		}
+
+		// Webhook
+		fs.HandleWebhookSend(fmt.Sprintf("File uploaded: %s", finalPath), "upload")
 	}
 
 	// Log request
