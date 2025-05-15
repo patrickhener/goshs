@@ -124,10 +124,15 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 					logger.Fatalf("Error reading pkcs12 file: %+v", err)
 				}
 
-				fmt.Printf("Enter password for %+v: ", fs.MyP12)
-				password, err := gopass.GetPasswdMasked()
-				if err != nil {
-					logger.Fatalf("error reading password from stdin: %+v", err)
+				var password []byte
+				if fs.P12NoPass {
+					password = []byte("")
+				} else {
+					fmt.Printf("Enter password for %+v: ", fs.MyP12)
+					password, err = gopass.GetPasswdMasked()
+					if err != nil {
+						logger.Fatalf("error reading password from stdin: %+v", err)
+					}
 				}
 				privKey, certificate, err := pkcs12.Decode(p12, string(password))
 				if err != nil {

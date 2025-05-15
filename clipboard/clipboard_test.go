@@ -61,7 +61,7 @@ func TestDownload(t *testing.T) {
 
 	resJson, err := cb.Download()
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Download has an error: %+v", err)
 	}
 
 	if json.Unmarshal(resJson, &js) != nil {

@@ -1,0 +1,6 @@
+{
+  "block":[
+    "testfile.txt",
+    "testfolder/"
+  ]
+}

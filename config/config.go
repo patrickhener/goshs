@@ -19,6 +19,7 @@ type Config struct {
 	PrivateKey          string   `json:"private_key"`
 	Certificate         string   `json:"certificate"`
 	P12                 string   `json:"p12"`
+	P12NoPass           bool     `json:"p12_no_pass"`
 	LetsEncrypt         bool     `json:"letsencrypt"`
 	LetsEncryptDomain   string   `json:"letsencrypt_domain"`
 	LetsEncryptEmail    string   `json:"letsencrypt_email"`
@@ -54,13 +55,13 @@ func Load(configpath string) (Config, error) {
 	}
 
 	if err = json.Unmarshal(cfile, &cfg); err != nil {
-		return Config{}, nil
+		return Config{}, err
 	}
 
 	return cfg, nil
 }
 
-func PrintExample() {
+func PrintExample() (string, error) {
 	defaultConfig := Config{
 		Interface:           "0.0.0.0",
 		Port:                8000,
@@ -98,9 +99,9 @@ func PrintExample() {
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	fmt.Println(string(b))
+	return string(b), nil
 }
 
 func SanityChecks(webroot string, configpath string, AuthPassword string) error {
@@ -109,7 +110,7 @@ func SanityChecks(webroot string, configpath string, AuthPassword string) error 
 		// Check if the process user can write the config file
 		file, err := os.OpenFile(configpath, os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			return nil
+			return err
 		}
 		file.Close()
 		return fmt.Errorf("%s", "The config file is accessible via goshs and is writeable by the user running goshs. This is a security issue. Read the docs at https://goshs.de/en/usage/config/index.html")

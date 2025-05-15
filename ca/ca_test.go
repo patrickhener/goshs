@@ -1,8 +1,24 @@
 package ca
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
+	"encoding/pem"
+	"math/big"
+	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-acme/lego/v4/acme"
+	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/registration"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -45,7 +61,6 @@ rtI=
 )
 
 func TestSum(t *testing.T) {
-
 	sha256, sha1 := Sum(cert)
 	sha256Clean := strings.ReplaceAll(sha256, " ", "")
 	sha1Clean := strings.ReplaceAll(sha1, " ", "")
@@ -53,4 +68,149 @@ func TestSum(t *testing.T) {
 	if sha256Clean != certSha256 || sha1Clean != certSha1 {
 		t.Errorf("Certificate Fingerprint was wrong: got sha256 %s sha1 %s, want sha256 %s and sha1 %s", sha256Clean, sha1Clean, certSha256, certSha1)
 	}
+}
+
+func TestParseAndSumValid(t *testing.T) {
+	// Generate a private key
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	// Create a certificate template
+	template := x509.Certificate{
+		SerialNumber:          newSerial(),
+		Subject:               pkix.Name{CommonName: "test"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour), // short-lived for test
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+	}
+
+	// Self-sign the certificate
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatalf("failed to create cert: %v", err)
+	}
+
+	// Encode to PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	// Write to temp file
+	tmpfile, err := os.CreateTemp("", "cert*.pem")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write(certPEM); err != nil {
+		t.Fatalf("failed to write cert to file: %v", err)
+	}
+	tmpfile.Close()
+
+	// Call the actual function
+	sha256sum, sha1sum, err := ParseAndSum(tmpfile.Name())
+	if err != nil {
+		t.Fatalf("ParseAndSum returned error: %v", err)
+	}
+
+	if sha256sum == "" || sha1sum == "" {
+		t.Error("Expected non-empty SHA256 and SHA1 sums")
+	}
+
+}
+
+func TestParseAndSumInvalid(t *testing.T) {
+	// Invalid PEM with wrong base64 → pem.Decode fails
+	tmp1, _ := os.CreateTemp("", "bad1*.pem")
+	defer os.Remove(tmp1.Name())
+	tmp1.Write([]byte("not a pem cert"))
+	tmp1.Close()
+
+	_, _, err := ParseAndSum(tmp1.Name())
+	require.Error(t, err)
+
+	// Valid PEM but invalid cert DER
+	tmp2, _ := os.CreateTemp("", "bad2*.pem")
+	defer os.Remove(tmp2.Name())
+	tmp2.Write([]byte(`-----BEGIN CERTIFICATE-----
+MIIBfzCCASKgAwIBAgIRAJKPXxQlIkH3l6Cy1W9ndSUwCgYIKoZIzj0EAwIwEjEQ
+MA4GA1UEAwwHZXhhbXBsZQ==
+-----END CERTIFICATE-----`))
+	tmp2.Close()
+
+	_, _, err = ParseAndSum(tmp2.Name())
+	require.Error(t, err)
+
+	// File does not exist
+	_, _, err = ParseAndSum("/nonexistent/path.pem")
+	require.Error(t, err)
+}
+
+// helper for serial numbers
+func newSerial() *big.Int {
+	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	return serial
+}
+
+func TestSetup(t *testing.T) {
+	tlsConf, sha256sum, sha1sum, err := Setup()
+
+	// Should not return error
+	require.NoError(t, err)
+
+	// TLS config should not be nil
+	require.NotNil(t, tlsConf)
+	require.IsType(t, &tls.Config{}, tlsConf)
+
+	// Should include a certificate
+	require.NotEmpty(t, tlsConf.Certificates)
+	cert := tlsConf.Certificates[0]
+	require.NotNil(t, cert.Certificate)
+	require.NotEmpty(t, cert.Certificate[0]) // Raw cert bytes
+
+	require.NotEmpty(t, sha256sum)
+	require.NotEmpty(t, sha1sum)
+
+	// Optionally, parse and inspect the cert
+	parsedCert, err := x509.ParseCertificate(cert.Certificate[0])
+	require.NoError(t, err)
+	require.Equal(t, "goshs - SimpleHTTPServer", parsedCert.Subject.CommonName)
+	require.True(t, parsedCert.IsCA == false)
+}
+
+func TestLetsEncryptGetMethods(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	leu := LetsEncryptUser{
+		Email: "example@test.com",
+		Registration: &registration.Resource{
+			Body: acme.Account{
+				Status:                 "active",
+				Contact:                []string{"test"},
+				TermsOfServiceAgreed:   true,
+				Orders:                 "some",
+				OnlyReturnExisting:     false,
+				ExternalAccountBinding: json.RawMessage("test"),
+			},
+			URI: "https://example.com",
+		},
+		Key:      key,
+		HTTPPort: "80",
+		TLSPort:  "443",
+		Domains:  []string{"goshs.de"},
+		Config:   &lego.Config{},
+		Client:   &lego.Client{},
+	}
+
+	email := leu.GetEmail()
+	require.Equal(t, email, "example@test.com")
+
+	reg := leu.GetRegistration()
+	require.Equal(t, reg.URI, "https://example.com")
+
+	k := leu.GetPrivateKey()
+	require.NotEmpty(t, k)
+
 }

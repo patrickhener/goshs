@@ -38,12 +38,19 @@ const (
 	maxMessageSize = 8000000
 )
 
+type Conn interface {
+	Read(ctx context.Context) (websocket.MessageType, []byte, error)
+	Close(code websocket.StatusCode, reason string) error
+	Write(ctx context.Context, tp websocket.MessageType, data []byte) error
+}
+
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *Hub
 
 	// The websocket connection.
-	conn *websocket.Conn
+	// conn *websocket.Conn
+	conn Conn
 
 	// Buffered channel of outbound messages.
 	send chan []byte

@@ -2,6 +2,6 @@
     "interface": "0.0.0.0",
     "port": 8001,
     "auth_username": "admin",
-    "auth_password": "admin",
+    "auth_password": "$2a$14$rnZwXQa2ytOwHnGDZwF.rOEX8ZjS1owscQpNzO2FVA1QDOkCQ8hlO",
     "directory": "/pwd"
 }

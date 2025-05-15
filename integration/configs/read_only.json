@@ -1,5 +1,6 @@
 {
   "interface": "0.0.0.0",
   "port": 8001,
-  "directory": "/pwd"
+  "directory": "/pwd",
+  "read_only": true
 }

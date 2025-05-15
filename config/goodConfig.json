@@ -7,6 +7,7 @@
   "private_key": "",
   "certificate": "",
   "p12": "",
+  "p12_no_pass": false,
   "letsencrypt": false,
   "letsencrypt_domain": "",
   "letsencrypt_email": "",
