@@ -95,7 +95,7 @@ func TestGetIPv4Addr(t *testing.T) {
 
 	// Test invalid interface
 	addr, err := GetInterfaceIpv4Addr("foobar0")
-	require.NoError(t, err)
+	require.Error(t, err)
 	require.Empty(t, addr)
 }
 

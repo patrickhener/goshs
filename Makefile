@@ -69,18 +69,18 @@ build-arm: clean generate
 	@echo "[OK] App binary was created!"
 
 run-unit:
-	@go test -v ./ca -count=1
-	@go test -v ./cli -count=1
-	@go test -v ./clipboard -count=1
-	@go test -v ./config -count=1
-	@go test -v ./logger -count=1
-	@go test -v ./update -count=1
-	@go test -v ./utils -count=1
-	@go test -v ./webhook -count=1
-	@go test -v ./ws -count=1
+	@go test ./ca -count=1
+	@go test ./cli -count=1
+	@go test ./clipboard -count=1
+	@go test ./config -count=1
+	@go test ./logger -count=1
+	@go test ./update -count=1
+	@go test ./utils -count=1
+	@go test ./webhook -count=1
+	@go test ./ws -count=1
 
 run-integration: clean-integration
-	@go test -v ./integration -count=1
+	@go test ./integration -count=1
 
 clean-integration:
 	@mkdir -p ./integration/files
