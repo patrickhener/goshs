@@ -1,0 +1,9 @@
+{
+  "interface": "0.0.0.0",
+  "port": 8001,
+  "directory": "/pwd",
+  "ssl": true,
+  "p12": "/certs/goshs.p12",
+  "p12_no_pass": true,
+  "certificate_auth": "/certs/ca.crt"
+}

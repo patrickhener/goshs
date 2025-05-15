@@ -1,0 +1,9 @@
+{
+  "interface": "0.0.0.0",
+  "port": 8001,
+  "directory": "/pwd",
+  "auth_username": "admin",
+  "auth_password": "admin",
+  "webdav": true,
+  "webdav_port": 8002
+}

@@ -1,0 +1,7 @@
+{
+  "auth": "admin:$2a$14$zcTfw9R9RyEePEV7JOBYnO3Ljyx3fqtki6cBLMH2oUxQMyhDRVpwK",
+  "block": [
+    "testfile.txt",
+    "testfolder/"
+  ]
+}

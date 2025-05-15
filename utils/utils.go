@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/logger"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -96,18 +95,14 @@ func GetAllIPAdresses() (map[string]string, error) {
 
 // GenerateHashPassword will take a plaintext masked password and return a bcrypt hash
 // This is meant to be used with the filebased access via .goshs file
-func GenerateHashedPassword() {
-	fmt.Printf("Enter password: ")
-	password, err := gopass.GetPasswdMasked()
-	if err != nil {
-		logger.Fatalf("error reading password from stdin: %+v", err)
-	}
-
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+func GenerateHashedPassword(password []byte) string {
+	bytes, err := bcrypt.GenerateFromPassword(password, 14)
 	if err != nil {
 		logger.Fatalf("error hashing password: %+v", err)
 	}
 	fmt.Printf("Hash: %s\n", string(bytes))
+
+	return string(bytes)
 }
 
 // Contains checks if a string is in a slice of strings

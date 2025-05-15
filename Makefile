@@ -68,6 +68,40 @@ build-arm: clean generate
 	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
+run-unit:
+	@go test -v ./ca -count=1
+	@go test -v ./cli -count=1
+	@go test -v ./clipboard -count=1
+	@go test -v ./config -count=1
+	@go test -v ./logger -count=1
+	@go test -v ./update -count=1
+	@go test -v ./utils -count=1
+	@go test -v ./webhook -count=1
+	@go test -v ./ws -count=1
+
+run-integration: clean-integration
+	@go test -v ./integration -count=1
+
+clean-integration:
+	@mkdir -p ./integration/files
+	@rm -rf ./integration/files/*
+	@cp ./integration/keepFiles/test_data.txt ./integration/files/
+	@mkdir ./integration/files/ACL
+	@mkdir ./integration/files/ACL/testfolder
+	@mkdir ./integration/files/ACLAuth
+	@mkdir ./integration/files/ACLAuth/testfolder
+	@cp ./integration/keepFiles/goshsACL ./integration/files/ACL/.goshs
+	@cp ./integration/keepFiles/testfile.txt ./integration/files/ACL/
+	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACL/
+	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACL/testfolder/
+	@cp ./integration/keepFiles/goshsACLAuth ./integration/files/ACLAuth/.goshs
+	@cp ./integration/keepFiles/testfile.txt ./integration/files/ACLAuth/
+	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/
+	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/testfolder/
+	@echo "cleaned up, ready for next test"
+
+run-tests: run-unit run-integration
+
 run:
 	@go run main.go
 
@@ -78,3 +112,4 @@ install:
 clean:
 	@rm -rf ./dist
 	@echo "[OK] Cleaned up!"
+

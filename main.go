@@ -10,15 +10,15 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/config"
+	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
 )
-
-const goshsVersion = "v1.0.6"
 
 var (
 	port                = 8000
@@ -31,6 +31,7 @@ var (
 	myKey               = ""
 	myCert              = ""
 	myP12               = ""
+	p12NoPass           = false
 	basicAuth           = ""
 	certAuth            = ""
 	webdav              = false
@@ -80,16 +81,17 @@ Web server options:
   -o,  --output       Write output to logfile                 (default: false)
 
 TLS options:
-  -s,   --ssl          Use TLS
-  -ss,  --self-signed  Use a self-signed certificate
-  -sk,  --server-key   Path to server key
-  -sc,  --server-cert  Path to server certificate
-  -p12, --pkcs12       Path to server p12
-  -sl,  --lets-encrypt Use Let's Encrypt as certification service
-  -sld, --le-domains   Domain(s) to request from Let's Encrypt		(comma separated list)
-  -sle, --le-email     Email to use with Let's Encrypt
-  -slh, --le-http      Port to use for Let's Encrypt HTTP Challenge	(default: 80)
-  -slt, --le-tls       Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
+  -s,     --ssl           Use TLS
+  -ss,    --self-signed   Use a self-signed certificate
+  -sk,    --server-key    Path to server key
+  -sc,    --server-cert   Path to server certificate
+  -p12,   --pkcs12        Path to server p12
+  -p12np, --p12-no-pass   Server p12 has empty password
+  -sl,    --lets-encrypt  Use Let's Encrypt as certification service
+  -sld,   --le-domains    Domain(s) to request from Let's Encrypt		(comma separated list)
+  -sle,   --le-email      Email to use with Let's Encrypt
+  -slh,   --le-http       Port to use for Let's Encrypt HTTP Challenge	(default: 80)
+  -slt,   --le-tls        Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
 
 Authentication options:
   -b,  --basic-auth    Use basic authentication (user:pass - user can be empty)
@@ -125,7 +127,7 @@ Usage examples:
   Start with basic auth empty user:	./goshs -b ':$up3r$3cur3'
   Start with cli enabled:           	./goshs -b 'secret-user:$up3r$3cur3' -s -ss -c
 
-`, goshsVersion, os.Args[0])
+`, goshsversion.GoshsVersion, os.Args[0])
 	}
 }
 
@@ -150,6 +152,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&myCert, "server-cert", myCert, "server cert")
 	flag.StringVar(&myP12, "p12", myP12, "server p12")
 	flag.StringVar(&myP12, "pkcs12", myP12, "server p12")
+	flag.BoolVar(&p12NoPass, "p12np", p12NoPass, "p12 no pass")
+	flag.BoolVar(&p12NoPass, "p12-no-pass", p12NoPass, "p12 no pass")
 	flag.StringVar(&basicAuth, "b", basicAuth, "basic auth")
 	flag.StringVar(&basicAuth, "basic-auth", basicAuth, "basic auth")
 	flag.StringVar(&certAuth, "ca", certAuth, "cert auth")
@@ -264,24 +268,33 @@ func init() {
 	}
 
 	if *updateGoshs {
-		err := update.UpdateTool(goshsVersion)
+		err := update.UpdateTool(goshsversion.GoshsVersion)
 		if err != nil {
 			logger.Fatalf("Failed to update tool: %+v", err)
 		}
 	}
 
 	if *version {
-		fmt.Printf("goshs version is: %+v\n", goshsVersion)
+		fmt.Printf("goshs version is: %+v\n", goshsversion.GoshsVersion)
 		os.Exit(0)
 	}
 
 	if *hash || *hashLong {
-		utils.GenerateHashedPassword()
+		fmt.Printf("Enter password: ")
+		password, err := gopass.GetPasswdMasked()
+		if err != nil {
+			logger.Fatalf("error reading password from stdin: %+v", err)
+		}
+		utils.GenerateHashedPassword(password)
 		os.Exit(0)
 	}
 
 	if *printConfig || *printConfigLong {
-		config.PrintExample()
+		config, err := config.PrintExample()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(config)
 		os.Exit(0)
 	}
 
@@ -306,6 +319,7 @@ func init() {
 		myKey = cfg.PrivateKey
 		myCert = cfg.Certificate
 		myP12 = cfg.P12
+		p12NoPass = cfg.P12NoPass
 		letsencrypt = cfg.LetsEncrypt
 		leDomains = cfg.LetsEncryptDomain
 		leEmail = cfg.LetsEncryptEmail
@@ -354,9 +368,10 @@ func init() {
 	sanityChecks()
 
 	if webdav {
-		logger.Warn("upload/read-only mode deactivated due to use of 'webdav' mode")
+		logger.Warn("upload/read-only/no-delete mode deactivated due to use of 'webdav' mode")
 		uploadOnly = false
 		readOnly = false
+		noDelete = false
 	}
 
 	// Abspath for webroot
@@ -385,13 +400,13 @@ func parseBasicAuth() (string, string) {
 }
 
 func main() {
-	if yes, out := update.CheckForUpdates(goshsVersion); yes {
+	if yes, out := update.CheckForUpdates(goshsversion.GoshsVersion); yes {
 		logger.Warnf("There is a newer Version (%s) of goshs available. Run --update to update goshs.", out)
 	} else {
 		if out != "" {
 			logger.Warnf("Failed to check for updates: %+v", out)
 		} else {
-			logger.Infof("You are running the newest version (%s) of goshs", goshsVersion)
+			logger.Infof("You are running the newest version (%s) of goshs", goshsversion.GoshsVersion)
 		}
 	}
 
@@ -442,6 +457,7 @@ func main() {
 		MyCert:          myCert,
 		MyKey:           myKey,
 		MyP12:           myP12,
+		P12NoPass:       p12NoPass,
 		User:            user,
 		Pass:            pass,
 		CACert:          certAuth,
@@ -457,7 +473,7 @@ func main() {
 		WebhookEvents:   webhookEventsParsed,
 		WebhookProvider: webhookProvider,
 		Verbose:         verbose,
-		Version:         goshsVersion,
+		Version:         goshsversion.GoshsVersion,
 	}
 
 	go server.Start("web")

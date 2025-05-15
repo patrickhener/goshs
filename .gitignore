@@ -9,3 +9,5 @@
 /httpserver/embedded/*
 !httpserver/embedded/example.txt
 *.bak
+/integration/files
+coverage.out

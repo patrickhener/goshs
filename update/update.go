@@ -30,7 +30,7 @@ const (
 )
 
 func CheckForUpdates(version string) (bool, string) {
-	latestRelease, err := getLatestRelease()
+	latestRelease, err := getLatestRelease(owner, repo)
 	if err != nil {
 		return false, err.Error()
 	}
@@ -42,7 +42,7 @@ func CheckForUpdates(version string) (bool, string) {
 }
 
 func UpdateTool(version string) error {
-	latestRelease, err := getLatestRelease()
+	latestRelease, err := getLatestRelease(owner, repo)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest release: %+v", err)
 	}
@@ -68,7 +68,7 @@ func UpdateTool(version string) error {
 	return nil
 }
 
-func getLatestRelease() (*github.RepositoryRelease, error) {
+func getLatestRelease(owner string, repo string) (*github.RepositoryRelease, error) {
 	client := github.NewClient(nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

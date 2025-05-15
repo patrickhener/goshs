@@ -76,6 +76,9 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 	}
 
 	block, _ := pem.Decode(certBytes)
+	if block == nil {
+		return "", "", fmt.Errorf("failed to decode PEM block from cert")
+	}
 
 	certParsed, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {

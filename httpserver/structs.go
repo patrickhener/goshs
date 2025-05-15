@@ -56,6 +56,7 @@ type FileServer struct {
 	MyKey           string
 	MyCert          string
 	MyP12           string
+	P12NoPass       bool
 	User            string
 	Pass            string
 	CACert          string
