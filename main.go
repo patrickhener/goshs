@@ -16,6 +16,7 @@ import (
 	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/sftpserver"
 	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
 )
@@ -36,6 +37,10 @@ var (
 	certAuth            = ""
 	webdav              = false
 	webdavPort          = 8001
+	sftp                = false
+	sftpPort            = 2022
+	sftpKeyfile         = ""
+	sftpHostKeyfile     = ""
 	uploadOnly          = false
 	readOnly            = false
 	noClipboard         = false
@@ -50,7 +55,6 @@ var (
 	embedded            = false
 	output              = ""
 	configFile          = ""
-	printConfig         = false
 	webhookEnable       = false
 	webhookURL          = ""
 	webhookEvents       = "all"
@@ -92,6 +96,12 @@ TLS options:
   -sle,   --le-email      Email to use with Let's Encrypt
   -slh,   --le-http       Port to use for Let's Encrypt HTTP Challenge	(default: 80)
   -slt,   --le-tls        Port to use for Let's Encrypt TLS ALPN Challenge (default: 443)
+
+SFTP server options:
+  -sftp                        Activate SFTP server capabilities (default: false)
+  -sp,    --sftp-port          The port SFTP listens on          (default: 2022)
+  -skf,   --sftp-keyfile       Authorized_keys file for pubkey auth
+  -shk,   --sftp-host-keyfile  SSH Host key file for identification
 
 Authentication options:
   -b,  --basic-auth    Use basic authentication (user:pass - user can be empty)
@@ -200,6 +210,14 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&webhookEvents, "webhook-events", webhookEvents, "")
 	flag.StringVar(&webhookProvider, "Wp", webhookProvider, "")
 	flag.StringVar(&webhookProvider, "webhook-provider", webhookProvider, "")
+	flag.BoolVar(&sftp, "sftp", sftp, "sftp")
+	flag.IntVar(&sftpPort, "sp", sftpPort, "sftp port")
+	flag.IntVar(&sftpPort, "sftp-port", sftpPort, "sftp port")
+	flag.StringVar(&sftpKeyfile, "skf", sftpKeyfile, "")
+	flag.StringVar(&sftpKeyfile, "sftp-keyfile", sftpKeyfile, "")
+	flag.StringVar(&sftpHostKeyfile, "shk", sftpHostKeyfile, "")
+	flag.StringVar(&sftpHostKeyfile, "sftp-host-keyfile", sftpHostKeyfile, "")
+
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
@@ -249,6 +267,11 @@ func sanityChecks() {
 	// Sanity check if CA mode enabled you will also need TLS enabled in some way
 	if certAuth != "" && !ssl {
 		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")
+	}
+
+	// Sanity check either user:pass or keyfile when using sftp
+	if sftp && (basicAuth == "" && sftpKeyfile == "") {
+		logger.Fatal("When using SFTP you need to either specify an authorized keyfile using -sfk or username and password using -b")
 	}
 
 }
@@ -343,6 +366,10 @@ func init() {
 		webhookURL = cfg.WebhookURL
 		webhookProvider = cfg.WebhookProvider
 		webhookEventsParsed = cfg.WebhookEvents
+		sftp = cfg.SFTP
+		sftpPort = cfg.SFTPPort
+		sftpKeyfile = cfg.SFTPKeyFile
+		sftpHostKeyfile = cfg.SFTPHostKeyFile
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -482,12 +509,21 @@ func main() {
 		logger.Warnf("error registering zeroconf mDNS: %+v", err)
 	}
 
+	// Start web server
 	go server.Start("web")
 
+	// Start WebDAV server
 	if webdav {
 		server.WebdavPort = webdavPort
 
 		go server.Start("webdav")
+	}
+
+	// Start SFTP server
+	if sftp {
+		s := sftpserver.NewSFTPServer(ip, sftpPort, sftpKeyfile, user, pass, webroot, readOnly, sftpHostKeyfile)
+
+		go s.Start()
 	}
 
 	<-done
