@@ -118,7 +118,7 @@ func Contains(slice []string, item string) bool {
 	return false
 }
 
-func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int) error {
+func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int) error {
 	// Register zeroconf mDNS
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -175,6 +175,24 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int) er
 		defer zeroDav.Shutdown()
 
 		logger.Infof("mDSN service registered as %s://%s.local:%d", out, hostname, webdavPort)
+	}
+
+	// Register sftp if enabled
+	if sftp {
+		zeroDav, err := zeroconf.Register(
+			"goshs WebDAV",
+			"_ssh._tcp",
+			"local.",
+			webdavPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), "subsystem=sftp", "path=/", fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDSN service registered as ssh://%s.local:%d", hostname, sftpPort)
 	}
 
 	return nil

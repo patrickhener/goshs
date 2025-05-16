@@ -504,7 +504,7 @@ func main() {
 	}
 
 	// Zeroconf mDNS
-	err := utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort)
+	err := utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort, sftp, sftpPort)
 	if err != nil {
 		logger.Warnf("error registering zeroconf mDNS: %+v", err)
 	}
