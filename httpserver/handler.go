@@ -239,6 +239,7 @@ func (fileS *FileServer) constructEmbedded() []item {
 				item.Ext = strings.ToLower(utils.ReturnExt(d.Name()))
 				uri_temp := url.PathEscape(pathS)
 				uri_temp = strings.TrimPrefix(uri_temp, "embedded")
+				uri_temp = strings.TrimPrefix(uri_temp, "%2F")
 				item.URI = fmt.Sprintf("%s?embedded", uri_temp)
 
 				// Add to items slice
