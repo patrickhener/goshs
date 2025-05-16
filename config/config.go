@@ -71,6 +71,7 @@ func PrintExample() (string, error) {
 		PrivateKey:          "",
 		Certificate:         "",
 		P12:                 "",
+		P12NoPass:           false,
 		LetsEncrypt:         false,
 		LetsEncryptDomain:   "",
 		LetsEncryptEmail:    "",
