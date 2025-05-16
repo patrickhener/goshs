@@ -44,6 +44,10 @@ type Config struct {
 	WebhookURL          string   `json:"webhook_url"`
 	WebhookProvider     string   `json:"webhook_provider"`
 	WebhookEvents       []string `json:"webhook_events"`
+	SFTP                bool     `json:"sftp"`
+	SFTPPort            int      `json:"sftp_port"`
+	SFTPKeyFile         string   `json:"sftp_keyfile"`
+	SFTPHostKeyFile     string   `json:"sftp_host_keyfile"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -96,6 +100,10 @@ func PrintExample() (string, error) {
 		WebhookURL:          "",
 		WebhookProvider:     "discord",
 		WebhookEvents:       []string{"all"},
+		SFTP:                false,
+		SFTPPort:            2022,
+		SFTPKeyFile:         "",
+		SFTPHostKeyFile:     "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

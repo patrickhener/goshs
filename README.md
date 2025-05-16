@@ -40,6 +40,10 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * Download clipboard entries as .json file
 * WebDAV support
 * Read-Only and Upload-Only mode
+* SFTP support
+  * Read-Only
+  * Key Auth
+  * Password Auth
 * Silent mode (no webserver output)
 * Retrieve json on cli
 * Drop user privileges before execution (Unix only)
