@@ -80,7 +80,7 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 	return addr
 }
 
-func (fs *FileServer) StartListener(server http.Server, what string, listener net.Listener) {
+func (fs *FileServer) StartListener(server *http.Server, what string, listener net.Listener) {
 	var err error
 	// Check if ssl
 	if fs.SSL {
@@ -94,7 +94,7 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 
 			// If client-cert auth add it to TLS Config of server
 			if fs.CACert != "" {
-				fs.AddCertAuth(&server)
+				fs.AddCertAuth(server)
 			}
 
 			fs.Fingerprint256 = fingerprint256
@@ -165,7 +165,7 @@ func (fs *FileServer) StartListener(server http.Server, what string, listener ne
 
 			// If client-cert auth add it to TLS Config of server
 			if fs.CACert != "" {
-				fs.AddCertAuth(&server)
+				fs.AddCertAuth(server)
 			}
 
 			fs.Fingerprint256 = fingerprint256
@@ -212,7 +212,7 @@ func (fs *FileServer) Start(what string) {
 	}()
 
 	// construct server
-	server := http.Server{
+	server := &http.Server{
 		// Addr:              addr,
 		Handler:           http.AllowQuerySemicolons(mux),
 		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
