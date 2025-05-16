@@ -33,5 +33,9 @@
   "webhook_provider": "discord",
   "webhook_events": [
     "all"
-  ]
+  ],
+  "sftp": false,
+  "sftp_port": 2022,
+  "sftp_keyfile": "",
+  "sftp_host_keyfile": "" 
 }
