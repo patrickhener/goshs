@@ -476,6 +476,12 @@ func main() {
 		Version:         goshsversion.GoshsVersion,
 	}
 
+	// Zeroconf mDNS
+	err := utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort)
+	if err != nil {
+		logger.Warnf("error registering zeroconf mDNS: %+v", err)
+	}
+
 	go server.Start("web")
 
 	if webdav {

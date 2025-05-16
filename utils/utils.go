@@ -7,8 +7,11 @@ import (
 	"math/big"
 	"mime"
 	"net"
+	"os"
 	"strings"
 
+	"github.com/grandcat/zeroconf"
+	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/logger"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -113,4 +116,66 @@ func Contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int) error {
+	// Register zeroconf mDNS
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("cannot get hostname for mDNS: %+v", err)
+	}
+	// Register webPort
+	var serviceType string
+	var out string
+	switch ssl {
+	case true:
+		serviceType = "_https._tcp"
+		out = "https"
+	default:
+		serviceType = "_http._tcp"
+		out = "http"
+	}
+	zero, err := zeroconf.Register(
+		"goshs WebInterface",
+		serviceType,
+		"local.",
+		webPort,
+		[]string{fmt.Sprintf("host=%s.local", hostname), "path=/", fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+	}
+	defer zero.Shutdown()
+
+	logger.Infof("mDSN service registered as %s://%s.local:%d", out, hostname, webPort)
+
+	// Register webdav if enabled
+	if webdav {
+		switch ssl {
+		case true:
+			serviceType = "_webdavs._tcp"
+			out = "webdavs"
+		default:
+			serviceType = "_webdav._tcp"
+			out = "webdav"
+		}
+
+		zeroDav, err := zeroconf.Register(
+			"goshs WebDAV",
+			serviceType,
+			"local.",
+			webdavPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), "path=/", fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDSN service registered as %s://%s.local:%d", out, hostname, webdavPort)
+	}
+
+	return nil
 }
