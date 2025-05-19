@@ -23,7 +23,7 @@ func (h *ReadOnlyHandler) GetHandler() sftp.Handlers {
 }
 
 func (h *ReadOnlyHandler) Fileread(r *sftp.Request) (io.ReaderAt, error) {
-	return readFile(r.Filepath, h.Root, r, h.ClientIP)
+	return readFile(h.Root, r, h.ClientIP)
 }
 
 func (h *ReadOnlyHandler) Filewrite(r *sftp.Request) (io.WriterAt, error) {
@@ -31,7 +31,7 @@ func (h *ReadOnlyHandler) Filewrite(r *sftp.Request) (io.WriterAt, error) {
 }
 
 func (h *ReadOnlyHandler) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
-	return listFile(r.Filepath, h.Root, r, h.ClientIP)
+	return listFile(h.Root, r, h.ClientIP)
 }
 
 func (h *ReadOnlyHandler) Filecmd(r *sftp.Request) error {
@@ -58,11 +58,11 @@ func (h *UploadOnlyHandler) Fileread(r *sftp.Request) (io.ReaderAt, error) {
 }
 
 func (h *UploadOnlyHandler) Filewrite(r *sftp.Request) (io.WriterAt, error) {
-	return writeFile(r.Filepath, h.Root, r, h.ClientIP)
+	return writeFile(h.Root, r, h.ClientIP)
 }
 
 func (h *UploadOnlyHandler) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
-	return nil, errors.New("listing not allowed in upload-only mode")
+	return listFile(h.Root, r, h.ClientIP)
 }
 
 func (h *UploadOnlyHandler) Filecmd(r *sftp.Request) error {
@@ -85,17 +85,17 @@ func (h *DefaultHandler) GetHandler() sftp.Handlers {
 }
 
 func (h *DefaultHandler) Fileread(r *sftp.Request) (io.ReaderAt, error) {
-	return readFile(r.Filepath, h.Root, r, h.ClientIP)
+	return readFile(h.Root, r, h.ClientIP)
 }
 
 func (h *DefaultHandler) Filewrite(r *sftp.Request) (io.WriterAt, error) {
-	return writeFile(r.Filepath, h.Root, r, h.ClientIP)
+	return writeFile(h.Root, r, h.ClientIP)
 }
 
 func (h *DefaultHandler) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
-	return listFile(r.Filepath, h.Root, r, h.ClientIP)
+	return listFile(h.Root, r, h.ClientIP)
 }
 
 func (h *DefaultHandler) Filecmd(r *sftp.Request) error {
-	return cmdFile(r.Filepath, h.Root, r, h.ClientIP)
+	return cmdFile(h.Root, r, h.ClientIP)
 }
