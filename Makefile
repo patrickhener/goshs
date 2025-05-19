@@ -74,6 +74,7 @@ run-unit:
 	@go test ./clipboard -count=1
 	@go test ./config -count=1
 	@go test ./logger -count=1
+	@go test ./sftpserver -count=1
 	@go test ./update -count=1
 	@go test ./utils -count=1
 	@go test ./webhook -count=1
