@@ -83,6 +83,7 @@ func readFile(root string, r *sftp.Request, ip string) (*os.File, error) {
 	}
 	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
+		logger.LogSFTPRequestBlocked(r, ip, err)
 		return nil, err
 	}
 	logger.LogSFTPRequest(r, ip)
@@ -96,12 +97,14 @@ func listFile(root string, r *sftp.Request, ip string) (*simpleListerAt, error) 
 	}
 	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
+		logger.LogSFTPRequestBlocked(r, ip, err)
 		return nil, err
 	}
 	switch r.Method {
 	case "Stat":
 		info, err := os.Stat(fullPath)
 		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
 			return nil, err
 		}
 		logger.LogSFTPRequest(r, ip)
@@ -109,12 +112,14 @@ func listFile(root string, r *sftp.Request, ip string) (*simpleListerAt, error) 
 	default:
 		f, err := os.Open(fullPath)
 		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
 			return nil, err
 		}
 		defer f.Close()
 
 		infos, err := f.Readdir(0)
 		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
 			return nil, err
 		}
 
@@ -129,6 +134,7 @@ func writeFile(root string, r *sftp.Request, ip string) (*os.File, error) {
 	}
 	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
+		logger.LogSFTPRequestBlocked(r, ip, err)
 		return nil, err
 	}
 	logger.LogSFTPRequest(r, ip)
@@ -143,44 +149,90 @@ func cmdFile(root string, r *sftp.Request, ip string) error {
 	}
 	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
+		logger.LogSFTPRequestBlocked(r, ip, err)
 		return err
 	}
 
 	switch r.Method {
 	case "Stat":
 		_, err := os.Stat(fullPath)
-		logger.LogSFTPRequest(r, ip)
-		return err
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	case "Lstat":
 		_, err := os.Lstat(fullPath)
-		logger.LogSFTPRequest(r, ip)
-		return err
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	case "Setstat":
 		mode := os.FileMode(r.Attributes().Mode)
 		if mode != 0 {
 			if err := os.Chmod(fullPath, mode); err != nil {
+				logger.LogSFTPRequestBlocked(r, ip, fmt.Errorf("chmod failed: %w", err))
 				return fmt.Errorf("chmod failed %w", err)
 			}
 			return nil
 		}
 		logger.LogSFTPRequest(r, ip)
-		return os.Chmod(fullPath, os.FileMode(r.Attributes().Mode))
+		err := os.Chmod(fullPath, os.FileMode(r.Attributes().Mode))
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
+
 	case "Rename":
-		logger.LogSFTPRequest(r, ip)
-		return os.Rename(fullPath, r.Target)
+		err := os.Rename(fullPath, r.Target)
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	case "Rmdir":
-		logger.LogSFTPRequest(r, ip)
-		return os.RemoveAll(fullPath)
+		err := os.RemoveAll(fullPath)
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	case "Mkdir":
-		logger.LogSFTPRequest(r, ip)
-		return os.Mkdir(fullPath, 0o775)
+		err := os.Mkdir(fullPath, 0o775)
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	case "Remove":
-		logger.LogSFTPRequest(r, ip)
-		return os.Remove(fullPath)
+		err := os.Remove(fullPath)
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			return err
+		} else {
+			logger.LogSFTPRequest(r, ip)
+			return err
+		}
 	default:
-		logger.LogSFTPRequest(r, ip)
+		logger.LogSFTPRequestBlocked(r, ip, fmt.Errorf("unsupported command: %s", r.Method))
 		return errors.New("unsupported command")
 	}
+
+	return nil
 }
 
 func rewritePathWindows(path string) string {
