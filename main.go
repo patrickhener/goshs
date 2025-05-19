@@ -521,7 +521,7 @@ func main() {
 
 	// Start SFTP server
 	if sftp {
-		s := sftpserver.NewSFTPServer(ip, sftpPort, sftpKeyfile, user, pass, webroot, readOnly, sftpHostKeyfile)
+		s := sftpserver.NewSFTPServer(ip, sftpPort, sftpKeyfile, user, pass, webroot, readOnly, uploadOnly, sftpHostKeyfile)
 
 		go s.Start()
 	}

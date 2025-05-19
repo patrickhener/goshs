@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
 )
 
@@ -129,6 +130,15 @@ func logVerbose(req *http.Request) {
 
 			logger.Infof("Request Body: \n%s\n", body)
 		}
+	}
+}
+
+func LogSFTPRequest(r *sftp.Request, ip string) {
+	switch r.Method {
+	case "Rename":
+		logger.Infof("%s - [\x1b[1;34m%s\x1b[0m] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
+	default:
+		logger.Infof("%s - [\x1b[1;34m%s\x1b[0m] - \"%s\"", ip, r.Method, r.Filepath)
 	}
 }
 
