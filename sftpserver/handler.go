@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/patrickhener/goshs/logger"
 	"github.com/pkg/sftp"
 )
 
@@ -27,6 +28,7 @@ func (h *ReadOnlyHandler) Fileread(r *sftp.Request) (io.ReaderAt, error) {
 }
 
 func (h *ReadOnlyHandler) Filewrite(r *sftp.Request) (io.WriterAt, error) {
+	logger.LogSFTPRequestBlocked(r, h.ClientIP, errors.New("upload not allowed in read-only mode"))
 	return nil, errors.New("upload not allowed in read-only mode")
 }
 
@@ -35,6 +37,7 @@ func (h *ReadOnlyHandler) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
 }
 
 func (h *ReadOnlyHandler) Filecmd(r *sftp.Request) error {
+	logger.LogSFTPRequestBlocked(r, h.ClientIP, errors.New("file commands are not allowed in read-only mode"))
 	return errors.New("file commands are not allowed in read-only mode")
 }
 
@@ -54,6 +57,7 @@ func (h *UploadOnlyHandler) GetHandler() sftp.Handlers {
 }
 
 func (h *UploadOnlyHandler) Fileread(r *sftp.Request) (io.ReaderAt, error) {
+	logger.LogSFTPRequestBlocked(r, h.ClientIP, errors.New("download not allowed in upload-only mode"))
 	return nil, errors.New("download not allowed in upload-only mode")
 }
 
@@ -66,6 +70,7 @@ func (h *UploadOnlyHandler) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
 }
 
 func (h *UploadOnlyHandler) Filecmd(r *sftp.Request) error {
+	logger.LogSFTPRequestBlocked(r, h.ClientIP, errors.New("file commands are not allowed in upload-only mode"))
 	return errors.New("file commands are not allowed in upload-only mode")
 }
 

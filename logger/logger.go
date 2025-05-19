@@ -136,9 +136,18 @@ func logVerbose(req *http.Request) {
 func LogSFTPRequest(r *sftp.Request, ip string) {
 	switch r.Method {
 	case "Rename":
-		logger.Infof("%s - [\x1b[1;34m%s\x1b[0m] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
+		logger.Infof("%s - [\x1b[1;32m%s\x1b[0m] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
 	default:
-		logger.Infof("%s - [\x1b[1;34m%s\x1b[0m] - \"%s\"", ip, r.Method, r.Filepath)
+		logger.Infof("%s - [\x1b[1;32m%s\x1b[0m] - \"%s\"", ip, r.Method, r.Filepath)
+	}
+}
+
+func LogSFTPRequestBlocked(r *sftp.Request, ip string, err error) {
+	switch r.Method {
+	case "Rename":
+		logger.Infof("%s - [\x1b[1;31m%s\x1b[0m] - \"%s to %s\" - %+v", ip, r.Method, r.Filepath, r.Target, err.Error())
+	default:
+		logger.Infof("%s - [\x1b[1;31m%s\x1b[0m] - \"%s\": %+v", ip, r.Method, r.Filepath, err.Error())
 	}
 }
 
