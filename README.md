@@ -42,6 +42,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Read-Only and Upload-Only mode
 * SFTP support
   * Read-Only
+  * Upload-Only
   * Key Auth
   * Password Auth
 * Silent mode (no webserver output)
