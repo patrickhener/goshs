@@ -66,40 +66,40 @@ func TestSanitizePath(t *testing.T) {
 
 func TestReadFile(t *testing.T) {
 	req := &sftp.Request{
-		Method: "Readfile",
-		Target: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Method:   "Readfile",
+		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
-	file, err := readFile(filepath.Join(os.Getenv("PWD"), "authorized_keys"), os.Getenv("PWD"), req, "127.0.0.1")
+	file, err := readFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 	require.Equal(t, file.Name(), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
 }
 
 func TestListFile(t *testing.T) {
 	req := &sftp.Request{
-		Method: "Stat",
-		Target: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Method:   "Stat",
+		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
-	files, err := listFile(filepath.Join(os.Getenv("PWD"), "authorized_keys"), os.Getenv("PWD"), req, "127.0.0.1")
+	files, err := listFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 	file := files.files[0]
 	require.Equal(t, filepath.Join(os.Getenv("PWD"), file.Name()), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
 
 	req = &sftp.Request{
-		Method: "Listfiles",
-		Target: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Method:   "Listfiles",
+		Filepath: os.Getenv("PWD"),
 	}
 
-	files, err = listFile(os.Getenv("PWD"), os.Getenv("PWD"), req, "127.0.0.1")
+	files, err = listFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 	require.Greater(t, len(files.files), 4)
 }
 
 func TestWriteFile(t *testing.T) {
 	req := &sftp.Request{
-		Method: "Writefile",
-		Target: filepath.Join(os.Getenv("PWD"), "test.txt"),
+		Method:   "Writefile",
+		Filepath: filepath.Join(os.Getenv("PWD"), "test.txt"),
 	}
-	file, err := writeFile(filepath.Join(os.Getenv("PWD"), "test.txt"), os.Getenv("PWD"), req, "127.0.0.1")
+	file, err := writeFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 	_, err = file.Write([]byte("test content"))
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
 
-	err := cmdFile(filepath.Join(os.Getenv("PWD"), "authorized_keys"), os.Getenv("PWD"), req, "127.0.0.1")
+	err := cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -119,7 +119,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
 
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "authorized_keys"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -127,7 +127,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
 	}
 
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "testdir"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -136,7 +136,7 @@ func TestCmd(t *testing.T) {
 		Target:   filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 	}
 
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "test.txt"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -144,7 +144,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 		Attrs:    []byte(`{"mode": 0644}`), // Invalid
 	}
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	// TODO: Add test for Setstat with valid attributes
@@ -154,7 +154,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 	}
 
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -162,7 +162,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
 	}
 
-	err = cmdFile(filepath.Join(os.Getenv("PWD"), "testdir"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -170,6 +170,6 @@ func TestCmd(t *testing.T) {
 		Filepath: os.Getenv("PWD"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
 	require.Error(t, err)
 }

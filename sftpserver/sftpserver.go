@@ -88,7 +88,6 @@ func (s *SFTPServer) Start() error {
 	sshServer.SubsystemHandlers = map[string]ssh.SubsystemHandler{
 		"sftp": func(sess ssh.Session) {
 			var server *sftp.RequestServer
-			var err error
 			// Set handler read only or upload only or default
 			if s.ReadOnly {
 				roHandler := &ReadOnlyHandler{
@@ -110,10 +109,6 @@ func (s *SFTPServer) Start() error {
 				server = sftp.NewRequestServer(sess, dh.GetHandler(), sftp.WithStartDirectory(s.Root))
 			}
 
-			if err != nil {
-				logger.Errorf("SFTP server init error: %+v", err)
-				return
-			}
 			if err := server.Serve(); err == io.EOF {
 				server.Close()
 			} else if err != nil {

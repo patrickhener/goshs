@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/patrickhener/goshs/logger"
@@ -42,7 +43,14 @@ func loadAuthorizedKeys(path string) (map[string]bool, error) {
 
 // Sanitize client path to restrict to sftpRoot
 func sanitizePath(clientPath string, sftpRoot string) (string, error) {
-	cleanPath := filepath.Clean("/" + clientPath)
+	var cleanPath string
+	if runtime.GOOS == "windows" {
+		clientPath = rewritePathWindows(clientPath)
+		sftpRoot = rewritePathWindows(sftpRoot)
+		cleanPath = clientPath
+	} else {
+		cleanPath = filepath.Clean("/" + clientPath)
+	}
 	if !strings.HasPrefix(cleanPath, sftpRoot) {
 		return "", errors.New("access denied: outside of webroot")
 	}
@@ -68,18 +76,25 @@ func (l *simpleListerAt) ListAt(p []fs.FileInfo, off int64) (int, error) {
 }
 
 // readFile opens a file for reading
-func readFile(path string, root string, r *sftp.Request, ip string) (*os.File, error) {
-	path, err := sanitizePath(path, root)
+func readFile(root string, r *sftp.Request, ip string) (*os.File, error) {
+	if runtime.GOOS == "windows" {
+		r.Filepath = rewritePathWindows(r.Filepath)
+		root = rewritePathWindows(root)
+	}
+	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
 		return nil, err
 	}
 	logger.LogSFTPRequest(r, ip)
-	return os.Open(path)
+	return os.Open(fullPath)
 }
 
 // listFile lists files in a directory
-func listFile(path string, root string, r *sftp.Request, ip string) (*simpleListerAt, error) {
-	fullPath, err := sanitizePath(path, root)
+func listFile(root string, r *sftp.Request, ip string) (*simpleListerAt, error) {
+	if runtime.GOOS == "windows" {
+		r.Filepath = rewritePathWindows(r.Filepath)
+	}
+	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
 		return nil, err
 	}
@@ -108,56 +123,68 @@ func listFile(path string, root string, r *sftp.Request, ip string) (*simpleList
 }
 
 // writeFile opens a file for writing
-func writeFile(path string, root string, r *sftp.Request, ip string) (*os.File, error) {
-	path, err := sanitizePath(path, root)
+func writeFile(root string, r *sftp.Request, ip string) (*os.File, error) {
+	if runtime.GOOS == "windows" {
+		r.Filepath = rewritePathWindows(r.Filepath)
+	}
+	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
 		return nil, err
 	}
 	logger.LogSFTPRequest(r, ip)
-	return os.Create(path)
+	return os.Create(fullPath)
 }
 
 // cmdFile executes file commands like Stat, Lstat, Setstat, Rename, Rmdir, Mkdir, and Remove
-func cmdFile(path string, root string, r *sftp.Request, ip string) error {
-	path, err := sanitizePath(path, root)
+func cmdFile(root string, r *sftp.Request, ip string) error {
+	if runtime.GOOS == "windows" {
+		r.Target = rewritePathWindows(r.Target)
+		r.Filepath = rewritePathWindows(r.Filepath)
+	}
+	fullPath, err := sanitizePath(r.Filepath, root)
 	if err != nil {
 		return err
 	}
 
 	switch r.Method {
 	case "Stat":
-		_, err := os.Stat(path)
+		_, err := os.Stat(fullPath)
 		logger.LogSFTPRequest(r, ip)
 		return err
 	case "Lstat":
-		_, err := os.Lstat(path)
+		_, err := os.Lstat(fullPath)
 		logger.LogSFTPRequest(r, ip)
 		return err
 	case "Setstat":
 		mode := os.FileMode(r.Attributes().Mode)
-		fmt.Printf("mode: %+v\n", mode)
 		if mode != 0 {
-			if err := os.Chmod(path, mode); err != nil {
+			if err := os.Chmod(fullPath, mode); err != nil {
 				return fmt.Errorf("chmod failed %w", err)
 			}
 			return nil
 		}
 		logger.LogSFTPRequest(r, ip)
-		return os.Chmod(path, os.FileMode(r.Attributes().Mode))
+		return os.Chmod(fullPath, os.FileMode(r.Attributes().Mode))
 	case "Rename":
 		logger.LogSFTPRequest(r, ip)
-		return os.Rename(path, r.Target)
+		return os.Rename(fullPath, r.Target)
 	case "Rmdir":
 		logger.LogSFTPRequest(r, ip)
-		return os.RemoveAll(path)
+		return os.RemoveAll(fullPath)
 	case "Mkdir":
 		logger.LogSFTPRequest(r, ip)
-		return os.Mkdir(path, 0o775)
+		return os.Mkdir(fullPath, 0o775)
 	case "Remove":
 		logger.LogSFTPRequest(r, ip)
-		return os.Remove(path)
+		return os.Remove(fullPath)
 	default:
 		logger.LogSFTPRequest(r, ip)
 		return errors.New("unsupported command")
 	}
+}
+
+func rewritePathWindows(path string) string {
+	path = strings.TrimPrefix(path, "/")
+	path = strings.ReplaceAll(path, "/", "\\")
+	return path
 }
