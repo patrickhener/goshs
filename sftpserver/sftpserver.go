@@ -1,10 +1,8 @@
 package sftpserver
 
 import (
-	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/gliderlabs/ssh"
@@ -13,8 +11,7 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
-var authorizedKeysMap map[string]bool
-
+// SFTPServer represents an SFTP server configuration
 type SFTPServer struct {
 	IP          string
 	Port        int
@@ -23,10 +20,12 @@ type SFTPServer struct {
 	Password    string
 	Root        string
 	ReadOnly    bool
+	UploadOnly  bool
 	HostKeyFile string
 }
 
-func NewSFTPServer(ip string, port int, keyfile string, username string, password string, root string, readonly bool, hostkey string) *SFTPServer {
+// NewSFTPServer creates a new SFTP server instance
+func NewSFTPServer(ip string, port int, keyfile string, username string, password string, root string, readonly bool, uploadonly bool, hostkey string) *SFTPServer {
 	return &SFTPServer{
 		IP:          ip,
 		Port:        port,
@@ -35,10 +34,12 @@ func NewSFTPServer(ip string, port int, keyfile string, username string, passwor
 		Password:    password,
 		Root:        root,
 		ReadOnly:    readonly,
+		UploadOnly:  uploadonly,
 		HostKeyFile: hostkey,
 	}
 }
 
+// Start initializes and starts the SFTP server
 func (s *SFTPServer) Start() error {
 	var err error
 
@@ -86,21 +87,35 @@ func (s *SFTPServer) Start() error {
 	// Add SFTP Handler
 	sshServer.SubsystemHandlers = map[string]ssh.SubsystemHandler{
 		"sftp": func(sess ssh.Session) {
-			var server *sftp.Server
+			var server *sftp.RequestServer
 			var err error
-
+			// Set handler read only or upload only or default
 			if s.ReadOnly {
-				server, err = sftp.NewServer(sess, sftp.WithServerWorkingDirectory(s.Root), sftp.ReadOnly())
+				roHandler := &ReadOnlyHandler{
+					Root:     s.Root,
+					ClientIP: sess.RemoteAddr().String(),
+				}
+				server = sftp.NewRequestServer(sess, roHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
+			} else if s.UploadOnly {
+				uoHandler := &UploadOnlyHandler{
+					Root:     s.Root,
+					ClientIP: sess.RemoteAddr().String(),
+				}
+				server = sftp.NewRequestServer(sess, uoHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
 			} else {
-				server, err = sftp.NewServer(sess, sftp.WithServerWorkingDirectory(s.Root))
+				dh := &DefaultHandler{
+					Root:     s.Root,
+					ClientIP: sess.RemoteAddr().String(),
+				}
+				server = sftp.NewRequestServer(sess, dh.GetHandler(), sftp.WithStartDirectory(s.Root))
 			}
+
 			if err != nil {
 				logger.Errorf("SFTP server init error: %+v", err)
 				return
 			}
 			if err := server.Serve(); err == io.EOF {
 				server.Close()
-				logger.Warn("SFTP client disconnected")
 			} else if err != nil {
 				logger.Errorf("SFTP server error: %+v", err)
 			}
@@ -111,25 +126,4 @@ func (s *SFTPServer) Start() error {
 	logger.Fatal(sshServer.ListenAndServe())
 
 	return nil
-}
-
-func loadAuthorizedKeys(path string) (map[string]bool, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	keys := make(map[string]bool)
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		key, _, _, _, err := gossh.ParseAuthorizedKey(line)
-		if err != nil {
-			log.Printf("Skipping invalid key: %v", err)
-			continue
-		}
-		keys[string(key.Marshal())] = true
-	}
-	return keys, scanner.Err()
 }
