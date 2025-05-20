@@ -36,7 +36,7 @@ func validateAndParseJSON(input []byte) (bool, interface{}) {
 }
 
 // LogRequest will log the request in a uniform way
-func LogRequest(req *http.Request, status int, verbose bool) {
+func LogRequest(req *http.Request, status int, verbose bool, wh webhook.Webhook) {
 	logger.Debug("We are about to log a request")
 	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized || status == http.StatusForbidden || status == http.StatusBadRequest {
 		logger.Errorf("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
@@ -54,39 +54,52 @@ func LogRequest(req *http.Request, status int, verbose bool) {
 	}
 	if verbose {
 		logger.Debug("We are using verbose logging")
-		logVerbose(req)
+		logVerbose(req, wh)
 	}
 }
 
-func logVerbose(req *http.Request) {
-	// User Agent
-	logger.Infof("User Agent: %s", req.UserAgent())
-	// Authentication
-	auth := req.Header.Get("Authorization")
-	if auth != "" {
-		logger.Infof("Authorization Header: %s", auth)
-		if strings.Contains(auth, "Basic") {
-			decodedAuth, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(auth, "Basic ", ""))
-			if err != nil {
-				logger.Warnf("error decoding basic auth: %s", err)
-				return
+func logVerbose(req *http.Request, wh webhook.Webhook) {
+	// Headers
+	for k, v := range req.Header {
+		if k == "Authorization" {
+			auth := v[0]
+			logger.Infof("Authorization Header: %s", auth)
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Authorization Header: %s", auth), "verbose", wh)
+			if strings.Contains(strings.ToLower(auth), "basic") {
+				decodedAuth, err := base64.StdEncoding.DecodeString(auth[6:])
+				if err != nil {
+					logger.Warnf("error decoding basic auth: %s", err)
+					HandleWebhookSend(fmt.Sprintf("[VERBOSE] error decoding basic auth: %s", err), "verbose", wh)
+					return
+				}
+				logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
+				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Decoded Authorization is: `%s`", decodedAuth), "verbose", wh)
 			}
-			logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
+		} else {
+			decodedBase64, err := base64.StdEncoding.DecodeString(v[0])
+			if err == nil && k != "Content-Type" && k != "Accept" && k != "Accept-Encoding" {
+				logger.Infof("Header %s is base64 and decodes to '%s'", k, decodedBase64)
+				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Header `%s` is base64 and decodes to\n```%s```\n", k, decodedBase64), "verbose", wh)
+			} else {
+				logger.Infof("Header %s is %s", k, v)
+				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Header `%s` is `%s`", k, v), "verbose", wh)
+			}
 		}
 	}
 	// URL Parameter
 	for k, v := range req.URL.Query() {
-		logger.Infof("Parameter %s is", k)
 		input, err := url.QueryUnescape(v[0])
 		if err != nil {
 			logger.Warnf("error unescaping url parameter: %+v", err)
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] error unescaping url parameter: %+v", err), "verbose", wh)
 		}
 		isValid, _ := validateAndParseJSON([]byte(input))
 		if isValid {
 			logger.Debug("JSON format detected")
 			dst := &bytes.Buffer{}
 			json.Indent(dst, []byte(v[0]), "", "  ")
-			fmt.Println(dst.String())
+			logger.Infof("Parameter %s is %s\n", k, dst.String())
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] JSON detected, Parameter %s is \n```%s```", k, dst.String()), "verbose", wh)
 			continue
 		}
 
@@ -94,13 +107,15 @@ func logVerbose(req *http.Request) {
 			logger.Debug("Base64 detected")
 			logger.Info("Decoding Base64 before printing")
 			decodedBytes, _ := base64.StdEncoding.DecodeString(v[0])
-			fmt.Println(string(decodedBytes))
+			logger.Infof("Parameter %s is %s\n", k, string(decodedBytes))
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Base64 detected, Parameter `%s` is \n```%s```", k, string(decodedBytes)), "verbose", wh)
 
 			continue
 		}
 
 		logger.Debug("Neither JSON nor Base64 parameter, so printing plain")
-		fmt.Println(v[0])
+		logger.Infof("Parameter %s is %s", k, v[0])
+		HandleWebhookSend(fmt.Sprintf("[VERBOSE] Parameter `%s` is `%s`", k, v[0]), "verbose", wh)
 	}
 
 	// Body
@@ -109,6 +124,7 @@ func logVerbose(req *http.Request) {
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			Warnf("error reading body: %+v", err)
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] error reading body: %+v", err), "verbose", wh)
 		}
 		defer req.Body.Close()
 
@@ -119,17 +135,21 @@ func logVerbose(req *http.Request) {
 				err := json.Indent(&prettyJson, body, "", "  ")
 				if err != nil {
 					Warnf("error printing pretty json body: %+v", err)
+					HandleWebhookSend(fmt.Sprintf("[VERBOSE] error printing pretty json body: %+v", err), "verbose", wh)
 				}
 				logger.Infof("JSON Request Body: \n%s\n", prettyJson.String())
+				HandleWebhookSend(fmt.Sprintf("[VERBOSE] JSON Request Body: \n```%s```\n", prettyJson.String()), "verbose", wh)
 				return
 			}
 			if isBase64(string(body)) {
 				decodedBytes, _ := base64.StdEncoding.DecodeString(string(body))
 				logger.Infof("Base64 Request Body: \n%s\n", decodedBytes)
+				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Base64 Request Body: \n```%s```\n", decodedBytes), "verbose", wh)
 				return
 			}
 
 			logger.Infof("Request Body: \n%s\n", body)
+			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Request Body: \n```%s```\n", body), "verbose", wh)
 		}
 	}
 }
@@ -154,7 +174,12 @@ func LogSFTPRequestBlocked(r *sftp.Request, ip string, err error) {
 
 func HandleWebhookSend(message string, event string, wh webhook.Webhook) {
 	if wh.GetEnabled() {
-		if wh.Contains(event) || wh.GetEvents()[0] == "all" {
+		// Only send if wh.Contains(event) or if the first event is "all" but wh.Contains("verbose") is false
+		if wh.Contains("all") && event != "verbose" {
+			wh.Send(message)
+		} else if wh.Contains(event) {
+			wh.Send(message)
+		} else if wh.Contains("verbose") && event == "verbose" {
 			wh.Send(message)
 		}
 	}

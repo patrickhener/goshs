@@ -121,10 +121,10 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
 		if err := fs.embedded(w, req); err != nil {
-			logger.LogRequest(req, http.StatusNotFound, fs.Verbose)
+			logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
 			return true
 		}
-		logger.LogRequest(req, http.StatusOK, fs.Verbose)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
 		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
@@ -188,7 +188,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
 
 	// Switch and check if dir
 	stat, _ := file.Stat()
@@ -550,5 +550,5 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// Send webhook message
 	logger.HandleWebhookSend(fmt.Sprintf("[WEB] File deleted: %s", deletePath), "delete", fs.Webhook)
 
-	logger.LogRequest(req, http.StatusResetContent, fs.Verbose)
+	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook)
 }
