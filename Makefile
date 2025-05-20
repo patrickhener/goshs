@@ -68,6 +68,23 @@ build-arm: clean generate
 	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
+new-version:
+ifndef VERSION
+	$(error Usage: make new-version VERSION=vX.Y.Z)
+endif
+	@echo "Updating version to $(VERSION)..."
+	@sed -i 's/var GoshsVersion = "v[^"]*"/var GoshsVersion = "$(VERSION)"/' goshsversion/version.go
+	@sed -i 's|https://img.shields.io/badge/Version-v[^-]*-green|https://img.shields.io/badge/Version-$(VERSION)-green|' README.md
+	@git add goshsversion/version.go README.md
+	@git commit -m "New version $(VERSION)"
+	@git push
+	@git tag $(VERSION)
+	@git push origin $(VERSION)
+	@docker build -t patrickhener/goshs:$(VERSION) .
+	@docker build -t patrickhener/goshs:latest .
+	@docker push patrickhener/goshs:$(VERSION)
+	@docker push patrickhener/goshs:latest
+
 run-unit:
 	@go test ./ca -count=1
 	@go test ./cli -count=1
