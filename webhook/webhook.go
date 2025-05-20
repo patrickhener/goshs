@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Webhook interface {
 	Send(message string) error
+	GetEnabled() bool
+	GetEvents() []string
+	Contains(event string) bool
 }
 
 func postJSON(url string, payload any) error {
@@ -28,4 +32,37 @@ func postJSON(url string, payload any) error {
 	}
 
 	return nil
+}
+
+func Register(enabled bool, url string, provider string, events []string) *Webhook {
+	var webhook Webhook
+
+	switch strings.ToLower(provider) {
+	case "discord":
+		webhook = &DiscordWebhook{
+			Enabled:  enabled,
+			Events:   events,
+			URL:      url,
+			Username: "goshs",
+		}
+	case "slack":
+		webhook = &SlackWebhook{
+			Enabled: enabled,
+			Events:  events,
+			URL:     url,
+		}
+	case "mattermost":
+		webhook = &MattermostWebhook{
+			Enabled:  enabled,
+			Events:   events,
+			URL:      url,
+			Username: "goshs",
+		}
+	default:
+		webhook = &DiscordWebhook{
+			Enabled: false,
+		}
+	}
+
+	return &webhook
 }

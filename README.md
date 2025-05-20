@@ -63,6 +63,9 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 * Write output to a log file
 * Control via config file
 * Send notifications via webhook
+  * HTTP Server
+  * Webdav
+  * SFTP
 
 # Installation
 

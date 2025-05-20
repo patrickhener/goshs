@@ -501,7 +501,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		}
 
 		// Send webhook message
-		fs.HandleWebhookSend(fmt.Sprintf("File downloaded: %s", filepath.Join(fs.Webroot, req.URL.Path)), "download")
+		logger.HandleWebhookSend(fmt.Sprintf("[WEB] File downloaded: %s", filepath.Join(fs.Webroot, req.URL.Path)), "download", fs.Webhook)
 
 	} else {
 		// Write to browser
@@ -515,7 +515,7 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		}
 
 		// Send webhook message
-		fs.HandleWebhookSend(fmt.Sprintf("File viewed: %s", filepath.Join(fs.Webroot, req.URL.Path)), "view")
+		logger.HandleWebhookSend(fmt.Sprintf("[WEB] File viewed: %s", filepath.Join(fs.Webroot, req.URL.Path)), "view", fs.Webhook)
 	}
 }
 
@@ -548,7 +548,7 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Send webhook message
-	fs.HandleWebhookSend(fmt.Sprintf("File deleted: %s", deletePath), "delete")
+	logger.HandleWebhookSend(fmt.Sprintf("[WEB] File deleted: %s", deletePath), "delete", fs.Webhook)
 
 	logger.LogRequest(req, http.StatusResetContent, fs.Verbose)
 }

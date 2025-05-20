@@ -99,19 +99,6 @@ func TestGetIPv4Addr(t *testing.T) {
 	require.Empty(t, addr)
 }
 
-func TestContains(t *testing.T) {
-	slice := []string{"test1", "test2", "test3"}
-	result := Contains(slice, "test2")
-	if !result {
-		t.Errorf("Error in Contains: want true - got %+v", result)
-	}
-
-	negative := Contains(slice, "foo")
-	if negative {
-		t.Errorf("Error in Contains: want false - got %+v", result)
-	}
-}
-
 func TestGenerateHashedPassword(t *testing.T) {
 	password := []byte("test1234")
 

@@ -108,16 +108,6 @@ func GenerateHashedPassword(password []byte) string {
 	return string(bytes)
 }
 
-// Contains checks if a string is in a slice of strings
-func Contains(slice []string, item string) bool {
-	for _, a := range slice {
-		if a == item {
-			return true
-		}
-	}
-	return false
-}
-
 func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int) error {
 	// Register zeroconf mDNS
 	hostname, err := os.Hostname()

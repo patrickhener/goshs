@@ -7,6 +7,7 @@ import (
 
 	"github.com/gliderlabs/ssh"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/pkg/sftp"
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -22,21 +23,7 @@ type SFTPServer struct {
 	ReadOnly    bool
 	UploadOnly  bool
 	HostKeyFile string
-}
-
-// NewSFTPServer creates a new SFTP server instance
-func NewSFTPServer(ip string, port int, keyfile string, username string, password string, root string, readonly bool, uploadonly bool, hostkey string) *SFTPServer {
-	return &SFTPServer{
-		IP:          ip,
-		Port:        port,
-		KeyFile:     keyfile,
-		Username:    username,
-		Password:    password,
-		Root:        root,
-		ReadOnly:    readonly,
-		UploadOnly:  uploadonly,
-		HostKeyFile: hostkey,
-	}
+	Webhook     webhook.Webhook
 }
 
 // Start initializes and starts the SFTP server
@@ -91,20 +78,23 @@ func (s *SFTPServer) Start() error {
 			// Set handler read only or upload only or default
 			if s.ReadOnly {
 				roHandler := &ReadOnlyHandler{
-					Root:     s.Root,
-					ClientIP: sess.RemoteAddr().String(),
+					Root:       s.Root,
+					ClientIP:   sess.RemoteAddr().String(),
+					SFTPServer: s,
 				}
 				server = sftp.NewRequestServer(sess, roHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
 			} else if s.UploadOnly {
 				uoHandler := &UploadOnlyHandler{
-					Root:     s.Root,
-					ClientIP: sess.RemoteAddr().String(),
+					Root:       s.Root,
+					ClientIP:   sess.RemoteAddr().String(),
+					SFTPServer: s,
 				}
 				server = sftp.NewRequestServer(sess, uoHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
 			} else {
 				dh := &DefaultHandler{
-					Root:     s.Root,
-					ClientIP: sess.RemoteAddr().String(),
+					Root:       s.Root,
+					ClientIP:   sess.RemoteAddr().String(),
+					SFTPServer: s,
 				}
 				server = sftp.NewRequestServer(sess, dh.GetHandler(), sftp.WithStartDirectory(s.Root))
 			}
@@ -121,4 +111,25 @@ func (s *SFTPServer) Start() error {
 	logger.Fatal(sshServer.ListenAndServe())
 
 	return nil
+}
+
+func (s *SFTPServer) HandleWebhookSend(event string, r *sftp.Request, ip string, blocked bool) {
+	var message string
+	if blocked {
+		switch r.Method {
+		case "Rename":
+			message = fmt.Sprintf("[SFTP] BLOCKED %s - [%s] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
+		default:
+			message = fmt.Sprintf("[SFTP] BLOCKED %s - [%s] - \"%s\"", ip, r.Method, r.Filepath)
+		}
+	} else {
+		switch r.Method {
+		case "Rename":
+			message = fmt.Sprintf("[SFTP] %s - [%s] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
+		default:
+			message = fmt.Sprintf("[SFTP] %s - [%s] - \"%s\"", ip, r.Method, r.Filepath)
+		}
+	}
+
+	logger.HandleWebhookSend(message, "sftp", s.Webhook)
 }

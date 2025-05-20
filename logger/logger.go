@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
 )
@@ -136,18 +137,26 @@ func logVerbose(req *http.Request) {
 func LogSFTPRequest(r *sftp.Request, ip string) {
 	switch r.Method {
 	case "Rename":
-		logger.Infof("%s - [\x1b[1;32m%s\x1b[0m] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
+		logger.Infof("SFTP: %s - [\x1b[1;32m%s\x1b[0m] - \"%s to %s\"", ip, r.Method, r.Filepath, r.Target)
 	default:
-		logger.Infof("%s - [\x1b[1;32m%s\x1b[0m] - \"%s\"", ip, r.Method, r.Filepath)
+		logger.Infof("SFTP: %s - [\x1b[1;32m%s\x1b[0m] - \"%s\"", ip, r.Method, r.Filepath)
 	}
 }
 
 func LogSFTPRequestBlocked(r *sftp.Request, ip string, err error) {
 	switch r.Method {
 	case "Rename":
-		logger.Infof("%s - [\x1b[1;31m%s\x1b[0m] - \"%s to %s\" - %+v", ip, r.Method, r.Filepath, r.Target, err.Error())
+		logger.Errorf("SFTP: %s - [\x1b[1;31m%s\x1b[0m] - \"%s to %s\" - %+v", ip, r.Method, r.Filepath, r.Target, err.Error())
 	default:
-		logger.Infof("%s - [\x1b[1;31m%s\x1b[0m] - \"%s\": %+v", ip, r.Method, r.Filepath, err.Error())
+		logger.Errorf("SFTP: %s - [\x1b[1;31m%s\x1b[0m] - \"%s\": %+v", ip, r.Method, r.Filepath, err.Error())
+	}
+}
+
+func HandleWebhookSend(message string, event string, wh webhook.Webhook) {
+	if wh.GetEnabled() {
+		if wh.Contains(event) || wh.GetEvents()[0] == "all" {
+			wh.Send(message)
+		}
 	}
 }
 

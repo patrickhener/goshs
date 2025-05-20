@@ -161,7 +161,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Webhook
-		fs.HandleWebhookSend(fmt.Sprintf("File uploaded: %s", finalPath), "upload")
+		logger.HandleWebhookSend(fmt.Sprintf("[WEB] File uploaded: %s", finalPath), "upload", fs.Webhook)
 	}
 
 	// Log request
