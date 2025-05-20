@@ -63,7 +63,7 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 	for k, v := range req.Header {
 		if k == "Authorization" {
 			auth := v[0]
-			logger.Infof("Authorization Header: %s", auth)
+			logger.Verbosef("Authorization Header: %s", writeMagenta(auth))
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Authorization Header: %s", auth), "verbose", wh)
 			if strings.Contains(strings.ToLower(auth), "basic") {
 				decodedAuth, err := base64.StdEncoding.DecodeString(auth[6:])
@@ -72,16 +72,16 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 					HandleWebhookSend(fmt.Sprintf("[VERBOSE] error decoding basic auth: %s", err), "verbose", wh)
 					return
 				}
-				logger.Infof("Decoded Authorization is: '%s'", decodedAuth)
+				logger.Verbosef("Decoded Authorization is: '%s'", writeMagenta(string(decodedAuth)))
 				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Decoded Authorization is: `%s`", decodedAuth), "verbose", wh)
 			}
 		} else {
 			decodedBase64, err := base64.StdEncoding.DecodeString(v[0])
 			if err == nil && k != "Content-Type" && k != "Accept" && k != "Accept-Encoding" {
-				logger.Infof("Header %s is base64 and decodes to '%s'", k, decodedBase64)
+				logger.Verbosef("Header %s is base64 and decodes to '%s'", writeMagenta(k), writeMagenta(string(decodedBase64)))
 				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Header `%s` is base64 and decodes to\n```%s```\n", k, decodedBase64), "verbose", wh)
 			} else {
-				logger.Infof("Header %s is %s", k, v)
+				logger.Verbosef("Header %s is %s", writeMagenta(k), writeMagentaSlice(v))
 				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Header `%s` is `%s`", k, v), "verbose", wh)
 			}
 		}
@@ -98,23 +98,23 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 			logger.Debug("JSON format detected")
 			dst := &bytes.Buffer{}
 			json.Indent(dst, []byte(v[0]), "", "  ")
-			logger.Infof("Parameter %s is %s\n", k, dst.String())
+			logger.Verbosef("Parameter %s is %s\n", writeMagenta(k), writeMagenta(dst.String()))
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] JSON detected, Parameter %s is \n```%s```", k, dst.String()), "verbose", wh)
 			continue
 		}
 
 		if isBase64(v[0]) {
 			logger.Debug("Base64 detected")
-			logger.Info("Decoding Base64 before printing")
+			logger.Verbosef("Decoding Base64 before printing")
 			decodedBytes, _ := base64.StdEncoding.DecodeString(v[0])
-			logger.Infof("Parameter %s is %s\n", k, string(decodedBytes))
+			logger.Verbosef("Parameter %s is %s\n", writeMagenta(k), writeMagenta(string(decodedBytes)))
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Base64 detected, Parameter `%s` is \n```%s```", k, string(decodedBytes)), "verbose", wh)
 
 			continue
 		}
 
 		logger.Debug("Neither JSON nor Base64 parameter, so printing plain")
-		logger.Infof("Parameter %s is %s", k, v[0])
+		logger.Verbosef("Parameter %s is %s", writeMagenta(k), writeMagenta(v[0]))
 		HandleWebhookSend(fmt.Sprintf("[VERBOSE] Parameter `%s` is `%s`", k, v[0]), "verbose", wh)
 	}
 
@@ -123,7 +123,7 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 		logger.Debug("Body is detected")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
-			Warnf("error reading body: %+v", err)
+			logger.Warnf("error reading body: %+v", err)
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] error reading body: %+v", err), "verbose", wh)
 		}
 		defer req.Body.Close()
@@ -134,21 +134,21 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 				var prettyJson bytes.Buffer
 				err := json.Indent(&prettyJson, body, "", "  ")
 				if err != nil {
-					Warnf("error printing pretty json body: %+v", err)
+					logger.Warnf("error printing pretty json body: %+v", err)
 					HandleWebhookSend(fmt.Sprintf("[VERBOSE] error printing pretty json body: %+v", err), "verbose", wh)
 				}
-				logger.Infof("JSON Request Body: \n%s\n", prettyJson.String())
+				logger.Verbosef("JSON Request Body: \n%s\n", writeMagenta(prettyJson.String()))
 				HandleWebhookSend(fmt.Sprintf("[VERBOSE] JSON Request Body: \n```%s```\n", prettyJson.String()), "verbose", wh)
 				return
 			}
 			if isBase64(string(body)) {
 				decodedBytes, _ := base64.StdEncoding.DecodeString(string(body))
-				logger.Infof("Base64 Request Body: \n%s\n", decodedBytes)
+				logger.Verbosef("Base64 Request Body: \n%s\n", writeMagenta(string(decodedBytes)))
 				HandleWebhookSend(fmt.Sprintf("[VERBOSE] Base64 Request Body: \n```%s```\n", decodedBytes), "verbose", wh)
 				return
 			}
 
-			logger.Infof("Request Body: \n%s\n", body)
+			logger.Verbosef("Request Body: \n%s\n", writeMagenta(string(body)))
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] Request Body: \n```%s```\n", body), "verbose", wh)
 		}
 	}
@@ -187,6 +187,14 @@ func HandleWebhookSend(message string, event string, wh webhook.Webhook) {
 
 var logger *StandardLogger
 
+func writeMagenta(s string) string {
+	return fmt.Sprintf("\x1b[1;35m%s\x1b[0m", s)
+}
+
+func writeMagentaSlice(s []string) string {
+	return fmt.Sprintf("\x1b[1;35m%s\x1b[0m", strings.Join(s, " "))
+}
+
 func init() {
 	logger = NewLogger()
 }
@@ -202,17 +210,37 @@ type StandardLogger struct {
 	*logrus.Logger
 }
 
+type CustomFormatter struct {
+	logrus.TextFormatter
+}
+
+func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	// Check for custom 'verbose' field
+	if verbose, ok := entry.Data["verbose"]; ok && verbose == true {
+		// Format timestamp
+		timestamp := entry.Time.Format(f.TimestampFormat)
+		// Apply a different color (e.g. magenta: "\x1b[1;35m")
+		output := fmt.Sprintf("\x1b[1;35mVERB\x1b[0m   [%s] %s\n", timestamp, entry.Message)
+
+		return []byte(output), nil
+	}
+	return f.TextFormatter.Format(entry)
+}
+
 // NewLogger initializes the standard logger.
 func NewLogger() *StandardLogger {
 	baseLogger := logrus.New()
 	standardLogger := &StandardLogger{baseLogger}
 
-	standardLogger.Formatter = &logrus.TextFormatter{
-		FullTimestamp:   true,
-		ForceColors:     true,
-		PadLevelText:    true,
-		TimestampFormat: "2006-01-02 15:04:05",
-	}
+	standardLogger.SetFormatter(&CustomFormatter{
+		TextFormatter: logrus.TextFormatter{
+			FullTimestamp:   true,
+			ForceColors:     true,
+			PadLevelText:    true,
+			TimestampFormat: "2006-01-02 15:04:05",
+		},
+	})
+
 	// Log level
 	standardLogger.SetLevel(logrus.InfoLevel)
 
@@ -296,4 +324,14 @@ func Fatal(args ...interface{}) {
 // Fatalf Log
 func Fatalf(format string, args ...interface{}) {
 	logger.Fatalf(format, args...)
+}
+
+// Verbose Log
+func (l *StandardLogger) Verbose(args ...interface{}) {
+	l.WithField("verbose", true).Infoln(args...)
+}
+
+// Verbosef Log
+func (l *StandardLogger) Verbosef(format string, args ...interface{}) {
+	l.WithField("verbose", true).Infof(format, args...)
 }
