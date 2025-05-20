@@ -81,7 +81,7 @@ run-unit:
 	@go test ./ws -count=1
 
 run-integration: clean-integration
-	@go test ./integration -count=1
+	@go test -v ./integration -count=1
 
 clean-integration:
 	@mkdir -p ./integration/files

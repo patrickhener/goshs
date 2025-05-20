@@ -64,7 +64,7 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
 }
 
 // upload handles the POST request to upload files
@@ -161,11 +161,11 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Webhook
-		fs.HandleWebhookSend(fmt.Sprintf("File uploaded: %s", finalPath), "upload")
+		logger.HandleWebhookSend(fmt.Sprintf("[WEB] File uploaded: %s", finalPath), "upload", fs.Webhook)
 	}
 
 	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, target, http.StatusSeeOther)
@@ -266,6 +266,6 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	if err := resultZip.Close(); err != nil {
 		logger.Error(err)
 	} else {
-		logger.LogRequest(req, http.StatusOK, fs.Verbose)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
 	}
 }

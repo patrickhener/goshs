@@ -19,6 +19,7 @@ import (
 	"github.com/patrickhener/goshs/sftpserver"
 	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
+	"github.com/patrickhener/goshs/webhook"
 )
 
 var (
@@ -109,12 +110,12 @@ Authentication options:
   -H,  --hash          Hash a password for file based ACLs
 
 Webhook options:
-  -W,  --webhook            Enable webhook support                                      (default: false)
+  -W,  --webhook            Enable webhook support                                       (default: false)
   -Wu, --webhook-url        URL to send webhook requests to
   -We, --webhook-events     Comma separated list of events to notify
-                            [all, upload, delete, download, view, verbose]              (default: all)
+                            [all, upload, delete, download, view, webdav, sftp, verbose] (default: all)
   -Wp, --webhook-provider   Webhook provider
-                            [Discord, Mattermost, Slack]                                (default: Discord)
+                            [Discord, Mattermost, Slack]                                 (default: Discord)
 
 Misc options:
   -C  --config        Provide config file path                (default: false)
@@ -202,7 +203,7 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&embedded, "embedded", embedded, "")
 	flag.StringVar(&output, "o", output, "")
 	flag.StringVar(&output, "output", output, "")
-	flag.BoolVar(&webhookEnable, "Wh", webhookEnable, "")
+	flag.BoolVar(&webhookEnable, "W", webhookEnable, "")
 	flag.BoolVar(&webhookEnable, "webhook", webhookEnable, "")
 	flag.StringVar(&webhookURL, "Wu", webhookURL, "")
 	flag.StringVar(&webhookURL, "webhook-url", webhookURL, "")
@@ -472,35 +473,35 @@ func main() {
 		logger.LogFile(multiWriter)
 	}
 
+	// Register webhook
+	webhook := webhook.Register(webhookEnable, webhookURL, webhookProvider, webhookEventsParsed)
+
 	// Setup the custom file server
 	server := &httpserver.FileServer{
-		IP:              ip,
-		Port:            port,
-		CLI:             cli,
-		Webroot:         webroot,
-		SSL:             ssl,
-		SelfSigned:      selfsigned,
-		LetsEncrypt:     letsencrypt,
-		MyCert:          myCert,
-		MyKey:           myKey,
-		MyP12:           myP12,
-		P12NoPass:       p12NoPass,
-		User:            user,
-		Pass:            pass,
-		CACert:          certAuth,
-		DropUser:        dropuser,
-		UploadOnly:      uploadOnly,
-		ReadOnly:        readOnly,
-		NoClipboard:     noClipboard,
-		NoDelete:        noDelete,
-		Silent:          silent,
-		Embedded:        embedded,
-		WebhookEnable:   webhookEnable,
-		WebhookURL:      webhookURL,
-		WebhookEvents:   webhookEventsParsed,
-		WebhookProvider: webhookProvider,
-		Verbose:         verbose,
-		Version:         goshsversion.GoshsVersion,
+		IP:          ip,
+		Port:        port,
+		CLI:         cli,
+		Webroot:     webroot,
+		SSL:         ssl,
+		SelfSigned:  selfsigned,
+		LetsEncrypt: letsencrypt,
+		MyCert:      myCert,
+		MyKey:       myKey,
+		MyP12:       myP12,
+		P12NoPass:   p12NoPass,
+		User:        user,
+		Pass:        pass,
+		CACert:      certAuth,
+		DropUser:    dropuser,
+		UploadOnly:  uploadOnly,
+		ReadOnly:    readOnly,
+		NoClipboard: noClipboard,
+		NoDelete:    noDelete,
+		Silent:      silent,
+		Embedded:    embedded,
+		Webhook:     *webhook,
+		Verbose:     verbose,
+		Version:     goshsversion.GoshsVersion,
 	}
 
 	// Zeroconf mDNS
@@ -521,7 +522,18 @@ func main() {
 
 	// Start SFTP server
 	if sftp {
-		s := sftpserver.NewSFTPServer(ip, sftpPort, sftpKeyfile, user, pass, webroot, readOnly, uploadOnly, sftpHostKeyfile)
+		s := &sftpserver.SFTPServer{
+			IP:          ip,
+			Port:        sftpPort,
+			KeyFile:     sftpKeyfile,
+			Username:    user,
+			Password:    pass,
+			Root:        webroot,
+			ReadOnly:    readOnly,
+			UploadOnly:  uploadOnly,
+			HostKeyFile: sftpHostKeyfile,
+			Webhook:     *webhook,
+		}
 
 		go s.Start()
 	}

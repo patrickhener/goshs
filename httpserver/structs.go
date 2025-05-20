@@ -45,39 +45,35 @@ type item struct {
 
 // FileServer holds the fileserver information
 type FileServer struct {
-	IP              string
-	Port            int
-	CLI             bool
-	WebdavPort      int
-	Webroot         string
-	SSL             bool
-	SelfSigned      bool
-	LetsEncrypt     bool
-	MyKey           string
-	MyCert          string
-	MyP12           string
-	P12NoPass       bool
-	User            string
-	Pass            string
-	CACert          string
-	DropUser        string
-	Version         string
-	Fingerprint256  string
-	Fingerprint1    string
-	UploadOnly      bool
-	ReadOnly        bool
-	NoClipboard     bool
-	NoDelete        bool
-	Silent          bool
-	Embedded        bool
-	Verbose         bool
-	Webhook         webhook.Webhook
-	WebhookEnable   bool
-	WebhookURL      string
-	WebhookEvents   []string
-	WebhookProvider string
-	Hub             *ws.Hub
-	Clipboard       *clipboard.Clipboard
+	IP             string
+	Port           int
+	CLI            bool
+	WebdavPort     int
+	Webroot        string
+	SSL            bool
+	SelfSigned     bool
+	LetsEncrypt    bool
+	MyKey          string
+	MyCert         string
+	MyP12          string
+	P12NoPass      bool
+	User           string
+	Pass           string
+	CACert         string
+	DropUser       string
+	Version        string
+	Fingerprint256 string
+	Fingerprint1   string
+	UploadOnly     bool
+	ReadOnly       bool
+	NoClipboard    bool
+	NoDelete       bool
+	Silent         bool
+	Embedded       bool
+	Verbose        bool
+	Webhook        webhook.Webhook
+	Hub            *ws.Hub
+	Clipboard      *clipboard.Clipboard
 }
 
 type httperror struct {

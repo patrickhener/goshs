@@ -17,7 +17,7 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	var e httperror
 
 	// Log to console
-	logger.LogRequest(req, status, fs.Verbose)
+	logger.LogRequest(req, status, fs.Verbose, fs.Webhook)
 
 	// Construct error for template filling
 	e.ErrorCode = status

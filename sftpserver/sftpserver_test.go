@@ -7,33 +7,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/pkg/sftp"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewSFTPServer(t *testing.T) {
-	server := NewSFTPServer("0.0.0.0", 2022, "", "test", "test", os.Getenv("PWD"), false, false, "")
-
-	require.Equal(t, server.IP, "0.0.0.0")
-	require.Equal(t, server.Port, 2022)
-	require.Equal(t, server.KeyFile, "")
-	require.Equal(t, server.Username, "test")
-	require.Equal(t, server.Password, "test")
-	require.Equal(t, server.Root, os.Getenv("PWD"))
-	require.Equal(t, server.ReadOnly, false)
-	require.Equal(t, server.HostKeyFile, "")
+var sftpserver *SFTPServer = &SFTPServer{
+	IP:          "0.0.0.0",
+	Port:        2022,
+	KeyFile:     "authorized_keys",
+	Username:    "test",
+	Password:    "test",
+	Root:        os.Getenv("PWD"),
+	ReadOnly:    false,
+	UploadOnly:  false,
+	HostKeyFile: "goshs_host_key_rsa",
+	Webhook: &webhook.DiscordWebhook{
+		Enabled: false,
+	},
 }
 
 func TestStart(t *testing.T) {
-	server := NewSFTPServer("0.0.0.0", 2022, "authorized_keys", "test", "test", os.Getenv("PWD"), true, false, "goshs_host_key_rsa")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	done := make(chan struct{})
 
 	go func() {
-		err := server.Start()
+		err := sftpserver.Start()
 		require.NoError(t, err)
 	}()
 	// Wait for context timeout or server error
@@ -43,11 +44,37 @@ func TestStart(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
-	server := NewSFTPServer("0.0.0.0", 2022, "authorized_keys.foo", "", "", os.Getenv("PWD"), false, false, "")
+	server := &SFTPServer{
+		IP:          "0.0.0.0",
+		Port:        2022,
+		KeyFile:     "authorized_keys.foo",
+		Username:    "",
+		Password:    "",
+		Root:        os.Getenv("PWD"),
+		ReadOnly:    false,
+		UploadOnly:  false,
+		HostKeyFile: "",
+		Webhook: &webhook.DiscordWebhook{
+			Enabled: false,
+		},
+	}
 	err := server.Start()
 	require.Error(t, err)
 
-	server = NewSFTPServer("0.0.0.0", 2022, "", "", "", os.Getenv("PWD"), false, false, "foo")
+	server = &SFTPServer{
+		IP:          "0.0.0.0",
+		Port:        2022,
+		KeyFile:     "",
+		Username:    "",
+		Password:    "",
+		Root:        os.Getenv("PWD"),
+		ReadOnly:    false,
+		UploadOnly:  false,
+		HostKeyFile: "foo",
+		Webhook: &webhook.DiscordWebhook{
+			Enabled: false,
+		},
+	}
 	err = server.Start()
 	require.Error(t, err)
 }
@@ -69,7 +96,7 @@ func TestReadFile(t *testing.T) {
 		Method:   "Readfile",
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
-	file, err := readFile(os.Getenv("PWD"), req, "127.0.0.1")
+	file, err := readFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	require.Equal(t, file.Name(), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
 }
@@ -79,7 +106,7 @@ func TestListFile(t *testing.T) {
 		Method:   "Stat",
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
-	files, err := listFile(os.Getenv("PWD"), req, "127.0.0.1")
+	files, err := listFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	file := files.files[0]
 	require.Equal(t, filepath.Join(os.Getenv("PWD"), file.Name()), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
@@ -89,7 +116,7 @@ func TestListFile(t *testing.T) {
 		Filepath: os.Getenv("PWD"),
 	}
 
-	files, err = listFile(os.Getenv("PWD"), req, "127.0.0.1")
+	files, err = listFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	require.Greater(t, len(files.files), 4)
 }
@@ -99,7 +126,7 @@ func TestWriteFile(t *testing.T) {
 		Method:   "Writefile",
 		Filepath: filepath.Join(os.Getenv("PWD"), "test.txt"),
 	}
-	file, err := writeFile(os.Getenv("PWD"), req, "127.0.0.1")
+	file, err := writeFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	_, err = file.Write([]byte("test content"))
 	require.NoError(t, err)
@@ -111,7 +138,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
 
-	err := cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err := cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -119,7 +146,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -127,7 +154,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -136,7 +163,7 @@ func TestCmd(t *testing.T) {
 		Target:   filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -144,7 +171,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 		Attrs:    []byte(`{"mode": 0644}`), // Invalid
 	}
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	// TODO: Add test for Setstat with valid attributes
@@ -154,7 +181,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -162,7 +189,7 @@ func TestCmd(t *testing.T) {
 		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
@@ -170,6 +197,6 @@ func TestCmd(t *testing.T) {
 		Filepath: os.Getenv("PWD"),
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1")
+	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
 	require.Error(t, err)
 }
