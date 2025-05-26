@@ -17,23 +17,7 @@ security:
 	@echo "[OK] No issues detected"
 
 
-build-all: clean generate
-	@echo "[*] go mod dowload"
-	@go mod download
-	@echo "[*] Building for linux"
-	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux_amd64/goshs
-	@GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/linux_386/goshs
-	@echo "[*] Building for windows"
-	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows_amd64/goshs.exe
-	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
-	@echo "[*] Building for mac"
-	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
-	@echo "[*] Building for arm"
-	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/arm_5/goshs
-	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/arm_6/goshs
-	@GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/arm_7/goshs
-	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
-	@echo "[OK] App binary was created!"
+build-all: clean generate build-linux build-mac build-windows build-dragonfly build-freebsd build-openbsd build-netbsd
 
 build-linux: clean generate
 	@echo "[*] go mod dowload"
@@ -41,6 +25,10 @@ build-linux: clean generate
 	@echo "[*] Building for linux"
 	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux_amd64/goshs
 	@GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o dist/linux_386/goshs
+	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/linux_arm_5/goshs
+	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/linux_arm_6/goshs
+	@GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/linux_arm_7/goshs
+	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/linux_arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
 build-mac: clean generate
@@ -48,6 +36,7 @@ build-mac: clean generate
 	@go mod download
 	@echo "[*] Building for mac"
 	@GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin_amd64/goshs
+	@GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/darwin_arm64/goshs
 	@echo "[OK] App binary was created!"
 
 build-windows: clean generate
@@ -56,16 +45,53 @@ build-windows: clean generate
 	@echo "[*] Building for windows"
 	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows_amd64/goshs.exe
 	@GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o dist/windows_386/goshs.exe
+	@GOOS=windows GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/windows_arm_5/goshs.exe
+	@GOOS=windows GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/windows_arm_6/goshs.exe
+	@GOOS=windows GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/windows_arm_7/goshs.exe
+	@GOOS=windows GOARCH=arm64 go build -ldflags="-s -w" -o dist/windows_arm64_8/goshs.exe
 	@echo "[OK] App binary was created!"
 
-build-arm: clean generate
+build-dragonfly: clean generate
 	@echo "[*] go mod dowload"
 	@go mod download
-	@echo "[*] Building for arm"
-	@GOOS=linux GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/arm_5/goshs
-	@GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/arm_6/goshs
-	@GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/arm_7/goshs
-	@GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/arm64_8/goshs
+	@echo "[*] Building for dragonfly"
+	@GOOS=dragonfly GOARCH=amd64 go build -ldflags="-s -w" -o dist/dragonfly_amd64/goshs
+	@echo "[OK] App binary was created!"
+
+build-freebsd: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for freebsd"
+	@GOOS=freebsd GOARCH=amd64 go build -ldflags="-s -w" -o dist/freebsd_amd64/goshs
+	@GOOS=freebsd GOARCH=386 go build -ldflags="-s -w" -o dist/freebsd_386/goshs
+	@GOOS=freebsd GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/freebsd_arm_5/goshs
+	@GOOS=freebsd GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/freebsd_arm_6/goshs
+	@GOOS=freebsd GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/freebsd_arm_7/goshs
+	@GOOS=freebsd GOARCH=arm64 go build -ldflags="-s -w" -o dist/freebsd_arm64_8/goshs
+	@echo "[OK] App binary was created!"
+
+build-openbsd: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for openbsd"
+	@GOOS=openbsd GOARCH=amd64 go build -ldflags="-s -w" -o dist/openbsd_amd64/goshs
+	@GOOS=openbsd GOARCH=386 go build -ldflags="-s -w" -o dist/openbsd_386/goshs
+	@GOOS=openbsd GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/openbsd_arm_5/goshs
+	@GOOS=openbsd GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/openbsd_arm_6/goshs
+	@GOOS=openbsd GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/openbsd_arm_7/goshs
+	@GOOS=openbsd GOARCH=arm64 go build -ldflags="-s -w" -o dist/openbsd_arm64_8/goshs
+	@echo "[OK] App binary was created!"
+
+build-netbsd: clean generate
+	@echo "[*] go mod dowload"
+	@go mod download
+	@echo "[*] Building for netbsd"
+	@GOOS=netbsd GOARCH=amd64 go build -ldflags="-s -w" -o dist/netbsd_amd64/goshs
+	@GOOS=netbsd GOARCH=386 go build -ldflags="-s -w" -o dist/netbsd_386/goshs
+	@GOOS=netbsd GOARCH=arm GOARM=5 go build -ldflags="-s -w" -o dist/netbsd_arm_5/goshs
+	@GOOS=netbsd GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o dist/netbsd_arm_6/goshs
+	@GOOS=netbsd GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o dist/netbsd_arm_7/goshs
+	@GOOS=netbsd GOARCH=arm64 go build -ldflags="-s -w" -o dist/netbsd_arm64_8/goshs
 	@echo "[OK] App binary was created!"
 
 new-version:
