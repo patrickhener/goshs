@@ -61,6 +61,8 @@ var (
 	webhookEvents       = "all"
 	webhookProvider     = "Discord"
 	webhookEventsParsed = []string{}
+	whitelist           = ""
+	trustedProxies      = ""
 )
 
 // Man page
@@ -105,9 +107,13 @@ SFTP server options:
   -shk,   --sftp-host-keyfile  SSH Host key file for identification
 
 Authentication options:
-  -b,  --basic-auth    Use basic authentication (user:pass - user can be empty)
-  -ca, --cert-auth     Use certificate based authentication - provide ca certificate
-  -H,  --hash          Hash a password for file based ACLs
+  -b,  --basic-auth     Use basic authentication (user:pass - user can be empty)
+  -ca, --cert-auth      Use certificate based authentication - provide ca certificate
+  -H,  --hash           Hash a password for file based ACLs
+
+Connection restriction:
+  -ipw, --ip-whitelist             Comma separated list of IPs to whitelist
+  -tpw, --trusted-proxy-whitelist  Comma seperated list of trusted proxies
 
 Webhook options:
   -W,  --webhook            Enable webhook support                                       (default: false)
@@ -218,6 +224,10 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&sftpKeyfile, "sftp-keyfile", sftpKeyfile, "")
 	flag.StringVar(&sftpHostKeyfile, "shk", sftpHostKeyfile, "")
 	flag.StringVar(&sftpHostKeyfile, "sftp-host-keyfile", sftpHostKeyfile, "")
+	flag.StringVar(&whitelist, "ipw", whitelist, "")
+	flag.StringVar(&whitelist, "ip-whitelist", whitelist, "")
+	flag.StringVar(&trustedProxies, "tpw", trustedProxies, "")
+	flag.StringVar(&trustedProxies, "trusted-proxy-whitelist", trustedProxies, "")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -274,7 +284,6 @@ func sanityChecks() {
 	if sftp && (basicAuth == "" && sftpKeyfile == "") {
 		logger.Fatal("When using SFTP you need to either specify an authorized keyfile using -sfk or username and password using -b")
 	}
-
 }
 
 // Flag handling
@@ -371,6 +380,8 @@ func init() {
 		sftpPort = cfg.SFTPPort
 		sftpKeyfile = cfg.SFTPKeyFile
 		sftpHostKeyfile = cfg.SFTPHostKeyFile
+		whitelist = cfg.Whitelist
+		trustedProxies = cfg.TrustedProxies
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -473,6 +484,20 @@ func main() {
 		logger.LogFile(multiWriter)
 	}
 
+	var wl *httpserver.Whitelist
+	var err error
+
+	enabled := false
+	if whitelist != "" {
+		logger.Infof("Whitelist activated: %+v", whitelist)
+		enabled = true
+	}
+
+	wl, err = httpserver.NewIPWhitelist(whitelist, enabled, trustedProxies)
+	if err != nil {
+		logger.Warnf("Error parsing IP whitelist: %+v", err)
+	}
+
 	// Register webhook
 	webhook := webhook.Register(webhookEnable, webhookURL, webhookProvider, webhookEventsParsed)
 
@@ -501,11 +526,12 @@ func main() {
 		Embedded:    embedded,
 		Webhook:     *webhook,
 		Verbose:     verbose,
+		Whitelist:   wl,
 		Version:     goshsversion.GoshsVersion,
 	}
 
 	// Zeroconf mDNS
-	err := utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort, sftp, sftpPort)
+	err = utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort, sftp, sftpPort)
 	if err != nil {
 		logger.Warnf("error registering zeroconf mDNS: %+v", err)
 	}
@@ -533,6 +559,7 @@ func main() {
 			UploadOnly:  uploadOnly,
 			HostKeyFile: sftpHostKeyfile,
 			Webhook:     *webhook,
+			Whitelist:   wl,
 		}
 
 		go s.Start()

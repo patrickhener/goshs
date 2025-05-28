@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/pkg/sftp"
@@ -24,6 +25,7 @@ type SFTPServer struct {
 	UploadOnly  bool
 	HostKeyFile string
 	Webhook     webhook.Webhook
+	Whitelist   *httpserver.Whitelist
 }
 
 // Start initializes and starts the SFTP server
@@ -35,6 +37,7 @@ func (s *SFTPServer) Start() error {
 		Addr: fmt.Sprintf("%s:%d", s.IP, s.Port),
 		Handler: func(s ssh.Session) {
 			// Deny default ssh connections
+			fmt.Println("Hitting ssh handler")
 			io.WriteString(s, "This server only supports SFTP.\n")
 			s.Exit(1)
 		},
@@ -74,35 +77,40 @@ func (s *SFTPServer) Start() error {
 	// Add SFTP Handler
 	sshServer.SubsystemHandlers = map[string]ssh.SubsystemHandler{
 		"sftp": func(sess ssh.Session) {
-			var server *sftp.RequestServer
-			// Set handler read only or upload only or default
-			if s.ReadOnly {
-				roHandler := &ReadOnlyHandler{
-					Root:       s.Root,
-					ClientIP:   sess.RemoteAddr().String(),
-					SFTPServer: s,
+			// Whitelist
+			if isAllowedIP(sess.RemoteAddr(), s.Whitelist) {
+				var server *sftp.RequestServer
+				// Set handler read only or upload only or default
+				if s.ReadOnly {
+					roHandler := &ReadOnlyHandler{
+						Root:       s.Root,
+						ClientIP:   sess.RemoteAddr().String(),
+						SFTPServer: s,
+					}
+					server = sftp.NewRequestServer(sess, roHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
+				} else if s.UploadOnly {
+					uoHandler := &UploadOnlyHandler{
+						Root:       s.Root,
+						ClientIP:   sess.RemoteAddr().String(),
+						SFTPServer: s,
+					}
+					server = sftp.NewRequestServer(sess, uoHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
+				} else {
+					dh := &DefaultHandler{
+						Root:       s.Root,
+						ClientIP:   sess.RemoteAddr().String(),
+						SFTPServer: s,
+					}
+					server = sftp.NewRequestServer(sess, dh.GetHandler(), sftp.WithStartDirectory(s.Root))
 				}
-				server = sftp.NewRequestServer(sess, roHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
-			} else if s.UploadOnly {
-				uoHandler := &UploadOnlyHandler{
-					Root:       s.Root,
-					ClientIP:   sess.RemoteAddr().String(),
-					SFTPServer: s,
-				}
-				server = sftp.NewRequestServer(sess, uoHandler.GetHandler(), sftp.WithStartDirectory(s.Root))
-			} else {
-				dh := &DefaultHandler{
-					Root:       s.Root,
-					ClientIP:   sess.RemoteAddr().String(),
-					SFTPServer: s,
-				}
-				server = sftp.NewRequestServer(sess, dh.GetHandler(), sftp.WithStartDirectory(s.Root))
-			}
 
-			if err := server.Serve(); err == io.EOF {
-				server.Close()
-			} else if err != nil {
-				logger.Errorf("SFTP server error: %+v", err)
+				if err := server.Serve(); err == io.EOF {
+					server.Close()
+				} else if err != nil {
+					logger.Errorf("SFTP server error: %+v", err)
+				}
+			} else {
+				logger.Warnf("[WHITELIST] SFTP access denied for IP: %v", sess.RemoteAddr())
 			}
 		},
 	}

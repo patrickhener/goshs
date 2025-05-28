@@ -34,9 +34,6 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			mux.Use(fs.BasicAuthMiddleware)
 		}
 
-		// Add custom server header middleware
-		mux.Use(fs.ServerHeaderMiddleware)
-
 		// Define routes
 		mux.HandleFunc("POST /upload", func(w http.ResponseWriter, r *http.Request) {
 			fs.upload(w, r)
@@ -52,6 +49,12 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	case "webdav":
+		// IP Whitelist Middleware
+		mux.Use(fs.IPWhitelistMiddleware)
+
+		// Add custom server header middleware
+		mux.Use(fs.ServerHeaderMiddleware)
+
 		wdHandler := &webdav.Handler{
 			FileSystem: webdav.Dir(fs.Webroot),
 			LockSystem: webdav.NewMemLS(),
@@ -67,6 +70,7 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			},
 		}
 
+		// Check Basic Auth and use middleware
 		if fs.User != "" || fs.Pass != "" {
 			authHandler := fs.BasicAuthMiddleware(wdHandler)
 			mux.Handle("/", authHandler)

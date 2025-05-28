@@ -7,11 +7,13 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/pkg/sftp"
 	gossh "golang.org/x/crypto/ssh"
@@ -264,4 +266,28 @@ func rewritePathWindows(path string) string {
 	path = strings.TrimPrefix(path, "/")
 	path = strings.ReplaceAll(path, "/", "\\")
 	return path
+}
+
+func isAllowedIP(addr net.Addr, wl *httpserver.Whitelist) bool {
+	// If Whitelist disabled just serve
+	if !wl.Enabled {
+		return true
+	}
+
+	host, _, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		host = addr.String()
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, net := range wl.Networks {
+		if net.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }

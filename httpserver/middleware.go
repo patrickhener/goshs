@@ -2,11 +2,13 @@ package httpserver
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"strings"
 	"sync"
 
+	"github.com/patrickhener/goshs/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -84,7 +86,50 @@ func (fs *FileServer) ServerHeaderMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// IPWhitelistMiddleware checks if the request's IP is in the whitelist
+func (fs *FileServer) IPWhitelistMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Implement check for IP whitelist
+		clientIP := GetClientIP(r, fs.Whitelist)
+
+		if !fs.Whitelist.IsAllowed(clientIP) {
+			logger.Warnf("[WHITELIST] Access denied for IP: %s", clientIP)
+			http.Error(w, "Access Denied", http.StatusForbidden)
+			return
+		}
+
+		// logger.Infof("[WHITELIST] Access granted for IP: %s", clientIP)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+func GetClientIP(r *http.Request, whitelist *Whitelist) string {
+	// Get RemoteIP
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+
+	if whitelist.IsTrustedProxy(host) {
+		// Check X-Forwarded-For header first (for proxies)
+		xff := r.Header.Get("X-Forwarded-For")
+		if xff != "" {
+			// Take the first IP in case of multiple
+			ips := strings.Split(xff, ",")
+			return strings.TrimSpace(ips[0])
+		}
+
+		// Check X-Real-IP header
+		xri := r.Header.Get("X-Real-IP")
+		if xri != "" {
+			return xri
+		}
+	}
+
+	return host
 }
