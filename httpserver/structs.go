@@ -74,6 +74,7 @@ type FileServer struct {
 	Webhook        webhook.Webhook
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
+	Whitelist      *Whitelist
 }
 
 type httperror struct {

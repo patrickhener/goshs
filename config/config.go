@@ -48,6 +48,8 @@ type Config struct {
 	SFTPPort            int      `json:"sftp_port"`
 	SFTPKeyFile         string   `json:"sftp_keyfile"`
 	SFTPHostKeyFile     string   `json:"sftp_host_keyfile"`
+	Whitelist           string   `json:"whitelist"`
+	TrustedProxies      string   `json:"trusted_proxies"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -104,6 +106,8 @@ func PrintExample() (string, error) {
 		SFTPPort:            2022,
 		SFTPKeyFile:         "",
 		SFTPHostKeyFile:     "",
+		Whitelist:           "",
+		TrustedProxies:      "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

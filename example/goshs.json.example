@@ -37,5 +37,7 @@
   "sftp": false,
   "sftp_port": 2022,
   "sftp_keyfile": "",
-  "sftp_host_keyfile": "" 
+  "sftp_host_keyfile": "",
+  "whitelist": "",
+  "trusted_proxies": ""
 }
