@@ -66,6 +66,8 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * HTTP Server
   * Webdav
   * SFTP
+* Access control via IP Whitelist
+  * Proxy Aware
 
 # Installation
 
