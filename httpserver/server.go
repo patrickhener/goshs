@@ -34,6 +34,12 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			mux.Use(fs.BasicAuthMiddleware)
 		}
 
+		// IP Whitelist Middleware
+		mux.Use(fs.IPWhitelistMiddleware)
+
+		// Add custom server header middleware
+		mux.Use(fs.ServerHeaderMiddleware)
+
 		// Define routes
 		mux.HandleFunc("POST /upload", func(w http.ResponseWriter, r *http.Request) {
 			fs.upload(w, r)
