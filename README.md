@@ -108,6 +108,12 @@ scoop bucket add extras
 scoop install extras/goshs
 ```
 
+## MacOS Homebrew
+
+```
+brew install goshs
+```
+
 ## Run with docker
 
 ```
