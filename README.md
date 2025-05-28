@@ -108,7 +108,7 @@ scoop bucket add extras
 scoop install extras/goshs
 ```
 
-## MacOS Homebrew
+## macOS homebrew
 
 ```
 brew install goshs
