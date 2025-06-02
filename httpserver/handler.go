@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -136,12 +137,20 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 			return true
 		}
 	}
+	if _, ok := req.URL.Query()["share"]; ok {
+		fs.CreateShareHandler(w, req)
+		return true
+	}
+	if _, ok := req.URL.Query()["token"]; ok {
+		fs.ShareHandler(w, req)
+		return true
+	}
 	return false
 }
 
 // handler is the function which actually handles dir or file retrieval
 func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
-	// Early break for /?ws, /?cbDown, /?bulk, /?static /?delete, ?embedded
+	// Early break for /?ws, /?cbDown, /?bulk, /?static /?delete, ?embedded, ?share, ?token
 	if ok := fs.earlyBreakParameters(w, req); ok {
 		return
 	}
@@ -551,4 +560,152 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	logger.HandleWebhookSend(fmt.Sprintf("[WEB] File deleted: %s", deletePath), "delete", fs.Webhook)
 
 	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook)
+}
+
+func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request) {
+	var shareURLs []string
+	var err error
+	var stat os.FileInfo
+
+	// If Auth is not used there is no sharing
+	if fs.Pass == "" && fs.CACert == "" {
+		logger.LogRequest(r, 403, fs.Verbose, fs.Webhook)
+		http.Error(w, "Sharing disabled when auth is disabled", http.StatusForbidden)
+		return
+	}
+
+	upath := r.URL.Path
+	upath = path.Clean(upath)
+	upath = filepath.Clean(upath)
+
+	var expires time.Time
+	var downloadLimit int
+
+	// Set expiration
+	if _, ok := r.URL.Query()["expires"]; !ok {
+		// Apply default of 60 minutes expiration
+		expires = time.Now().Add(time.Duration(3600 * time.Second))
+	} else {
+		seconds, err := strconv.Atoi(r.URL.Query()["expires"][0])
+		if err != nil {
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			http.Error(w, "expires needs to be integer in seconds", http.StatusBadRequest)
+		}
+		expires = time.Now().Add(time.Duration(seconds * int(time.Second)))
+	}
+
+	// Set download limit
+	if _, ok := r.URL.Query()["limit"]; !ok {
+		// Appy default of 1 single download
+		downloadLimit = 1
+	} else {
+		limit, err := strconv.Atoi(r.URL.Query()["limit"][0])
+		if err != nil {
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			http.Error(w, "limit needs to be integer", http.StatusBadRequest)
+		}
+		downloadLimit = limit
+	}
+
+	// Get stat for file
+	fpath := filepath.Join(fs.Webroot, upath)
+	stat, err = os.Stat(fpath)
+	if err != nil {
+		logger.Errorf("cannot get stat information for file: %s", fpath)
+		http.Error(w, "cannot get stat informatio for file", 400)
+	}
+
+	sl := SharedLink{
+		FilePath:      upath,
+		IsDir:         stat.IsDir(),
+		Expires:       expires,
+		DownloadLimit: downloadLimit,
+	}
+
+	// Fetch token
+	token := GenerateToken()
+
+	// Add to map
+	fs.SharedLinks[token] = sl
+
+	interfaceAdresses := make(map[string]string)
+	// Return share URL
+	if fs.IP == "0.0.0.0" {
+		interfaceAdresses, err = utils.GetAllIPAdresses()
+		if err != nil {
+			logger.Errorf("There has been an error fetching the interface addresses: %+v\n", err)
+		}
+	} else {
+		interfaceAdresses["0"] = "0.0.0.0"
+	}
+
+	var protocol string
+	if fs.SSL {
+		protocol = "https://"
+	} else {
+		protocol = "http://"
+	}
+
+	for _, ip := range interfaceAdresses {
+		if fs.Port != 80 && fs.Port != 443 {
+			shareURLs = append(shareURLs, fmt.Sprintf("%s%s:%d%s?token=%s", protocol, ip, fs.Port, upath, token))
+		} else {
+			shareURLs = append(shareURLs, fmt.Sprintf("%s%s%s?token=%s", protocol, ip, upath, token))
+		}
+	}
+
+	logger.LogRequest(r, 200, fs.Verbose, fs.Webhook)
+	logger.Infof("A file was shared: %s", shareURLs[0])
+
+	var response string
+	response = "The share links are:\n"
+	for _, url := range shareURLs {
+		response += url + "\n"
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte(response))
+}
+
+func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
+	if _, token := r.URL.Query()["token"]; !token {
+		http.Error(w, "error in token handler", 400)
+	}
+
+	token := r.URL.Query()["token"][0]
+	entry, ok := fs.SharedLinks[token]
+	if !ok || time.Now().After(entry.Expires) {
+		http.NotFound(w, r)
+		return
+	}
+
+	file, err := os.Open(filepath.Join(fs.Webroot, entry.FilePath))
+	if err != nil {
+		logger.Errorf("error opening shared file: %s", entry.FilePath)
+	}
+
+	// Only send if download limit not reached
+	if entry.DownloadLimit > 0 || entry.DownloadLimit == -1 {
+		if entry.IsDir {
+			// bulkDownload folder as zip
+			// GET /?file=%252Ffilepath&bulk=true
+			q := r.URL.Query()
+			q.Set("file", entry.FilePath)
+			q.Set("bulk", "true")
+			r.URL.RawQuery = q.Encode()
+
+			fs.bulkDownload(w, r)
+		} else {
+			fs.sendFile(w, r, file, configFile{})
+		}
+	} else {
+		http.NotFound(w, r)
+	}
+
+	// Substract from download limit
+	if entry.DownloadLimit > 0 {
+		entry.DownloadLimit--
+	}
+
+	fs.SharedLinks[token] = entry
 }

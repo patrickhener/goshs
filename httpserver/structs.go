@@ -3,6 +3,7 @@ package httpserver
 import (
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/webhook"
@@ -75,6 +76,7 @@ type FileServer struct {
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
 	Whitelist      *Whitelist
+	SharedLinks    map[string]SharedLink
 }
 
 type httperror struct {
@@ -96,4 +98,11 @@ type Middleware func(http.Handler) http.Handler
 type CustomMux struct {
 	mux        *http.ServeMux
 	middleware []Middleware
+}
+
+type SharedLink struct {
+	FilePath      string
+	IsDir         bool
+	Expires       time.Time
+	DownloadLimit int
 }

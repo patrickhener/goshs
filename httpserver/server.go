@@ -247,6 +247,9 @@ func (fs *FileServer) Start(what string) {
 	// Print all embedded files as info to the console
 	fs.PrintEmbeddedFiles()
 
+	// Create SharedLinks map
+	fs.SharedLinks = make(map[string]SharedLink)
+
 	// Start listener
 	fs.StartListener(server, what, listener)
 }

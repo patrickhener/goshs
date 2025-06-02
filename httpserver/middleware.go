@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/patrickhener/goshs/logger"
 	"golang.org/x/crypto/bcrypt"
@@ -20,6 +21,16 @@ var (
 // BasicAuthMiddleware is a middleware to handle the basic auth
 func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.URL.Query().Get("token")
+
+		if token != "" {
+			share, ok := fs.SharedLinks[token]
+			if ok && time.Now().Before(share.Expires) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		auth := r.Header.Get("Authorization")

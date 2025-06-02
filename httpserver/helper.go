@@ -1,8 +1,10 @@
 package httpserver
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"io/fs"
 	"net/http"
 	"os"
@@ -52,4 +54,12 @@ func (files *FileServer) AddCertAuth(server *http.Server) {
 
 	server.TLSConfig.ClientCAs = caCertPool
 	server.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
+}
+
+func GenerateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+
+	s := base64.RawURLEncoding.EncodeToString(b)
+	return strings.TrimRight(s, "=")
 }
