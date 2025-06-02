@@ -183,3 +183,110 @@ document
     const target = document.getElementById('qrModalLabel');
     target.innerHTML = title;
   });
+
+function toggleLimitInput() {
+  const checkbox = document.getElementById('enableLimit');
+  const input = document.getElementById('downloadLimit');
+  input.disabled = !checkbox.checked;
+}
+
+document
+  .getElementById('shareModal')
+  .addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const filepath = button.getAttribute('data-file');
+    document.getElementById('shareFilePath').value = filepath;
+
+    // Reset modal content on open
+    resetModal();
+  });
+
+function resetModal() {
+  // Show form area, hide results
+  document.getElementById('shareFormArea').style.display = '';
+  document.getElementById('shareResultArea').style.display = 'none';
+  document.getElementById('shareModalFooter').style.display = '';
+  // Clear inputs
+  document.getElementById('expiry').value = 60;
+  document.getElementById('enableLimit').checked = false;
+  document.getElementById('downloadLimit').value = '';
+  document.getElementById('downloadLimit').disabled = true;
+
+  // Clear previous links
+  const container = document.getElementById('shareLinksContainer');
+  container.innerHTML = '';
+}
+
+async function submitShareForm() {
+  const filepath = document.getElementById('shareFilePath').value;
+  const expireMinutes = parseInt(document.getElementById('expiry').value) || 60;
+  const expireSeconds = expireMinutes * 60;
+  const limitEnabled = document.getElementById('enableLimit').checked;
+  const limitValue = document.getElementById('downloadLimit').value;
+
+  // Build URL with query params
+  let url = `${filepath}?share&expires=${expireSeconds}`;
+  if (limitEnabled && limitValue) {
+    url += `&limit=${encodeURIComponent(limitValue)}`;
+  } else {
+    url += '&limit=-1';
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+    const data = await response.json();
+
+    if (!data.urls || data.urls.length === 0) {
+      alert('No share URLs returned');
+      return;
+    }
+
+    // Hide form, footer; show results
+    document.getElementById('shareFormArea').style.display = 'none';
+    document.getElementById('shareResultArea').style.display = '';
+    document.getElementById('shareModalFooter').style.display = 'none';
+
+    const container = document.getElementById('shareLinksContainer');
+    container.innerHTML = '';
+
+    // For each URL create a card with the link + QR code
+    data.urls.forEach((url) => {
+      const card = document.createElement('div');
+      card.className = 'card p-3';
+
+      // Link text & clickable
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.textContent = url;
+      link.style.wordBreak = 'break-all';
+
+      // Create canvas for QR
+      const canvas = document.createElement('canvas');
+      canvas.style.marginTop = '10px';
+      canvas.width = 150;
+      canvas.height = 150;
+
+      // Generate QR code on canvas
+      new QRious({
+        element: canvas,
+        value: url,
+        size: 150,
+      });
+
+      card.appendChild(link);
+      card.appendChild(canvas);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    alert('Failed to generate share links: ' + err.message);
+  }
+}

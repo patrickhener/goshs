@@ -19,6 +19,7 @@ type baseTemplate struct {
 	Embedded        bool
 	NoClipboard     bool
 	NoDelete        bool
+	SharedLinks     map[string]SharedLink
 }
 
 type directory struct {
@@ -27,6 +28,7 @@ type directory struct {
 	IsSubdirectory bool
 	Back           string
 	Content        []item
+	AuthEnabled    bool
 }
 
 type item struct {
@@ -43,6 +45,7 @@ type item struct {
 	SortLastModified    int64        `json:"last_modified"`
 	ReadOnly            bool
 	NoDelete            bool
+	AuthEnabled         bool
 }
 
 // FileServer holds the fileserver information

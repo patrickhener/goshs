@@ -9,7 +9,9 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/patrickhener/goshs/logger"
 	"github.com/skip2/go-qrcode"
@@ -76,4 +78,15 @@ func GenerateQRCode(uri string) string {
 	encoded := base64.StdEncoding.EncodeToString(png)
 
 	return fmt.Sprintf("data:image/png;base64,%s", encoded)
+}
+
+func downloadLimitDisplay(limit int) string {
+	if limit == -1 {
+		return "disabled"
+	}
+	return strconv.Itoa(limit)
+}
+
+func formatTime(t time.Time) string {
+	return t.Local().Format("2006-01-02 15:04:05")
 }

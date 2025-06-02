@@ -59,9 +59,14 @@
                                     <th width="4%">
                                         <!--Direct Download button-->
                                     </th>
-                                    <th>
+                                    <th width="4%">
                                         <!--QR Code-->
                                     </th>
+                                    {{ if .Directory.AuthEnabled }}
+                                    <th width="4%">
+                                        <!--Share button-->
+                                    </th>
+                                    {{ end }}
                                     <th width="4%">
                                         <!--Delete Button-->
                                     </th>
@@ -79,6 +84,9 @@
                                     <td></td>
                                     <td></td>
                                     <td></td>
+                                    {{ if .Directory.AuthEnabled }}
+                                    <td></td>
+                                    {{ end }}
                                 </tr>
                                 {{ end }}
                                 {{range .Directory.Content}}
@@ -212,6 +220,11 @@
                                     <td>
                                         <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{.QRCode}}" data-filename="{{.Name}}"><i class="fa-solid fa-qrcode"></i></a>
                                     </td>
+                                    {{ if .AuthEnabled }}
+                                    <td>
+                                        <a href="" data-bs-toggle="modal" data-bs-target="#shareModal" data-file="{{.URI}}"><i class="fa-solid fa-share-alt"></i></a>
+                                    </td>
+                                    {{ end }}
                                     <td>
                                         {{ if or .ReadOnly .NoDelete }}
                                         {{ else }}
@@ -347,6 +360,34 @@
                 </div>
             </div>
             {{ end }}
+            <!-- ShareLinks Heading Row-->
+            {{ if gt (len .SharedLinks) 0}}
+            <div class="row">
+                <div class="col mb-2">
+                    <h1>Shared Files</h1>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col mb-2">
+                    {{ range $token, $info := .SharedLinks }}
+                    <div class="card shareLinkCard mt-2" id="sl-{{$token}}">
+                        <div class="card-header d-flex flex-row">
+                            <div class="col-md-10">
+                                <h5 class="card-title">{{ $info.FilePath}}</h5>
+                            </div>
+                            <div class="col-md-2">DELETE TODO</div>
+                        </div>
+                        <div class="card-body" id="card-body-{{$token}}">
+                            <p>Expires: {{ formatTime $info.Expires }}</p>
+                            <p>Download Limit: {{ downloadLimitDisplay $info.DownloadLimit }}</p>
+                            <p>Share URL: TODO</p>
+                            <p>QR CODE: TODO</p>
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
         </div>
     </div>
 </div>
@@ -366,6 +407,89 @@
     </div>
 </div>
 </div>
+
+<!-- Share Modal-->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg"> <!-- bigger modal -->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="shareModalLabel">Share File</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- Form inputs -->
+          <div id="shareFormArea">
+            <input type="hidden" id="shareFilePath">
+
+            <div class="mb-3">
+              <label for="expiry" class="form-label">Expires in (minutes)</label>
+              <input type="number" class="form-control" id="expiry" value="60" min="1">
+            </div>
+
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="enableLimit" onclick="toggleLimitInput()">
+              <label class="form-check-label" for="enableLimit">Enable download limit</label>
+            </div>
+
+            <div class="mb-3">
+              <label for="downloadLimit" class="form-label">Max downloads</label>
+              <input type="number" class="form-control" id="downloadLimit" min="1" disabled>
+            </div>
+          </div>
+
+          <!-- Result container (hidden until filled) -->
+          <div id="shareResultArea" style="display:none;">
+            <h6>Share Links</h6>
+            <div id="shareLinksContainer" class="d-flex flex-wrap gap-3"></div>
+            <button class="btn btn-secondary mt-3" onclick="resetModal()">Share again</button>
+          </div>
+        </div>
+
+        <div class="modal-footer" id="shareModalFooter">
+          <button type="button" class="btn btn-primary" onclick="submitShareForm()">Generate Share Links</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="shareModalLabel">Share File</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Hidden file path -->
+          <input type="hidden" id="shareFilePath">
+
+          <!-- Expiry (minutes) -->
+          <div class="mb-3">
+            <label for="expiry" class="form-label">Expires in (minutes)</label>
+            <input type="number" class="form-control" id="expiry" value="60" min="1">
+          </div>
+
+          <!-- Enable download limit -->
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="enableLimit" onclick="toggleLimitInput()">
+            <label class="form-check-label" for="enableLimit">Enable download limit</label>
+          </div>
+
+          <!-- Download limit (disabled until enabled) -->
+          <div class="mb-3">
+            <label for="downloadLimit" class="form-label">Max downloads</label>
+            <input type="number" class="form-control" id="downloadLimit" min="1" disabled>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="submitShareForm()">Generate Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 {{ template "scripts_index" . }}
 {{ template "footer" . }}

@@ -306,6 +306,12 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		AbsPath: filepath.Join(fileS.Webroot, relpath),
 		Content: items,
 	}
+	if fileS.Pass != "" || fileS.CACert != "" {
+		// Auth -> Sharelinks on
+		d.AuthEnabled = true
+	} else {
+		d.AuthEnabled = false
+	}
 	if relpath != "/" {
 		d.IsSubdirectory = true
 		pathSlice := strings.Split(relpath, "/")
@@ -347,16 +353,33 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		EmbeddedContent: e,
 		NoClipboard:     fileS.NoClipboard,
 		NoDelete:        fileS.NoDelete,
+		SharedLinks:     fileS.SharedLinks,
 	}
 
 	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
 
-	t, err := template.ParseFS(static, files...)
+	var err error
+
+	funcMap := template.FuncMap{
+		"downloadLimitDisplay": func(l int) string {
+			if l == -1 {
+				return "disabled"
+			}
+			return strconv.Itoa(l)
+		},
+		"formatTime": func(t time.Time) string {
+			return t.Format("2006-01-02 15:04:05")
+		},
+	}
+
+	t := template.New("root").Funcs(funcMap)
+
+	t, err = t.ParseFS(static, files...)
 	if err != nil {
 		logger.Errorf("Error parsing templates: %+v", err)
 	}
 
-	if err := t.Execute(w, tem); err != nil {
+	if err := t.ExecuteTemplate(w, "index.html", tem); err != nil {
 		logger.Errorf("Error executing template: %+v", err)
 	}
 }
@@ -391,6 +414,11 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 		}
 		url := fmt.Sprintf("%s://%s%s", scheme, r.Host, item.URI)
 		item.QRCode = template.URL(GenerateQRCode(url))
+		if fileS.Pass != "" || fileS.CACert != "" {
+			item.AuthEnabled = true
+		} else {
+			item.AuthEnabled = false
+		}
 		item.DisplaySize = utils.ByteCountDecimal(fi.Size())
 		item.SortSize = fi.Size()
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
@@ -588,17 +616,18 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	var expires time.Time
 	var downloadLimit int
 
+	now := time.Now()
 	// Set expiration
 	if _, ok := r.URL.Query()["expires"]; !ok {
 		// Apply default of 60 minutes expiration
-		expires = time.Now().Add(time.Duration(3600 * time.Second))
+		expires = now.Add(time.Duration(3600 * time.Second))
 	} else {
 		seconds, err := strconv.Atoi(r.URL.Query()["expires"][0])
 		if err != nil {
 			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
 			http.Error(w, "expires needs to be integer in seconds", http.StatusBadRequest)
 		}
-		expires = time.Now().Add(time.Duration(seconds * int(time.Second)))
+		expires = now.Add(time.Duration(seconds * int(time.Second)))
 	}
 
 	// Set download limit
@@ -661,17 +690,22 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	logger.LogRequest(r, 200, fs.Verbose, fs.Webhook)
-	logger.Infof("A file was shared: %s", shareURLs[0])
+	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook)
+	logger.Debugf("A file was shared: %s", shareURLs[0])
 
-	var response string
-	response = "The share links are:\n"
-	for _, url := range shareURLs {
-		response += url + "\n"
+	response := map[string][]string{
+		"urls": shareURLs,
 	}
 
-	w.WriteHeader(200)
-	w.Write([]byte(response))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
@@ -707,6 +741,7 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		http.NotFound(w, r)
+		return
 	}
 
 	// Substract from download limit
@@ -715,4 +750,8 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fs.SharedLinks[token] = entry
+	if fs.SharedLinks[token].DownloadLimit == 0 {
+		// Remove the share link from map to keep it clean
+		delete(fs.SharedLinks, token)
+	}
 }
