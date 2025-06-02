@@ -169,3 +169,13 @@ function bulkDelete() {
     });
   }
 }
+
+document
+  .getElementById('qrModal')
+  .addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const qrCode = button.getAttribute('data-qrcode');
+
+    const img = document.getElementById('qrImage');
+    img.src = qrCode;
+  });

@@ -361,7 +361,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 	}
 }
 
-func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl configFile) []item {
+func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl configFile, r *http.Request) []item {
 	var err error
 	// Create empty slice
 	items := make([]item, 0, len(fis))
@@ -384,6 +384,13 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 		}
 		// Set item fields
 		item.URI = url.PathEscape(path.Join(relpath, fi.Name()))
+		// Set QR Code link
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		url := fmt.Sprintf("%s://%s%s", scheme, r.Host, item.URI)
+		item.QRCode = template.URL(GenerateQRCode(url))
 		item.DisplaySize = utils.ByteCountDecimal(fi.Size())
 		item.SortSize = fi.Size()
 		item.DisplayLastModified = fi.ModTime().Format("Mon Jan _2 15:04:05 2006")
@@ -433,7 +440,7 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 	fileS.applyCustomAuth(w, req, acl)
 
 	// Construct items list
-	items := fileS.constructItems(fis, relpath, acl)
+	items := fileS.constructItems(fis, relpath, acl, req)
 
 	// Handle embedded files
 	embeddedItems := fileS.constructEmbedded()

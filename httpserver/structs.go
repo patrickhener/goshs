@@ -30,16 +30,17 @@ type directory struct {
 }
 
 type item struct {
-	URI                 string `json:"-"`
-	Name                string `json:"name"`
-	IsDir               bool   `json:"is_dir"`
-	IsSymlink           bool   `json:"is_symlink"`
-	SymlinkTarget       string `json:"symlink_target"`
-	Ext                 string `json:"extension"`
-	DisplaySize         string `json:"-"`
-	SortSize            int64  `json:"size_bytes"`
-	DisplayLastModified string `json:"-"`
-	SortLastModified    int64  `json:"last_modified"`
+	URI                 string       `json:"-"`
+	QRCode              template.URL `json:"-"`
+	Name                string       `json:"name"`
+	IsDir               bool         `json:"is_dir"`
+	IsSymlink           bool         `json:"is_symlink"`
+	SymlinkTarget       string       `json:"symlink_target"`
+	Ext                 string       `json:"extension"`
+	DisplaySize         string       `json:"-"`
+	SortSize            int64        `json:"size_bytes"`
+	DisplayLastModified string       `json:"-"`
+	SortLastModified    int64        `json:"last_modified"`
 	ReadOnly            bool
 	NoDelete            bool
 }
