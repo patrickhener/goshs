@@ -78,6 +78,7 @@
                                     <td data-order="0">--</td>
                                     <td></td>
                                     <td></td>
+                                    <td></td>
                                 </tr>
                                 {{ end }}
                                 {{range .Directory.Content}}
@@ -209,7 +210,7 @@
                                         {{ end }}
                                     </td>
                                     <td>
-                                        <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{.QRCode}}"><i class="fa-solid fa-qrcode"></i></a>
+                                        <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{.QRCode}}" data-filename="{{.Name}}"><i class="fa-solid fa-qrcode"></i></a>
                                     </td>
                                     <td>
                                         {{ if or .ReadOnly .NoDelete }}
@@ -350,20 +351,21 @@
     </div>
 </div>
 
-  <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content text-center">
-        <div class="modal-header">
-          <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <img id="qrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 256px;">
-          <p class="mt-2 small text-muted">Scan this code to open the file</p>
-        </div>
-      </div>
+<!-- QR Code Modal-->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center">
+    <div class="modal-header">
+        <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
-  </div>
+    <div class="modal-body">
+        <img id="qrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 256px;">
+        <p class="mt-2 small text-muted">Scan this code to open the file</p>
+    </div>
+    </div>
+</div>
+</div>
 
 {{ template "scripts_index" . }}
 {{ template "footer" . }}

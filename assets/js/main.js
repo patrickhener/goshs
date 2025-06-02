@@ -178,4 +178,8 @@ document
 
     const img = document.getElementById('qrImage');
     img.src = qrCode;
+
+    const title = button.getAttribute('data-filename');
+    const target = document.getElementById('qrModalLabel');
+    target.innerHTML = title;
   });
