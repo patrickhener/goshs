@@ -648,9 +648,9 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 
 	for _, ip := range interfaceAdresses {
 		if fs.Port != 80 && fs.Port != 443 {
-			shareURLs = append(shareURLs, fmt.Sprintf("%s%s:%d/?token=%s", protocol, ip, fs.Port, token))
+			shareURLs = append(shareURLs, fmt.Sprintf("%s%s:%d%s?token=%s", protocol, ip, fs.Port, upath, token))
 		} else {
-			shareURLs = append(shareURLs, fmt.Sprintf("%s%s/?token=%s", protocol, ip, token))
+			shareURLs = append(shareURLs, fmt.Sprintf("%s%s%s?token=%s", protocol, ip, upath, token))
 		}
 	}
 
