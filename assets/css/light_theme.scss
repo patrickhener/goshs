@@ -20,9 +20,12 @@
     border-bottom: 5px solid $dark-color;
   }
 
-  .card-body {
+  .card-body, .customcard {
     a {
       color: $primary-color-light;
+    }
+
+    .hover-bold-link:hover {
       font-weight: bold;
     }
 
