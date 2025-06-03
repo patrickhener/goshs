@@ -247,6 +247,24 @@ func (fs *FileServer) Start(what string) {
 	// Print all embedded files as info to the console
 	fs.PrintEmbeddedFiles()
 
+	// Create SharedLinks map
+	fs.SharedLinks = make(map[string]SharedLink)
+
+	// Go routine to cleanup SharedLinks when expired
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			now := time.Now()
+			for token, link := range fs.SharedLinks {
+				if link.Expires.Before(now) {
+					delete(fs.SharedLinks, token)
+					logger.Debugf("Expired shared link removed: %s", token)
+				}
+			}
+		}
+	}()
+
 	// Start listener
 	fs.StartListener(server, what, listener)
 }

@@ -20,6 +20,16 @@ var (
 // BasicAuthMiddleware is a middleware to handle the basic auth
 func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.URL.Query().Get("token")
+
+		if token != "" {
+			_, ok := fs.SharedLinks[token]
+			if ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		auth := r.Header.Get("Authorization")

@@ -3,6 +3,7 @@ package httpserver
 import (
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/webhook"
@@ -18,6 +19,7 @@ type baseTemplate struct {
 	Embedded        bool
 	NoClipboard     bool
 	NoDelete        bool
+	SharedLinks     map[string]SharedLink
 }
 
 type directory struct {
@@ -26,21 +28,24 @@ type directory struct {
 	IsSubdirectory bool
 	Back           string
 	Content        []item
+	AuthEnabled    bool
 }
 
 type item struct {
-	URI                 string `json:"-"`
-	Name                string `json:"name"`
-	IsDir               bool   `json:"is_dir"`
-	IsSymlink           bool   `json:"is_symlink"`
-	SymlinkTarget       string `json:"symlink_target"`
-	Ext                 string `json:"extension"`
-	DisplaySize         string `json:"-"`
-	SortSize            int64  `json:"size_bytes"`
-	DisplayLastModified string `json:"-"`
-	SortLastModified    int64  `json:"last_modified"`
+	URI                 string       `json:"-"`
+	QRCode              template.URL `json:"-"`
+	Name                string       `json:"name"`
+	IsDir               bool         `json:"is_dir"`
+	IsSymlink           bool         `json:"is_symlink"`
+	SymlinkTarget       string       `json:"symlink_target"`
+	Ext                 string       `json:"extension"`
+	DisplaySize         string       `json:"-"`
+	SortSize            int64        `json:"size_bytes"`
+	DisplayLastModified string       `json:"-"`
+	SortLastModified    int64        `json:"last_modified"`
 	ReadOnly            bool
 	NoDelete            bool
+	AuthEnabled         bool
 }
 
 // FileServer holds the fileserver information
@@ -75,6 +80,7 @@ type FileServer struct {
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
 	Whitelist      *Whitelist
+	SharedLinks    map[string]SharedLink
 }
 
 type httperror struct {
@@ -96,4 +102,17 @@ type Middleware func(http.Handler) http.Handler
 type CustomMux struct {
 	mux        *http.ServeMux
 	middleware []Middleware
+}
+
+type SharedLink struct {
+	FilePath        string
+	IsDir           bool
+	Expires         time.Time
+	DownloadLimit   int
+	DownloadEntries []DownloadEntry
+}
+
+type DownloadEntry struct {
+	DownloadURL string
+	QRCode      template.URL
 }

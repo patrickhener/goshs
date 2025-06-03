@@ -20,6 +20,22 @@
     border-bottom: 5px solid $dark-color;
   }
 
+  .card-body, .customcard {
+    a {
+      color: $primary-color-light;
+    }
+
+    .hover-bold-link:hover {
+      font-weight: bold;
+    }
+
+    i {
+      color: $primary-color-light;
+      font-weight: bold;
+    }
+  }
+
+
   .dz-message {
     color: $dark-color;
   }

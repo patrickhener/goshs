@@ -22,6 +22,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 # Features
 * Download or view files
   * Bulk download as .zip file
+  * QRCode
 * Upload files
   * POST request
   * PUT request
@@ -68,6 +69,10 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * SFTP
 * Access control via IP Whitelist
   * Proxy Aware
+* Share Links
+  * Share files without authentication
+  * Use Download Limit
+  * Use Time Limit
 
 # Installation
 

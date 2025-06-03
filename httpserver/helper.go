@@ -1,14 +1,20 @@
 package httpserver
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/patrickhener/goshs/logger"
+	"github.com/skip2/go-qrcode"
 )
 
 func removeItem(sSlice []item, item string) []item {
@@ -52,4 +58,35 @@ func (files *FileServer) AddCertAuth(server *http.Server) {
 
 	server.TLSConfig.ClientCAs = caCertPool
 	server.TLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
+}
+
+func GenerateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+
+	s := base64.RawURLEncoding.EncodeToString(b)
+	return strings.TrimRight(s, "=")
+}
+
+func GenerateQRCode(uri string) string {
+	png, err := qrcode.Encode(uri, qrcode.Medium, 256)
+	if err != nil {
+		logger.Errorf("unable to generate QR Code for file: %s", uri)
+		return ""
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(png)
+
+	return fmt.Sprintf("data:image/png;base64,%s", encoded)
+}
+
+func downloadLimitDisplay(limit int) string {
+	if limit == -1 {
+		return "disabled"
+	}
+	return strconv.Itoa(limit)
+}
+
+func formatTime(t time.Time) string {
+	return t.Local().Format("2006-01-02 15:04:05")
 }
