@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/patrickhener/goshs/logger"
 	"golang.org/x/crypto/bcrypt"
@@ -24,8 +23,8 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 		token := r.URL.Query().Get("token")
 
 		if token != "" {
-			share, ok := fs.SharedLinks[token]
-			if ok && time.Now().Before(share.Expires) {
+			_, ok := fs.SharedLinks[token]
+			if ok {
 				next.ServeHTTP(w, r)
 				return
 			}

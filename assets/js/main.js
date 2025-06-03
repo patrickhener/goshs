@@ -160,6 +160,22 @@ function deleteFile(path, bulk) {
   }
 }
 
+function deleteSharedLink(token) {
+  let ok;
+  ok = confirm('Do you really want to delete the shared link?');
+
+  if (ok) {
+    var url = '';
+    location.protocol !== 'https:'
+      ? (url = 'http://' + window.location.host + '/' + '?token=' + token)
+      : (url = 'https://' + window.location.host + '/' + '?token=' + token);
+    var xhttp = new XMLHttpRequest();
+    xhttp.open('DELETE', url, false);
+    xhttp.send();
+    location.reload();
+  }
+}
+
 function bulkDelete() {
   if (confirm('Do you really want to delete the file or directory?')) {
     // collect all checked checkboxes and do delete the file for each occurance
@@ -200,6 +216,15 @@ document
     // Reset modal content on open
     resetModal();
   });
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('shareModal');
+  if (modal) {
+    modal.addEventListener('hidden.bs.modal', function () {
+      location.reload();
+    });
+  }
+});
 
 function resetModal() {
   // Show form area, hide results
@@ -260,14 +285,17 @@ async function submitShareForm() {
     // For each URL create a card with the link + QR code
     data.urls.forEach((url) => {
       const card = document.createElement('div');
-      card.className = 'card p-3';
+      card.className =
+        'card p-3 customcard d-flex flex-column align-items-start gap-2';
 
       // Link text & clickable
       const link = document.createElement('a');
+      link.className = 'hover-bold-link';
       link.href = url;
       link.target = '_blank';
       link.textContent = url;
-      link.style.wordBreak = 'break-all';
+      link.style.wordBreak = 'break-word';
+      link.style.fontSize = '0.9rem';
 
       // Create canvas for QR
       const canvas = document.createElement('canvas');

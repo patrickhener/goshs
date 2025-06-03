@@ -142,7 +142,13 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["token"]; ok {
-		fs.ShareHandler(w, req)
+		switch req.Method {
+		case http.MethodGet:
+			fs.ShareHandler(w, req)
+		case http.MethodDelete:
+			fs.DeleteShareHandler(w, req)
+		default:
+		}
 		return true
 	}
 	return false
@@ -598,6 +604,7 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 }
 
 func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request) {
+	var downloadEntries []DownloadEntry
 	var shareURLs []string
 	var err error
 	var stat os.FileInfo
@@ -651,18 +658,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "cannot get stat informatio for file", 400)
 	}
 
-	sl := SharedLink{
-		FilePath:      upath,
-		IsDir:         stat.IsDir(),
-		Expires:       expires,
-		DownloadLimit: downloadLimit,
-	}
-
 	// Fetch token
 	token := GenerateToken()
-
-	// Add to map
-	fs.SharedLinks[token] = sl
 
 	interfaceAdresses := make(map[string]string)
 	// Return share URL
@@ -675,20 +672,41 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		interfaceAdresses["0"] = "0.0.0.0"
 	}
 
-	var protocol string
+	protocol := "http://"
 	if fs.SSL {
 		protocol = "https://"
-	} else {
-		protocol = "http://"
 	}
 
 	for _, ip := range interfaceAdresses {
 		if fs.Port != 80 && fs.Port != 443 {
-			shareURLs = append(shareURLs, fmt.Sprintf("%s%s:%d%s?token=%s", protocol, ip, fs.Port, upath, token))
+			url := fmt.Sprintf("%s%s:%d%s?token=%s", protocol, ip, fs.Port, upath, token)
+			shareURLs = append(shareURLs, url)
+			downloadEntry := DownloadEntry{
+				DownloadURL: url,
+				QRCode:      template.URL(GenerateQRCode(url)),
+			}
+			downloadEntries = append(downloadEntries, downloadEntry)
 		} else {
-			shareURLs = append(shareURLs, fmt.Sprintf("%s%s%s?token=%s", protocol, ip, upath, token))
+			url := fmt.Sprintf("%s%s%s?token=%s", protocol, ip, upath, token)
+			shareURLs = append(shareURLs, url)
+			downloadEntry := DownloadEntry{
+				DownloadURL: url,
+				QRCode:      template.URL(GenerateQRCode(url)),
+			}
+			downloadEntries = append(downloadEntries, downloadEntry)
 		}
 	}
+
+	sl := SharedLink{
+		FilePath:        upath,
+		DownloadEntries: downloadEntries,
+		IsDir:           stat.IsDir(),
+		Expires:         expires,
+		DownloadLimit:   downloadLimit,
+	}
+
+	// Add to map
+	fs.SharedLinks[token] = sl
 
 	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook)
 	logger.Debugf("A file was shared: %s", shareURLs[0])
@@ -754,4 +772,18 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 		// Remove the share link from map to keep it clean
 		delete(fs.SharedLinks, token)
 	}
+}
+
+func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request) {
+	if _, token := r.URL.Query()["token"]; !token {
+		http.Error(w, "error in token delete handler", 400)
+	}
+
+	token := r.URL.Query().Get("token")
+	delete(fs.SharedLinks, token)
+
+	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook)
+
+	w.WriteHeader(204)
+	w.Write([]byte("shared link deleted successfully"))
 }

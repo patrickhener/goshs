@@ -6,6 +6,21 @@
     border-bottom: 5px solid $dark-light-color;
   }
 
+  .card-body, .customcard {
+    a {
+      color: $dark-light-color;
+    }
+
+    .hover-bold-link:hover {
+      font-weight: bold;
+    }
+
+    i {
+      color: $primary-color-light;
+      font-weight: bold;
+    }
+  }
+
   .btn-primary:hover,
   .btn-primary:focus,
   .btn-primary:active,

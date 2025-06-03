@@ -375,13 +375,23 @@
                             <div class="col-md-10">
                                 <h5 class="card-title">{{ $info.FilePath}}</h5>
                             </div>
-                            <div class="col-md-2">DELETE TODO</div>
+                            <div class="col-md-2">
+                                <a onclick="deleteSharedLink('{{$token}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
+                            </div>
                         </div>
                         <div class="card-body" id="card-body-{{$token}}">
                             <p>Expires: {{ formatTime $info.Expires }}</p>
                             <p>Download Limit: {{ downloadLimitDisplay $info.DownloadLimit }}</p>
-                            <p>Share URL: TODO</p>
-                            <p>QR CODE: TODO</p>
+                            {{ range $i, $v := .DownloadEntries }}
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-1 text-center">
+                                    <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{$v.QRCode}}" data-filename="{{$info.FilePath}}?token={{$token}}"><i class="fa-solid fa-qrcode"></i></a>
+                                </div>
+                                <div class="col-md-11">
+                                    <a href="{{$v.DownloadURL}}" class="d-block text-break hover-bold-link">{{$v.DownloadURL}}</a>
+                                </div>
+                            </div>
+                            {{ end }}
                         </div>
                     </div>
                     {{ end }}
@@ -443,7 +453,6 @@
           <div id="shareResultArea" style="display:none;">
             <h6>Share Links</h6>
             <div id="shareLinksContainer" class="d-flex flex-wrap gap-3"></div>
-            <button class="btn btn-secondary mt-3" onclick="resetModal()">Share again</button>
           </div>
         </div>
 

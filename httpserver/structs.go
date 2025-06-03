@@ -105,8 +105,14 @@ type CustomMux struct {
 }
 
 type SharedLink struct {
-	FilePath      string
-	IsDir         bool
-	Expires       time.Time
-	DownloadLimit int
+	FilePath        string
+	IsDir           bool
+	Expires         time.Time
+	DownloadLimit   int
+	DownloadEntries []DownloadEntry
+}
+
+type DownloadEntry struct {
+	DownloadURL string
+	QRCode      template.URL
 }
