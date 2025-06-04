@@ -9,7 +9,7 @@ import (
 func TestRunCMD(t *testing.T) {
 	result, err := RunCMD("ls -la")
 	if err != nil {
-		t.Errorf("Command did not run succesfully: %+v", err)
+		t.Errorf("Command did not run successfully: %+v", err)
 	}
 
 	require.Contains(t, result, "cli_unix.go")

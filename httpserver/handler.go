@@ -762,7 +762,7 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Substract from download limit
+	// Subtract from download limit
 	if entry.DownloadLimit > 0 {
 		entry.DownloadLimit--
 	}

@@ -81,7 +81,7 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 			c.User = "1000:1000"
 		},
 		// mount a volume to the container; this will allow you to
-		// use a behavior analagous to docker run -v "$PWD:/pwd"
+		// use a behavior analogous to docker run -v "$PWD:/pwd"
 		// and load files into the container from your local filesystem
 		Mounts: testcontainers.ContainerMounts{
 			testcontainers.ContainerMount{

@@ -114,7 +114,7 @@ Authentication options:
   -H,  --hash           Hash a password for file based ACLs
 
 Connection restriction:
-  -ipw, --ip-whitelist             Comma separated list of IPs to whitelist
+  -ipw, --ip-whitelist             Comma seperated list of IPs to whitelist
   -tpw, --trusted-proxy-whitelist  Comma seperated list of trusted proxies
 
 Webhook options:
