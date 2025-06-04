@@ -114,6 +114,8 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 	if err != nil {
 		return fmt.Errorf("cannot get hostname for mDNS: %+v", err)
 	}
+	// Remove duplicate .local if applicable
+	hostname = strings.TrimSuffix(hostname, ".local")
 	// Register webPort
 	var serviceType string
 	var out string
