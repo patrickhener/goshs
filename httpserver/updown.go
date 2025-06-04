@@ -34,7 +34,7 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	targetpath = targetpath[:len(targetpath)-1]
 	target := strings.Join(targetpath, "/")
 
-	savepath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, outName)
+	savepath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, outName)
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -105,7 +105,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		filenameClean := filenameSlice[len(filenameSlice)-1]
 
 		// Prepare destination file paths
-		finalPath := fmt.Sprintf("%s%s/%s", fs.Webroot, target, filenameClean)
+		finalPath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, filenameClean)
 		tempPath := finalPath + "~"
 
 		// Create temp file

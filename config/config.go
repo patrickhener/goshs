@@ -14,6 +14,7 @@ type Config struct {
 	Interface           string   `json:"interface"`
 	Port                int      `json:"port"`
 	Directory           string   `json:"directory"`
+	UploadFolder        string   `json:"upload_folder"`
 	SSL                 bool     `json:"ssl"`
 	SelfSigned          bool     `json:"self_signed"`
 	PrivateKey          string   `json:"private_key"`
@@ -72,6 +73,7 @@ func PrintExample() (string, error) {
 		Interface:           "0.0.0.0",
 		Port:                8000,
 		Directory:           ".",
+		UploadFolder:        ".",
 		SSL:                 false,
 		SelfSigned:          false,
 		PrivateKey:          "",

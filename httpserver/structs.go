@@ -55,6 +55,7 @@ type FileServer struct {
 	CLI            bool
 	WebdavPort     int
 	Webroot        string
+	UploadFolder   string
 	SSL            bool
 	SelfSigned     bool
 	LetsEncrypt    bool

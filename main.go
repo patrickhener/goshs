@@ -27,6 +27,7 @@ var (
 	ip                  = "0.0.0.0"
 	cli                 = false
 	webroot             = "."
+	uploadFolder        = "."
 	ssl                 = false
 	selfsigned          = false
 	letsencrypt         = false
@@ -73,19 +74,20 @@ goshs %s
 Usage: %s [options]
 
 Web server options:
-  -i,  --ip           IP or Interface to listen on            (default: 0.0.0.0)
-  -p,  --port         The port to listen on                   (default: 8000)
-  -d,  --dir          The web root directory                  (default: current working path)
-  -w,  --webdav       Also serve using webdav protocol        (default: false)
-  -wp, --webdav-port  The port to listen on for webdav        (default: 8001)
-  -ro, --read-only    Read only mode, no upload possible      (default: false)
-  -uo, --upload-only  Upload only mode, no download possible  (default: false)
-  -nc, --no-clipboard Disable the clipboard sharing           (default: false)
-  -nd, --no-delete    Disable the delete option               (default: false)
-  -si, --silent       Running without dir listing             (default: false)
-  -c,  --cli          Enable cli (only with auth and tls)     (default: false)
-  -e,  --embedded     Show embedded files in UI               (default: false)
-  -o,  --output       Write output to logfile                 (default: false)
+  -i,  --ip             IP or Interface to listen on            (default: 0.0.0.0)
+  -p,  --port           The port to listen on                   (default: 8000)
+  -d,  --dir            The web root directory                  (default: current working path)
+  -w,  --webdav         Also serve using webdav protocol        (default: false)
+  -wp, --webdav-port    The port to listen on for webdav        (default: 8001)
+  -ro, --read-only      Read only mode, no upload possible      (default: false)
+  -uo, --upload-only    Upload only mode, no download possible  (default: false)
+  -uf, --upload-folder  Specify a different upload folder       (default: current working path)
+  -nc, --no-clipboard   Disable the clipboard sharing           (default: false)
+  -nd, --no-delete      Disable the delete option               (default: false)
+  -si, --silent         Running without dir listing             (default: false)
+  -c,  --cli            Enable cli (only with auth and tls)     (default: false)
+  -e,  --embedded       Show embedded files in UI               (default: false)
+  -o,  --output         Write output to logfile                 (default: false)
 
 TLS options:
   -s,     --ssl           Use TLS
@@ -228,6 +230,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&whitelist, "ip-whitelist", whitelist, "")
 	flag.StringVar(&trustedProxies, "tpw", trustedProxies, "")
 	flag.StringVar(&trustedProxies, "trusted-proxy-whitelist", trustedProxies, "")
+	flag.StringVar(&uploadFolder, "uf", uploadFolder, "")
+	flag.StringVar(&uploadFolder, "upload-folder", uploadFolder, "")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -347,6 +351,7 @@ func init() {
 		ip = cfg.Interface
 		port = cfg.Port
 		webroot = cfg.Directory
+		uploadFolder = cfg.UploadFolder
 		ssl = cfg.SSL
 		selfsigned = cfg.SelfSigned
 		myKey = cfg.PrivateKey
@@ -406,13 +411,6 @@ func init() {
 	// Sanity checks
 	sanityChecks()
 
-	if webdav {
-		logger.Warn("upload/read-only/no-delete mode deactivated due to use of 'webdav' mode")
-		uploadOnly = false
-		readOnly = false
-		noDelete = false
-	}
-
 	// Abspath for webroot
 	var err error
 	// Trim trailing / for linux/mac and \ for windows
@@ -423,6 +421,19 @@ func init() {
 		if err != nil {
 			logger.Fatalf("Webroot cannot be constructed: %+v", err)
 		}
+	}
+
+	if webdav {
+		logger.Warn("upload/read-only/no-delete/upload-folder mode deactivated due to use of 'webdav' mode")
+		uploadFolder = webroot
+		uploadOnly = false
+		readOnly = false
+		noDelete = false
+	}
+
+	if sftp {
+		logger.Warn("upload-folder mode deactivated due to use of 'sftp' mode")
+		uploadFolder = webroot
 	}
 }
 
@@ -503,31 +514,32 @@ func main() {
 
 	// Setup the custom file server
 	server := &httpserver.FileServer{
-		IP:          ip,
-		Port:        port,
-		CLI:         cli,
-		Webroot:     webroot,
-		SSL:         ssl,
-		SelfSigned:  selfsigned,
-		LetsEncrypt: letsencrypt,
-		MyCert:      myCert,
-		MyKey:       myKey,
-		MyP12:       myP12,
-		P12NoPass:   p12NoPass,
-		User:        user,
-		Pass:        pass,
-		CACert:      certAuth,
-		DropUser:    dropuser,
-		UploadOnly:  uploadOnly,
-		ReadOnly:    readOnly,
-		NoClipboard: noClipboard,
-		NoDelete:    noDelete,
-		Silent:      silent,
-		Embedded:    embedded,
-		Webhook:     *webhook,
-		Verbose:     verbose,
-		Whitelist:   wl,
-		Version:     goshsversion.GoshsVersion,
+		IP:           ip,
+		Port:         port,
+		CLI:          cli,
+		Webroot:      webroot,
+		UploadFolder: uploadFolder,
+		SSL:          ssl,
+		SelfSigned:   selfsigned,
+		LetsEncrypt:  letsencrypt,
+		MyCert:       myCert,
+		MyKey:        myKey,
+		MyP12:        myP12,
+		P12NoPass:    p12NoPass,
+		User:         user,
+		Pass:         pass,
+		CACert:       certAuth,
+		DropUser:     dropuser,
+		UploadOnly:   uploadOnly,
+		ReadOnly:     readOnly,
+		NoClipboard:  noClipboard,
+		NoDelete:     noDelete,
+		Silent:       silent,
+		Embedded:     embedded,
+		Webhook:      *webhook,
+		Verbose:      verbose,
+		Whitelist:    wl,
+		Version:      goshsversion.GoshsVersion,
 	}
 
 	// Zeroconf mDNS
