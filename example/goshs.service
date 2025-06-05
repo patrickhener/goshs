@@ -1,0 +1,12 @@
+[Unit]
+Description=goshs File Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/goshs -C /etc/goshs/goshs.json
+Restart=on-failure
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
