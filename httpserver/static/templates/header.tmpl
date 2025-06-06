@@ -82,8 +82,10 @@
             <div onclick="document.location='/'" class="logo">
                 <img id="goshslogo" src="/images/banner-dark.png?static" alt="goshs" />
             </div>
-            <div class="heading_title">
-                <h2>Directory: {{.Directory.AbsPath}}</h2>
+            <div class="heading_title d-flex align_item_center">
+                <a class="me-2" href="" id="baseqr" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="" data-filename="{{.Directory.AbsPath}}"><i class="fa-solid fa-qrcode"></i></a>
+
+                <h2 class="mb-0">Directory: {{.Directory.AbsPath}}</h2>
             </div>
         </header>
 {{ end }}

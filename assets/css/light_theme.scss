@@ -18,6 +18,19 @@
 
   #header {
     border-bottom: 5px solid $dark-color;
+
+    a {
+      color: $primary-color-light;
+    }
+
+    .hover-bold-link:hover {
+      font-weight: bold;
+    }
+
+    i {
+      color: $primary-color-light;
+      font-weight: bold;
+    }
   }
 
   .card-body, .customcard {

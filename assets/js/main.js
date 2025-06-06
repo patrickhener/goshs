@@ -13,6 +13,20 @@ $(document).ready(function () {
       },
     ],
   });
+
+  var url = '';
+  location.protocol !== 'https:'
+    ? (url = 'http://' + window.location.host)
+    : (url = 'https://' + window.location.host);
+
+  // Generate QR code on canvas
+  var qr = new QRious({
+    value: url,
+    size: 150,
+  });
+
+  const baseqr = document.getElementById('baseqr');
+  baseqr.setAttribute('data-qrcode', qr.toDataURL());
 });
 
 // Checkbox handling
