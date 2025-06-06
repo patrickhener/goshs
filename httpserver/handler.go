@@ -418,7 +418,7 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 		if r.TLS != nil {
 			scheme = "https"
 		}
-		url := fmt.Sprintf("%s://%s%s", scheme, r.Host, item.URI)
+		url := fmt.Sprintf("%s://%s/%s", scheme, r.Host, strings.TrimPrefix(item.URI, "%2F"))
 		item.QRCode = template.URL(GenerateQRCode(url))
 		if fileS.Pass != "" || fileS.CACert != "" {
 			item.AuthEnabled = true
