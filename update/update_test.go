@@ -9,6 +9,10 @@ import (
 )
 
 func TestCheckForUpdates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
 	oldVersion := "v1.0.0"
 
 	result, _ := CheckForUpdates(oldVersion)
@@ -19,11 +23,19 @@ func TestCheckForUpdates(t *testing.T) {
 }
 
 func TestGetLatestReleaseInvalid(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
 	_, err := getLatestRelease("invalid", "invalid")
 	require.Error(t, err)
 }
 
 func TestUpdateTool(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
 	oldVersion := "v1.0.0"
 
 	err := UpdateTool(oldVersion)
@@ -34,6 +46,10 @@ func TestUpdateTool(t *testing.T) {
 }
 
 func TestGetAssetURLErr(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
 	name := "invalidAsset"
 	release := &github.RepositoryRelease{
 		Assets: []*github.ReleaseAsset{
@@ -48,6 +64,10 @@ func TestGetAssetURLErr(t *testing.T) {
 }
 
 func TestInvalidApplyUpdate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping network-dependent test in short mode")
+	}
+
 	err := applyUpdate("http://invalid")
 	require.Error(t, err)
 
