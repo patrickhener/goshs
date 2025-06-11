@@ -123,6 +123,18 @@ run-unit:
 	@go test ./webhook -count=1
 	@go test ./ws -count=1
 
+run-unit-no-network:
+	@go test -short ./ca -count=1
+	@go test -short ./cli -count=1
+	@go test -short ./clipboard -count=1
+	@go test -short ./config -count=1
+	@go test -short ./logger -count=1
+	@go test -short ./sftpserver -count=1
+	@go test -short ./update -count=1
+	@go test -short ./utils -count=1
+	@go test -short ./webhook -count=1
+	@go test -short ./ws -count=1
+
 run-integration: clean-integration
 	@go test -v ./integration -count=1
 
