@@ -64,6 +64,7 @@ var (
 	webhookEventsParsed = []string{}
 	whitelist           = ""
 	trustedProxies      = ""
+	noMDNS              = false
 )
 
 // Man page
@@ -130,6 +131,7 @@ Misc options:
   -P  --print-config  Print sample config to STDOUT           (default: false)
   -u  --user          Drop privs to user (unix only)          (default: current user)
       --update        Update goshs to most recent version
+  -nm --no-mdns       Disable zeroconf mDNS registration      (default: false)
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
@@ -232,6 +234,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&trustedProxies, "trusted-proxy-whitelist", trustedProxies, "")
 	flag.StringVar(&uploadFolder, "uf", uploadFolder, "")
 	flag.StringVar(&uploadFolder, "upload-folder", uploadFolder, "")
+	flag.BoolVar(&noMDNS, "nm", noMDNS, "Disable zeroconf mDNS registration")
+	flag.BoolVar(&noMDNS, "no-mdns", noMDNS, "Disable zeroconf mDNS registration")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -543,9 +547,11 @@ func main() {
 	}
 
 	// Zeroconf mDNS
-	err = utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort, sftp, sftpPort)
-	if err != nil {
-		logger.Warnf("error registering zeroconf mDNS: %+v", err)
+	if !noMDNS {
+		err = utils.RegisterZeroconfMDNS(ssl, port, webdav, webdavPort, sftp, sftpPort)
+		if err != nil {
+			logger.Warnf("error registering zeroconf mDNS: %+v", err)
+		}
 	}
 
 	// Start web server
