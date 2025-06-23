@@ -140,7 +140,7 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 	}
 	defer zero.Shutdown()
 
-	logger.Infof("mDSN service registered as %s://%s.local:%d", out, hostname, webPort)
+	logger.Infof("mDNS service registered as %s://%s.local:%d", out, hostname, webPort)
 
 	// Register webdav if enabled
 	if webdav {
@@ -166,7 +166,7 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 		}
 		defer zeroDav.Shutdown()
 
-		logger.Infof("mDSN service registered as %s://%s.local:%d", out, hostname, webdavPort)
+		logger.Infof("mDNS service registered as %s://%s.local:%d", out, hostname, webdavPort)
 	}
 
 	// Register sftp if enabled
@@ -184,7 +184,7 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 		}
 		defer zeroDav.Shutdown()
 
-		logger.Infof("mDSN service registered as ssh://%s.local:%d", hostname, sftpPort)
+		logger.Infof("mDNS service registered as ssh://%s.local:%d", hostname, sftpPort)
 	}
 
 	return nil
