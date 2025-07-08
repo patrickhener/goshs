@@ -123,7 +123,7 @@ func SanityChecks(webroot string, configpath string, AuthPassword string) error 
 	if webroot == filepath.Dir(configpath) {
 		logger.Warn("You are hosting your config file in the webroot of goshs. This is not recommended.")
 		// Check if the process user can write the config file
-		file, err := os.OpenFile(configpath, os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(configpath, os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			return err
 		}

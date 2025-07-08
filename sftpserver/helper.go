@@ -234,7 +234,7 @@ func cmdFile(root string, r *sftp.Request, ip string, sftpServer *SFTPServer) er
 			return err
 		}
 	case "Mkdir":
-		err := os.Mkdir(fullPath, 0o775)
+		err := os.Mkdir(fullPath, 0o755)
 		if err != nil {
 			logger.LogSFTPRequestBlocked(r, ip, err)
 			sftpServer.HandleWebhookSend("sftp", r, ip, true)

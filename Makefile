@@ -111,7 +111,7 @@ endif
 	@docker push patrickhener/goshs:$(VERSION)
 	@docker push patrickhener/goshs:latest
 
-run-unit:
+run-unit: clean-tests
 	@go test ./ca -count=1
 	@go test ./cli -count=1
 	@go test ./clipboard -count=1
@@ -135,10 +135,10 @@ run-unit-no-network:
 	@go test -short ./webhook -count=1
 	@go test -short ./ws -count=1
 
-run-integration: clean-integration
+run-integration: clean-tests
 	@go test -v ./integration -count=1
 
-clean-integration:
+clean-tests:
 	@mkdir -p ./integration/files
 	@rm -rf ./integration/files/*
 	@cp ./integration/keepFiles/test_data.txt ./integration/files/
@@ -154,6 +154,8 @@ clean-integration:
 	@cp ./integration/keepFiles/testfile.txt ./integration/files/ACLAuth/
 	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/
 	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/testfolder/
+	@rm -rf ./sftpserver/testdir
+	@rm -f ./sftpserver/test.txt
 	@echo "cleaned up, ready for next test"
 
 run-tests: run-unit run-integration

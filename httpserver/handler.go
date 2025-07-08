@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -175,8 +174,7 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	upath = path.Clean(upath)
-	upath = filepath.Clean(upath)
+	upath = filepath.FromSlash(filepath.Clean("/" + strings.Trim(upath, "/")))
 
 	// Define absolute path
 	open := fs.Webroot + upath
@@ -412,7 +410,7 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 			item.Ext = ""
 		}
 		// Set item fields
-		item.URI = url.PathEscape(path.Join(relpath, fi.Name()))
+		item.URI = url.PathEscape(filepath.Join(relpath, fi.Name()))
 		// Set QR Code link
 		scheme := "http"
 		if r.TLS != nil {
@@ -434,7 +432,7 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 		// Check and resolve symlink
 		if fi.Mode()&os.ModeSymlink != 0 {
 			item.IsSymlink = true
-			item.SymlinkTarget, err = os.Readlink(path.Join(fileS.Webroot, relpath, fi.Name()))
+			item.SymlinkTarget, err = os.Readlink(filepath.Join(fileS.Webroot, relpath, fi.Name()))
 			if err != nil {
 				logger.Errorf("resolving symlink: %+v", err)
 			}
@@ -577,9 +575,7 @@ func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
 // deleteFile will delete a file
 func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// Get path
-	upath := req.URL.Path
-	upath = path.Clean(upath)
-	upath = filepath.Clean(upath)
+	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(req.URL.Path, "/")))
 
 	fileCleaned, _ := url.QueryUnescape(upath)
 	if strings.Contains(fileCleaned, "..") {
@@ -616,9 +612,7 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	upath := r.URL.Path
-	upath = path.Clean(upath)
-	upath = filepath.Clean(upath)
+	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(r.URL.Path, "/")))
 
 	var expires time.Time
 	var downloadLimit int
