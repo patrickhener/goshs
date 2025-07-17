@@ -628,7 +628,7 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
 			http.Error(w, "expires needs to be integer in seconds", http.StatusBadRequest)
 		}
-		expires = now.Add(time.Duration(seconds * int(time.Second)))
+		expires = now.Add(time.Duration(seconds) * time.Second)
 	}
 
 	// Set download limit
