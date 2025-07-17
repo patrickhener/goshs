@@ -134,6 +134,8 @@ These are the awesome code contributors of `goshs`:
 [![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
 [![](https://github.com/abgordon.png?size=50)](https://github.com/abgordon)
 
+- [parzel](https://github.com/parzel)
+
 # Security issues shout out
 
 These are the awesome contributors that made `goshs` even more secure :heart:
