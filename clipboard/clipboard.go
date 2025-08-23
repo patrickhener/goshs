@@ -3,6 +3,7 @@ package clipboard
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -49,6 +50,12 @@ func (c *Clipboard) AddEntry(con string) error {
 // DeleteEntry will give the opportunity to delete an entry from the clipboard
 func (c *Clipboard) DeleteEntry(id int) error {
 	entries := c.Entries
+	if id < 0 {
+		return fmt.Errorf("id cannot be negative: %d", id)
+	}
+	if id >= len(entries) {
+		return fmt.Errorf("invalid entry ID: %d", id)
+	}
 	entries = append(entries[:id], entries[id+1:]...)
 	newEntries := reindex(entries)
 	c.Entries = newEntries
