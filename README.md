@@ -135,6 +135,7 @@ These are the awesome code contributors of `goshs`:
 [![](https://github.com/abgordon.png?size=50)](https://github.com/abgordon)
 
 - [parzel](https://github.com/parzel)
+- [ty3gx](https://github.com/ty3gx) 
 
 # Security issues shout out
 
