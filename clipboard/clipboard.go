@@ -29,19 +29,17 @@ func New() *Clipboard {
 func (c *Clipboard) AddEntry(con string) error {
 	entries := c.Entries
 	if len(entries) > 0 {
-		lastEntry := entries[len(entries)-1]
-		newID := lastEntry.ID + 1
-		entries = append(entries, Entry{
-			ID:      newID,
+		entries = append([]Entry{{
+			ID:      len(entries),
 			Content: con,
 			Time:    time.Now().Format("Mon Jan _2 15:04:05 2006"),
-		})
+		}}, entries...) // Create a copy of the slice to avoid modifying the original
 	} else {
-		entries = append(entries, Entry{
+		entries = append([]Entry{{
 			ID:      0,
 			Content: con,
 			Time:    time.Now().Format("Mon Jan _2 15:04:05 2006"),
-		})
+		}}, entries...) // Create a copy of the slice to avoid modifying the original
 	}
 	c.Entries = entries
 	return nil
@@ -85,13 +83,10 @@ func (c *Clipboard) Download() ([]byte, error) {
 }
 
 func reindex(entries []Entry) []Entry {
-	var newEntries []Entry
-	for i, e := range entries {
-		newEntries = append(newEntries, Entry{
-			ID:      i,
-			Content: e.Content,
-			Time:    e.Time,
-		})
+	n := len(entries)
+	for i := range entries {
+		entries[i].ID = n - 1 - i
 	}
-	return newEntries
+
+	return entries
 }
