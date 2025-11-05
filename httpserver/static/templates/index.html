@@ -4,6 +4,7 @@
     <div class="row h-100">
         <!-- 6: File Listing -->
         <div class="col-xl-6">
+            {{ if not .ReadOnly}}
             <!-- Heading Row -->
             <div class="row">
                 <div class="col mb-2">
@@ -30,6 +31,7 @@
                         </form>
                 </div>
             </div>
+            {{ end }}
             <!-- Checkbox Control Row -->
             <div class="row">
                 <div class="col mb-2">

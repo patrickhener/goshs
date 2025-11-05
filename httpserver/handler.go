@@ -358,6 +358,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		NoClipboard:     fileS.NoClipboard,
 		NoDelete:        fileS.NoDelete,
 		SharedLinks:     fileS.SharedLinks,
+		ReadOnly:        fileS.ReadOnly,
 	}
 
 	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}

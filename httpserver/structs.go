@@ -20,6 +20,7 @@ type baseTemplate struct {
 	NoClipboard     bool
 	NoDelete        bool
 	SharedLinks     map[string]SharedLink
+	ReadOnly        bool
 }
 
 type directory struct {
