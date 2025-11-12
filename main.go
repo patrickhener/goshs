@@ -27,7 +27,7 @@ var (
 	ip                  = "0.0.0.0"
 	cli                 = false
 	webroot             = "."
-	uploadFolder        = "."
+	uploadFolder        = ""
 	ssl                 = false
 	selfsigned          = false
 	letsencrypt         = false
@@ -337,6 +337,11 @@ func init() {
 		}
 		fmt.Println(config)
 		os.Exit(0)
+	}
+
+	// Set uploadFolder to webroot if not set
+	if uploadFolder == "" {
+		uploadFolder = webroot
 	}
 
 	if configFile != "" {
