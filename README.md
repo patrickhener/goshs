@@ -149,6 +149,10 @@ Join the Discord Community and start connecting.
 
 [![Join Discord](https://invidget.switchblade.xyz/3ZnskY8HcJ)](https://discord.gg/3ZnskY8HcJ)
 
+# Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=patrickhener/goshs&type=date&legend=top-left)](https://www.star-history.com/#patrickhener/goshs&type=date&legend=top-left)
+
 # Credits
 
 A special thank you goes to *sc0tfree* for inspiring this project with his project [updog](https://github.com/sc0tfree/updog) written in Python.
