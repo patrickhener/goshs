@@ -22,8 +22,14 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	// Construct error for template filling
 	e.ErrorCode = status
 	e.ErrorMessage = err.Error()
-	e.Directory = &directory{
-		AbsPath: path.Join(fs.Webroot, req.URL.Path),
+	if fs.Silent {
+		e.Directory = &directory{
+			AbsPath: "silent mode",
+		}
+	} else {
+		e.Directory = &directory{
+			AbsPath: path.Join(fs.Webroot, req.URL.Path),
+		}
 	}
 	e.GoshsVersion = fs.Version
 
