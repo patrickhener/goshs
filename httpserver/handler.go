@@ -480,6 +480,10 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 
 	// if ?json output json listing
 	if jsonOutput {
+		if fileS.Silent {
+			fileS.handleError(w, req, fmt.Errorf("%s", "json output deactivated in silent mode"), http.StatusNotFound)
+			return
+		}
 		returnJsonDirListing(w, items)
 		return
 	}
