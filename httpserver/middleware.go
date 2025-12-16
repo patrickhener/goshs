@@ -167,8 +167,13 @@ func (fs *FileServer) IPWhitelistMiddleware(next http.Handler) http.Handler {
 
 		if !fs.Whitelist.IsAllowed(clientIP) {
 			logger.Warnf("[WHITELIST] Access denied for IP: %s", clientIP)
-			http.Error(w, "Access Denied", http.StatusForbidden)
-			return
+			if !fs.Invisible {
+				http.Error(w, "Access Denied", http.StatusForbidden)
+				return
+			} else {
+				fs.handleInvisible(w)
+				return
+			}
 		}
 
 		// logger.Infof("[WHITELIST] Access granted for IP: %s", clientIP)
