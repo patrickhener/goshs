@@ -20,6 +20,10 @@ import (
 // put handles the PUT request to upload files
 func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	if fs.ReadOnly {
+		if fs.Invisible {
+			fs.handleInvisible(w)
+			return
+		}
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
@@ -70,6 +74,10 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 // upload handles the POST request to upload files
 func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	if fs.ReadOnly {
+		if fs.Invisible {
+			fs.handleInvisible(w)
+			return
+		}
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
