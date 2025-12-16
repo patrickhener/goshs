@@ -608,7 +608,6 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 // socket will handle the socket connection
 func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
 	ok := ws.ServeWS(fs.Hub, w, req)
-	fmt.Println(ok)
 	if !ok {
 		fs.handleError(w, req, fmt.Errorf("failed to serve websocket"), http.StatusInternalServerError)
 		return
