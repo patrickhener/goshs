@@ -9,7 +9,25 @@ import (
 	"github.com/patrickhener/goshs/utils"
 )
 
+func (fs *FileServer) handleInvisible(w http.ResponseWriter) {
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		return
+	}
+
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		return
+	}
+
+	conn.Close()
+}
+
 func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err error, status int) {
+	if fs.Invisible {
+		fs.handleInvisible(w)
+		return
+	}
 	// Set header to status
 	w.WriteHeader(status)
 

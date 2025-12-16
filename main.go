@@ -65,6 +65,7 @@ var (
 	whitelist           = ""
 	trustedProxies      = ""
 	MDNS                = false
+	invisible           = false
 )
 
 // Man page
@@ -86,6 +87,7 @@ Web server options:
   -nc, --no-clipboard   Disable the clipboard sharing           (default: false)
   -nd, --no-delete      Disable the delete option               (default: false)
   -si, --silent         Running without dir listing             (default: false)
+  -I,  --invisible      Invisible mode                          (default: false)
   -c,  --cli            Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded       Show embedded files in UI               (default: false)
   -o,  --output         Write output to logfile                 (default: false)
@@ -236,6 +238,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.StringVar(&uploadFolder, "upload-folder", uploadFolder, "")
 	flag.BoolVar(&MDNS, "m", MDNS, "Enable zeroconf mDNS registration")
 	flag.BoolVar(&MDNS, "mdns", MDNS, "Enable zeroconf mDNS registration")
+	flag.BoolVar(&invisible, "I", invisible, "Enable invisible mode")
+	flag.BoolVar(&invisible, "invisible", invisible, "Enable invisible mode")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -271,6 +275,17 @@ func resolveInterface() {
 }
 
 func sanityChecks() {
+	// Sanity check for invisible mode
+	if invisible {
+		if sftp || webdav {
+			sftp = false
+			webdav = false
+			MDNS = false
+			silent = false
+			logger.Warn("Invisible mode activated, disabling SFTP, WebDAV, silent mode and mDNS support")
+		}
+	}
+
 	// Sanity check for upload only vs read only
 	if uploadOnly && readOnly {
 		logger.Fatal("You can only select either 'upload only' or 'read only', not both.")
@@ -396,6 +411,7 @@ func init() {
 		sftpHostKeyfile = cfg.SFTPHostKeyFile
 		whitelist = cfg.Whitelist
 		trustedProxies = cfg.TrustedProxies
+		invisible = cfg.Invisible
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -544,6 +560,7 @@ func main() {
 		NoClipboard:  noClipboard,
 		NoDelete:     noDelete,
 		Silent:       silent,
+		Invisible:    invisible,
 		Embedded:     embedded,
 		Webhook:      *webhook,
 		Verbose:      verbose,

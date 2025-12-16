@@ -8,6 +8,11 @@ import (
 
 func (fs *FileServer) logOnly(w http.ResponseWriter, req *http.Request) {
 	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
-	w.WriteHeader(200)
-	w.Write([]byte("ok\n"))
+	if fs.Invisible {
+		// In invisible mode, do not respond
+		fs.handleInvisible(w)
+	} else {
+		w.WriteHeader(200)
+		w.Write([]byte("ok\n"))
+	}
 }

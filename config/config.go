@@ -37,6 +37,7 @@ type Config struct {
 	NoDelete            bool     `json:"no_delete"`
 	Verbose             bool     `json:"verbose"`
 	Silent              bool     `json:"silent"`
+	Invisible           bool     `json:"invisible"`
 	RunningUser         string   `json:"running_user"`
 	CLI                 bool     `json:"cli"`
 	Embedded            bool     `json:"embedded"`
@@ -96,6 +97,7 @@ func PrintExample() (string, error) {
 		NoDelete:            false,
 		Verbose:             false,
 		Silent:              false,
+		Invisible:           false,
 		RunningUser:         "",
 		CLI:                 false,
 		Embedded:            false,

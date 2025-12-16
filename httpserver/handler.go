@@ -106,22 +106,34 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
-		if !fs.NoClipboard {
+		if !fs.NoClipboard && !fs.Invisible {
 			fs.cbDown(w, req)
 			return true
 		}
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
-		fs.bulkDownload(w, req)
+		if !fs.Invisible {
+			fs.bulkDownload(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
-		fs.static(w, req)
+		if !fs.Invisible {
+			fs.static(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
 		if err := fs.embedded(w, req); err != nil {
-			logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+			if !fs.Invisible {
+				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+			} else {
+				fs.handleInvisible(w)
+			}
 			return true
 		}
 		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
@@ -137,16 +149,24 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		}
 	}
 	if _, ok := req.URL.Query()["share"]; ok {
-		fs.CreateShareHandler(w, req)
+		if !fs.Invisible {
+			fs.CreateShareHandler(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["token"]; ok {
-		switch req.Method {
-		case http.MethodGet:
-			fs.ShareHandler(w, req)
-		case http.MethodDelete:
-			fs.DeleteShareHandler(w, req)
-		default:
+		if !fs.Invisible {
+			switch req.Method {
+			case http.MethodGet:
+				fs.ShareHandler(w, req)
+			case http.MethodDelete:
+				fs.DeleteShareHandler(w, req)
+			default:
+			}
+		} else {
+			fs.handleInvisible(w)
 		}
 		return true
 	}
@@ -213,14 +233,16 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 }
 
 // Applies custom auth for file based acls
-func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Request, acl configFile) {
+func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Request, acl configFile) bool {
 	if acl.Auth != "" {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		if !fileS.Invisible {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		}
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {
 			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
-			return
+			return false
 		}
 
 		user := strings.Split(acl.Auth, ":")[0]
@@ -228,9 +250,10 @@ func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Reques
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
 			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
-			return
+			return false
 		}
 	}
+	return true
 }
 
 func (fileS *FileServer) constructEmbedded() []item {
@@ -459,6 +482,11 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 }
 
 func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
+	// Early break for invisible mode
+	if fileS.Invisible {
+		fileS.handleInvisible(w)
+		return
+	}
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
@@ -470,7 +498,10 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 	relpath = strings.TrimLeft(relpath, "\\")
 
 	// Apply Custom Auth if there is any due to file based acl
-	fileS.applyCustomAuth(w, req, acl)
+	if ok := fileS.applyCustomAuth(w, req, acl); !ok {
+		fileS.handleError(w, req, err, http.StatusUnauthorized)
+		return
+	}
 
 	// Construct items list
 	items := fileS.constructItems(fis, relpath, acl, req)
@@ -503,7 +534,9 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 
 	// Apply Custom Auth if there
 	if acl.Auth != "" {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		if !fs.Invisible {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		}
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {
@@ -574,7 +607,11 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 
 // socket will handle the socket connection
 func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
-	ws.ServeWS(fs.Hub, w, req)
+	ok := ws.ServeWS(fs.Hub, w, req)
+	if !ok {
+		fs.handleError(w, req, fmt.Errorf("failed to serve websocket"), http.StatusInternalServerError)
+		return
+	}
 }
 
 // deleteFile will delete a file

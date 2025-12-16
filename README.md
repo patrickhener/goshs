@@ -47,6 +47,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * Key Auth
   * Password Auth
 * Silent mode (no webserver output)
+* Invisible mode (no output whatsoever)
 * Retrieve json on cli
 * Drop user privileges before execution (Unix only)
   * Example: Run on port 80, but process is "www-data"
