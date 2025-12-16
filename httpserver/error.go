@@ -24,6 +24,10 @@ func (fs *FileServer) handleInvisible(w http.ResponseWriter) {
 }
 
 func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err error, status int) {
+	if fs.Invisible {
+		fs.handleInvisible(w)
+		return
+	}
 	// Set header to status
 	w.WriteHeader(status)
 

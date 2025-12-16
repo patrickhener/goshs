@@ -184,20 +184,10 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// #nosec G304
 	file, err := os.Open(open)
 	if os.IsNotExist(err) {
-		// Invisible dropout
-		if fs.Invisible {
-			fs.handleInvisible(w)
-			return
-		}
 		fs.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
 	if os.IsPermission(err) {
-		// Invisible dropout
-		if fs.Invisible {
-			fs.handleInvisible(w)
-			return
-		}
 		fs.handleError(w, req, err, http.StatusInternalServerError)
 		return
 	}
