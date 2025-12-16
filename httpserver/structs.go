@@ -76,6 +76,7 @@ type FileServer struct {
 	NoClipboard    bool
 	NoDelete       bool
 	Silent         bool
+	Invisible      bool
 	Embedded       bool
 	Verbose        bool
 	Webhook        webhook.Webhook
