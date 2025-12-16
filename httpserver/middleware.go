@@ -87,9 +87,72 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// InvisibleBasicAuthMiddleware is a middleware to handle basic auth in invisible mode
+func (fs *FileServer) InvisibleBasicAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, "Basic ") {
+			fs.handleInvisible(w)
+			return
+		}
+
+		authVal := auth[len("Basic "):]
+		// Cache check
+		authCacheMutex.RLock()
+		cachedOK := authCache[authVal]
+		authCacheMutex.RUnlock()
+
+		if cachedOK {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		//Check if provided password is a bcrypt hash
+		if strings.HasPrefix(fs.Pass, "$2a$") {
+			username, password, authOK := r.BasicAuth()
+			if !authOK {
+				fs.handleInvisible(w)
+				return
+			}
+
+			if username != fs.User {
+				fs.handleInvisible(w)
+				return
+			}
+
+			if err := bcrypt.CompareHashAndPassword([]byte(fs.Pass), []byte(password)); err != nil {
+				fs.handleInvisible(w)
+				return
+			}
+		} else {
+			username, password, authOK := r.BasicAuth()
+			if !authOK {
+				fs.handleInvisible(w)
+				return
+			}
+
+			if username != fs.User || password != fs.Pass {
+				fs.handleInvisible(w)
+				return
+			}
+		}
+
+		authCacheMutex.Lock()
+		authCache[authVal] = true
+		authCacheMutex.Unlock()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ServerHeaderMiddleware sets a custom Server header for all responses
 func (fs *FileServer) ServerHeaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Invisible mode
+		if fs.Invisible {
+			next.ServeHTTP(w, r)
+			return
+		}
 		serverHeader := fmt.Sprintf("goshs/%s (%s; %s)", fs.Version, runtime.GOOS, runtime.Version())
 		w.Header().Set("Server", serverHeader)
 		next.ServeHTTP(w, r)

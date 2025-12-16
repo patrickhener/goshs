@@ -30,8 +30,13 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 				logger.Warnf("You are using basic auth without SSL. Your credentials will be transferred in cleartext. Consider using -s, too.")
 			}
 			logger.Infof("Using basic auth with user '%s' and password '%s'", fs.User, fs.Pass)
-			// Use middleware
-			mux.Use(fs.BasicAuthMiddleware)
+			if fs.Invisible {
+				// Use invisible basic auth middleware
+				mux.Use(fs.InvisibleBasicAuthMiddleware)
+			} else {
+				// Use middleware
+				mux.Use(fs.BasicAuthMiddleware)
+			}
 		}
 
 		// IP Whitelist Middleware

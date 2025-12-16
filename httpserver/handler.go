@@ -184,10 +184,20 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// #nosec G304
 	file, err := os.Open(open)
 	if os.IsNotExist(err) {
+		// Invisible dropout
+		if fs.Invisible {
+			fs.handleInvisible(w)
+			return
+		}
 		fs.handleError(w, req, err, http.StatusNotFound)
 		return
 	}
 	if os.IsPermission(err) {
+		// Invisible dropout
+		if fs.Invisible {
+			fs.handleInvisible(w)
+			return
+		}
 		fs.handleError(w, req, err, http.StatusInternalServerError)
 		return
 	}
@@ -459,6 +469,11 @@ func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl c
 }
 
 func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, file *os.File, relpath string, jsonOutput bool, acl configFile) {
+	// Early break for invisible mode
+	if fileS.Invisible {
+		fileS.handleInvisible(w)
+		return
+	}
 	// Read directory FileInfo
 	fis, err := file.Readdir(-1)
 	if err != nil {
