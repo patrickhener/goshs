@@ -213,14 +213,16 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 }
 
 // Applies custom auth for file based acls
-func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Request, acl configFile) {
+func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Request, acl configFile) bool {
 	if acl.Auth != "" {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		if !fileS.Invisible {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		}
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {
 			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
-			return
+			return false
 		}
 
 		user := strings.Split(acl.Auth, ":")[0]
@@ -228,9 +230,10 @@ func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Reques
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
 			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
-			return
+			return false
 		}
 	}
+	return true
 }
 
 func (fileS *FileServer) constructEmbedded() []item {
@@ -475,7 +478,10 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 	relpath = strings.TrimLeft(relpath, "\\")
 
 	// Apply Custom Auth if there is any due to file based acl
-	fileS.applyCustomAuth(w, req, acl)
+	if ok := fileS.applyCustomAuth(w, req, acl); !ok {
+		fileS.handleError(w, req, err, http.StatusUnauthorized)
+		return
+	}
 
 	// Construct items list
 	items := fileS.constructItems(fis, relpath, acl, req)
@@ -508,7 +514,9 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 
 	// Apply Custom Auth if there
 	if acl.Auth != "" {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		if !fs.Invisible {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Filebased Restricted"`)
+		}
 
 		username, password, authOK := req.BasicAuth()
 		if !authOK {

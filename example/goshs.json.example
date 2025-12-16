@@ -25,6 +25,7 @@
   "no_delete": false,
   "verbose": false,
   "silent": false,
+  "invisible": false,
   "running_user": "",
   "cli": false,
   "embedded": false,
