@@ -150,11 +150,11 @@ func (c *Client) writePump() {
 }
 
 // ServeWS will handle the socket connections
-func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) bool {
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		logger.Errorf("Failed to upgrade ws: %+v", err)
-		return
+		return false
 	}
 
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 1024)}
@@ -162,6 +162,8 @@ func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	go client.writePump()
 	go client.readPump()
+
+	return true
 }
 
 func (c *Client) refreshClipboard() {

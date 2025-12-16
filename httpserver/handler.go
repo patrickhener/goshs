@@ -106,22 +106,34 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
-		if !fs.NoClipboard {
+		if !fs.NoClipboard && !fs.Invisible {
 			fs.cbDown(w, req)
 			return true
 		}
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
-		fs.bulkDownload(w, req)
+		if !fs.Invisible {
+			fs.bulkDownload(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
-		fs.static(w, req)
+		if !fs.Invisible {
+			fs.static(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
 		if err := fs.embedded(w, req); err != nil {
-			logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+			if !fs.Invisible {
+				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+			} else {
+				fs.handleInvisible(w)
+			}
 			return true
 		}
 		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
@@ -137,16 +149,24 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		}
 	}
 	if _, ok := req.URL.Query()["share"]; ok {
-		fs.CreateShareHandler(w, req)
+		if !fs.Invisible {
+			fs.CreateShareHandler(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["token"]; ok {
-		switch req.Method {
-		case http.MethodGet:
-			fs.ShareHandler(w, req)
-		case http.MethodDelete:
-			fs.DeleteShareHandler(w, req)
-		default:
+		if !fs.Invisible {
+			switch req.Method {
+			case http.MethodGet:
+				fs.ShareHandler(w, req)
+			case http.MethodDelete:
+				fs.DeleteShareHandler(w, req)
+			default:
+			}
+		} else {
+			fs.handleInvisible(w)
 		}
 		return true
 	}
@@ -587,7 +607,12 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 
 // socket will handle the socket connection
 func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
-	ws.ServeWS(fs.Hub, w, req)
+	ok := ws.ServeWS(fs.Hub, w, req)
+	fmt.Println(ok)
+	if !ok {
+		fs.handleError(w, req, fmt.Errorf("failed to serve websocket"), http.StatusInternalServerError)
+		return
+	}
 }
 
 // deleteFile will delete a file
