@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/howeyc/gopass"
@@ -46,12 +47,13 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 		mux.Use(fs.ServerHeaderMiddleware)
 
 		// Define routes
-		mux.HandleFunc("POST /upload", func(w http.ResponseWriter, r *http.Request) {
-			fs.upload(w, r)
-			runtime.GC()
-		})
 		mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
-			fs.logOnly(w, r)
+			if strings.HasSuffix(r.URL.Path, "/upload") {
+				fs.upload(w, r)
+				runtime.GC()
+			} else {
+				fs.logOnly(w, r)
+			}
 		})
 		mux.HandleFunc("PUT /", func(w http.ResponseWriter, r *http.Request) {
 			fs.put(w, r)
