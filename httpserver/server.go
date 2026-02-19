@@ -58,7 +58,18 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 		mux.HandleFunc("PUT /", func(w http.ResponseWriter, r *http.Request) {
 			fs.put(w, r)
 		})
-		mux.HandleFunc("/", fs.handler)
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodOptions {
+				// Handle CORS preflight
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+				w.WriteHeader(http.StatusOK)
+				fs.logOnly(w, r)
+			} else {
+				fs.handler(w, r)
+			}
+		})
 
 		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
 	case "webdav":
