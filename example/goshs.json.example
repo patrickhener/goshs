@@ -41,5 +41,6 @@
   "sftp_keyfile": "",
   "sftp_host_keyfile": "",
   "whitelist": "",
-  "trusted_proxies": ""
+  "trusted_proxies": "",
+  "tunnel": false
 }

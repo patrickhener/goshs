@@ -84,6 +84,7 @@ type FileServer struct {
 	Clipboard      *clipboard.Clipboard
 	Whitelist      *Whitelist
 	SharedLinks    map[string]SharedLink
+	Tunnel         bool
 }
 
 type httperror struct {

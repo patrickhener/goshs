@@ -66,6 +66,7 @@ var (
 	trustedProxies      = ""
 	MDNS                = false
 	invisible           = false
+	tunnel              = false
 )
 
 // Man page
@@ -91,6 +92,7 @@ Web server options:
   -c,  --cli            Enable cli (only with auth and tls)     (default: false)
   -e,  --embedded       Show embedded files in UI               (default: false)
   -o,  --output         Write output to logfile                 (default: false)
+  -t,  --tunnel         Enable tunnel                           (default: false)
 
 TLS options:
   -s,     --ssl           Use TLS
@@ -240,6 +242,8 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&MDNS, "mdns", MDNS, "Enable zeroconf mDNS registration")
 	flag.BoolVar(&invisible, "I", invisible, "Enable invisible mode")
 	flag.BoolVar(&invisible, "invisible", invisible, "Enable invisible mode")
+	flag.BoolVar(&tunnel, "t", tunnel, "Enable tunnel")
+	flag.BoolVar(&tunnel, "tunnel", tunnel, "Enable tunnel")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -412,6 +416,7 @@ func init() {
 		whitelist = cfg.Whitelist
 		trustedProxies = cfg.TrustedProxies
 		invisible = cfg.Invisible
+		tunnel = cfg.Tunnel
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -565,6 +570,7 @@ func main() {
 		Webhook:      *webhook,
 		Verbose:      verbose,
 		Whitelist:    wl,
+		Tunnel:       tunnel,
 		Version:      goshsversion.GoshsVersion,
 	}
 

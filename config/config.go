@@ -52,6 +52,7 @@ type Config struct {
 	SFTPHostKeyFile     string   `json:"sftp_host_keyfile"`
 	Whitelist           string   `json:"whitelist"`
 	TrustedProxies      string   `json:"trusted_proxies"`
+	Tunnel              bool     `json:"tunnel"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -112,6 +113,7 @@ func PrintExample() (string, error) {
 		SFTPHostKeyFile:     "",
 		Whitelist:           "",
 		TrustedProxies:      "",
+		Tunnel:              false,
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

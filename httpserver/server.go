@@ -16,6 +16,7 @@ import (
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/tunnel"
 	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
@@ -264,6 +265,17 @@ func (fs *FileServer) Start(what string) {
 
 	// Print all embedded files as info to the console
 	fs.PrintEmbeddedFiles()
+
+	// Start tunnel if enabled
+	if fs.Tunnel {
+		t, err := tunnel.Start(fs.IP, fs.Port)
+		if err != nil {
+			logger.Errorf("error starting tunnel: %+v", err)
+		} else {
+			defer t.Close()
+			logger.Infof("Public tunnel URL: %s", t.PublicURL)
+		}
+	}
 
 	// Create SharedLinks map
 	fs.SharedLinks = make(map[string]SharedLink)
