@@ -74,6 +74,8 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * Share files without authentication
   * Use Download Limit
   * Use Time Limit
+* Tunnel connection via localhost.run
+  * Expose your local goshs to the internet via localhost.run
 
 # Installation
 
