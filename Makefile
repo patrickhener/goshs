@@ -5,7 +5,8 @@ generate:
 	@echo "[*] Minifying js and compiling scss"
 	@uglifyjs -o httpserver/static/js/main.min.js assets/js/main.js
 	@uglifyjs -o httpserver/static/js/color-modes.min.js assets/js/color-modes.js
-	@sass --no-source-map -s compressed assets/css/style.scss httpserver/static/css/style.css
+	@uglifyjs -o httpserver/static/js/new-main.min.js assets/js/new-main.js
+	@sass --no-source-map -s compressed assets/css/new_style.scss httpserver/static/css/new_style.css
 	@echo "[OK] Done minifying and compiling things"
 	@echo "[*] Copying embedded files to target location"
 	@rm -rf httpserver/embedded
@@ -170,4 +171,3 @@ install:
 clean:
 	@rm -rf ./dist
 	@echo "[OK] Cleaned up!"
-

@@ -322,94 +322,151 @@ func (fileS *FileServer) constructSilent(w http.ResponseWriter) {
 }
 
 func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string, items []item, embeddedItems []item) {
+	var subdirectory bool
 	// Windows upload compatibility
 	if relpath == "\\" {
 		relpath = "/"
 	}
 
-	// Construct directory for template
-	d := &directory{
-		RelPath: relpath,
-		AbsPath: filepath.Join(fileS.Webroot, relpath),
-		Content: items,
-	}
-	if fileS.Pass != "" || fileS.CACert != "" {
-		// Auth -> Sharelinks on
-		d.AuthEnabled = true
-	} else {
-		d.AuthEnabled = false
-	}
 	if relpath != "/" {
-		d.IsSubdirectory = true
-		pathSlice := strings.Split(relpath, "/")
-		if len(pathSlice) > 2 {
-			pathSlice = pathSlice[1 : len(pathSlice)-1]
-
-			var backString string
-			for _, part := range pathSlice {
-				backString += "/" + part
-			}
-			d.Back = backString
-		} else {
-			d.Back = "/"
-		}
+		subdirectory = true
 	} else {
-		d.IsSubdirectory = false
+		subdirectory = false
 	}
 
-	// Construct directory for embedded files
-	e := &directory{
-		RelPath: fileS.Webroot,
-		AbsPath: fileS.Webroot,
-		Content: embeddedItems,
+	var breadcrumbParts []BreadcrumbPart
+	for i, e := range strings.Split(relpath, "/") {
+		if e != "" {
+			breadcrumbParts = append(breadcrumbParts, BreadcrumbPart{Name: e, Path: strings.Join(strings.Split(relpath, "/")[:i+1], "/")})
+		}
 	}
 
-	// upload only mode empty directory
-	if fileS.UploadOnly {
-		d = &directory{}
-		e = &directory{}
+	var fileItems []FileItem
+	for _, item := range items {
+		fileItems = append(fileItems, FileItem{
+			Name:       item.Name,
+			IsDir:      item.IsDir,
+			Size:       item.DisplaySize,
+			SizeRaw:    item.SortSize,
+			LastMod:    item.DisplayLastModified,
+			LastModRaw: item.SortLastModified,
+			Extension:  item.Ext,
+		})
 	}
 
-	// Construct template
-	tem := &baseTemplate{
-		Directory:       d,
+	var clipEntries []ClipEntry
+	entries, _ := fileS.Clipboard.GetEntries()
+	for _, entry := range entries {
+		clipEntries = append(clipEntries, ClipEntry{
+			ID:      entry.ID,
+			Content: entry.Content,
+			Time:    entry.Time,
+		})
+	}
+
+	uiData := UIData{
 		GoshsVersion:    fileS.Version,
-		Clipboard:       fileS.Clipboard,
-		CLI:             fileS.CLI,
-		Embedded:        fileS.Embedded,
-		EmbeddedContent: e,
+		AbsPath:         fileS.Webroot,
+		BreadcrumbParts: breadcrumbParts,
+		Subdirectory:    subdirectory,
+		ReadOnly:        fileS.ReadOnly,
+		UploadOnly:      fileS.UploadOnly,
 		NoClipboard:     fileS.NoClipboard,
 		NoDelete:        fileS.NoDelete,
-		SharedLinks:     fileS.SharedLinks,
-		ReadOnly:        fileS.ReadOnly,
+		CLI:             fileS.CLI,
+		Embedded:        fileS.Embedded,
+		Items:           fileItems,
+		Clipboard:       clipEntries,
 	}
 
-	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
+	renderIndex(w, uiData)
 
-	var err error
+	/*
+		// Construct directory for template
+		d := &directory{
+			RelPath: relpath,
+			AbsPath: filepath.Join(fileS.Webroot, relpath),
+			Content: items,
+		}
+		if fileS.Pass != "" || fileS.CACert != "" {
+			// Auth -> Sharelinks on
+			d.AuthEnabled = true
+		} else {
+			d.AuthEnabled = false
+		}
+		if relpath != "/" {
+			d.IsSubdirectory = true
+			pathSlice := strings.Split(relpath, "/")
+			if len(pathSlice) > 2 {
+				pathSlice = pathSlice[1 : len(pathSlice)-1]
 
-	funcMap := template.FuncMap{
-		"downloadLimitDisplay": func(l int) string {
-			if l == -1 {
-				return "disabled"
+				var backString string
+				for _, part := range pathSlice {
+					backString += "/" + part
+				}
+				d.Back = backString
+			} else {
+				d.Back = "/"
 			}
-			return strconv.Itoa(l)
-		},
-		"formatTime": func(t time.Time) string {
-			return t.Format("2006-01-02 15:04:05")
-		},
-	}
+		} else {
+			d.IsSubdirectory = false
+		}
 
-	t := template.New("root").Funcs(funcMap)
+		// Construct directory for embedded files
+		e := &directory{
+			RelPath: fileS.Webroot,
+			AbsPath: fileS.Webroot,
+			Content: embeddedItems,
+		}
 
-	t, err = t.ParseFS(static, files...)
-	if err != nil {
-		logger.Errorf("Error parsing templates: %+v", err)
-	}
+		// upload only mode empty directory
+		if fileS.UploadOnly {
+			d = &directory{}
+			e = &directory{}
+		}
 
-	if err := t.ExecuteTemplate(w, "index.html", tem); err != nil {
-		logger.Errorf("Error executing template: %+v", err)
-	}
+		// Construct template
+		tem := &baseTemplate{
+			Directory:       d,
+			GoshsVersion:    fileS.Version,
+			Clipboard:       fileS.Clipboard,
+			CLI:             fileS.CLI,
+			Embedded:        fileS.Embedded,
+			EmbeddedContent: e,
+			NoClipboard:     fileS.NoClipboard,
+			NoDelete:        fileS.NoDelete,
+			SharedLinks:     fileS.SharedLinks,
+			ReadOnly:        fileS.ReadOnly,
+		}
+
+		files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
+
+		var err error
+
+		funcMap := template.FuncMap{
+			"downloadLimitDisplay": func(l int) string {
+				if l == -1 {
+					return "disabled"
+				}
+				return strconv.Itoa(l)
+			},
+			"formatTime": func(t time.Time) string {
+				return t.Format("2006-01-02 15:04:05")
+			},
+		}
+
+		t := template.New("root").Funcs(funcMap)
+
+		t, err = t.ParseFS(static, files...)
+		if err != nil {
+			logger.Errorf("Error parsing templates: %+v", err)
+		}
+
+		if err := t.ExecuteTemplate(w, "index.html", tem); err != nil {
+			logger.Errorf("Error executing template: %+v", err)
+		}
+	*/
+
 }
 
 func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl configFile, r *http.Request) []item {

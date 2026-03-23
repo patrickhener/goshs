@@ -1,0 +1,100 @@
+package httpserver
+
+import (
+	"html/template"
+	"net/http"
+	"strings"
+
+	"github.com/patrickhener/goshs/logger"
+)
+
+// UIData is the struct passed to index.html on every page render.
+// Map your existing FileServer fields onto this when calling renderIndex.
+type UIData struct {
+	// Meta
+	GoshsVersion string
+
+	// Current path
+	AbsPath         string
+	BreadcrumbParts []BreadcrumbPart
+	Subdirectory    bool
+
+	// Feature flags (controls which tabs/buttons appear)
+	ReadOnly    bool
+	UploadOnly  bool
+	NoClipboard bool
+	NoDelete    bool
+	CLI         bool
+	Embedded    bool
+
+	// File listing
+	Items []FileItem
+
+	// Clipboard entries (pre-loaded from server state)
+	Clipboard []ClipEntry
+}
+
+// BreadcrumbPart is a single segment of the path breadcrumb.
+type BreadcrumbPart struct {
+	Name string
+	Path string
+}
+
+// FileItem represents one row in the file listing table.
+type FileItem struct {
+	Name       string
+	IsDir      bool
+	Size       string // human-readable, e.g. "1.4 MB"
+	SizeRaw    int64  // bytes, used for JS sorting
+	LastMod    string // formatted date string
+	LastModRaw int64  // unix timestamp, used for JS sorting
+	Extension  string // lowercase with dot, e.g. ".go"
+}
+
+// ClipEntry is a single clipboard entry rendered server-side.
+type ClipEntry struct {
+	ID      int
+	Content string
+	Time    string
+}
+
+// renderIndex parses and executes the embedded index.html template.
+func renderIndex(w http.ResponseWriter, data UIData) error {
+	tmpl, err := template.New("index.html").
+		Funcs(template.FuncMap{
+			// {{if not .Flag}} helper — Go templates don't have "not" built-in
+			"not": func(b bool) bool { return !b },
+		}).
+		ParseFS(static, "static/templates/index.html")
+	if err != nil {
+		logger.Errorf("parsing index.html: %+v", err)
+		return err
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.Execute(w, data); err != nil {
+		logger.Errorf("executing index.html: %+v", err)
+	}
+
+	return err
+}
+
+// buildBreadcrumb converts an absolute path string into BreadcrumbParts.
+// e.g. "/files/uploads/2024" → [{Name:"files",Path:"/files"}, ...]
+func buildBreadcrumb(absPath string) []BreadcrumbPart {
+	absPath = strings.TrimPrefix(absPath, "/")
+	if absPath == "" {
+		return nil
+	}
+	parts := strings.Split(absPath, "/")
+	crumbs := make([]BreadcrumbPart, 0, len(parts))
+	for i, p := range parts {
+		if p == "" {
+			continue
+		}
+		crumbs = append(crumbs, BreadcrumbPart{
+			Name: p,
+			Path: "/" + strings.Join(parts[:i+1], "/"),
+		})
+	}
+	return crumbs
+}
