@@ -17,7 +17,7 @@ func TestDispatchReadPump_NewEntry(t *testing.T) {
 	var mockClipboard *clipboard.Clipboard
 	mockClipboard = &clipboard.Clipboard{}
 
-	hub := &Hub{cb: mockClipboard, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cb: mockClipboard, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	entry := `"my clipboard entry"`
@@ -30,7 +30,7 @@ func TestDispatchReadPump_NewEntry(t *testing.T) {
 func TestDispatchReadPump_DelEntry(t *testing.T) {
 	cb := &clipboard.Clipboard{}
 	cb.AddEntry("test")
-	hub := &Hub{cb: cb, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cb: cb, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	idStr := `"0"` // JSON string
@@ -42,7 +42,7 @@ func TestDispatchReadPump_DelEntry(t *testing.T) {
 func TestDispatchReadPump_DelEntryInvalidID(t *testing.T) {
 	cb := &clipboard.Clipboard{}
 	cb.AddEntry("test")
-	hub := &Hub{cb: cb, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cb: cb, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	idStr := `0` // JSON string
@@ -52,25 +52,25 @@ func TestDispatchReadPump_DelEntryInvalidID(t *testing.T) {
 }
 
 func TestRefreshClipboard(t *testing.T) {
-	hub := &Hub{broadcast: make(chan []byte, 1)}
+	hub := &Hub{Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	client.refreshClipboard()
 
 	select {
-	case msg := <-hub.broadcast:
+	case msg := <-hub.Broadcast:
 		var pkt SendPacket
 		err := json.Unmarshal(msg, &pkt)
 		require.NoError(t, err)
 		require.Equal(t, "refreshClipboard", pkt.Type)
 	default:
-		t.Fatal("no message broadcasted")
+		t.Fatal("no message Broadcasted")
 	}
 }
 
 func TestDispatchReadPump_ClearClipboard(t *testing.T) {
 	cb := &clipboard.Clipboard{}
-	hub := &Hub{cb: cb, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cb: cb, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	packet := Packet{Type: "clearClipboard", Content: json.RawMessage(`""`)}
@@ -79,7 +79,7 @@ func TestDispatchReadPump_ClearClipboard(t *testing.T) {
 }
 
 func TestDispatchReadPump_Command(t *testing.T) {
-	hub := &Hub{cliEnabled: true, cb: &clipboard.Clipboard{}, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cliEnabled: true, cb: &clipboard.Clipboard{}, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	cmdStr := `"ls -la"`
@@ -89,7 +89,7 @@ func TestDispatchReadPump_Command(t *testing.T) {
 }
 
 func TestInvalidEventSent(t *testing.T) {
-	hub := &Hub{cliEnabled: true, cb: &clipboard.Clipboard{}, broadcast: make(chan []byte, 1)}
+	hub := &Hub{cliEnabled: true, cb: &clipboard.Clipboard{}, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
 	packet := Packet{Type: "invalid", Content: json.RawMessage(`""`)}
@@ -120,7 +120,7 @@ func TestHub_Run(t *testing.T) {
 
 	// Broadcast message
 	msg := []byte("hello")
-	hub.broadcast <- msg
+	hub.Broadcast <- msg
 
 	// Check client received message
 	select {
@@ -171,9 +171,9 @@ func TestHub_Run_BroadcastClientSendFull(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // allow goroutine to process
 
 	// Broadcast a message
-	hub.broadcast <- []byte("message")
+	hub.Broadcast <- []byte("message")
 
-	// Allow hub to process broadcast
+	// Allow hub to process Broadcast
 	time.Sleep(10 * time.Millisecond)
 
 	// Clean up (just in case)

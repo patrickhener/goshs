@@ -175,7 +175,7 @@ func (c *Client) refreshClipboard() {
 		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
 	}
 
-	c.hub.broadcast <- broadcastMessage
+	c.hub.Broadcast <- broadcastMessage
 }
 
 func (c *Client) updateCLI(output string) {
@@ -188,5 +188,5 @@ func (c *Client) updateCLI(output string) {
 		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
 	}
 
-	c.hub.broadcast <- broadcastMessage
+	c.hub.Broadcast <- broadcastMessage
 }

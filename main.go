@@ -12,14 +12,18 @@ import (
 
 	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
+	"github.com/patrickhener/goshs/clipboard"
 	"github.com/patrickhener/goshs/config"
+	"github.com/patrickhener/goshs/dnsserver"
 	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/sftpserver"
+	"github.com/patrickhener/goshs/smtpserver"
 	"github.com/patrickhener/goshs/update"
 	"github.com/patrickhener/goshs/utils"
 	"github.com/patrickhener/goshs/webhook"
+	"github.com/patrickhener/goshs/ws"
 )
 
 var (
@@ -67,6 +71,11 @@ var (
 	MDNS                = false
 	invisible           = false
 	tunnel              = false
+	dns                 = false
+	dnsPort             = 5353
+	dnsIP               = "127.0.0.1"
+	smtp                = false
+	smtpPort            = 2525
 )
 
 // Man page
@@ -121,6 +130,13 @@ Authentication options:
 Connection restriction:
   -ipw, --ip-whitelist             Comma separated list of IPs to whitelist
   -tpw, --trusted-proxy-whitelist  Comma separated list of trusted proxies
+
+Collaboration options:
+  -dns, --dns-server       Enable DNS server                   (default: false)
+  -dns-port, --dns-port    DNS server port                     (default: 5353)
+  -dns-ip, --dns-ip        DNS server Reply IP                 (default: 127.0.0.1)
+  -smtp, --smtp-server     Enable SMTP server                  (default: false)
+  -smtp-port, --smtp-port  SMTP server port                    (default: 2525)
 
 Webhook options:
   -W,  --webhook            Enable webhook support                                       (default: false)
@@ -244,6 +260,13 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&invisible, "invisible", invisible, "Enable invisible mode")
 	flag.BoolVar(&tunnel, "t", tunnel, "Enable tunnel")
 	flag.BoolVar(&tunnel, "tunnel", tunnel, "Enable tunnel")
+	flag.BoolVar(&dns, "dns", dns, "Enable DNS server")
+	flag.BoolVar(&dns, "dns-server", dns, "Enable DNS server")
+	flag.IntVar(&dnsPort, "dns-port", dnsPort, "DNS server port")
+	flag.StringVar(&dnsIP, "dns-ip", dnsIP, "DNS server Reply IP")
+	flag.BoolVar(&smtp, "smtp", smtp, "Enable SMTP server")
+	flag.BoolVar(&smtp, "smtp-server", smtp, "Enable SMTP server")
+	flag.IntVar(&smtpPort, "smtp-port", smtpPort, "SMTP server port")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -417,6 +440,11 @@ func init() {
 		trustedProxies = cfg.TrustedProxies
 		invisible = cfg.Invisible
 		tunnel = cfg.Tunnel
+		dns = cfg.DNSServer
+		dnsPort = cfg.DNSPort
+		dnsIP = cfg.DNSIP
+		smtp = cfg.SMTPServer
+		smtpPort = cfg.SMTPPort
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -542,12 +570,23 @@ func main() {
 	// Register webhook
 	webhook := webhook.Register(webhookEnable, webhookURL, webhookProvider, webhookEventsParsed)
 
+	// Init clipboard and hub
+	var clip *clipboard.Clipboard
+	if !noClipboard {
+		clip = clipboard.New()
+	}
+	hub := ws.NewHub(clip, cli)
+
+	go hub.Run()
+
 	// Setup the custom file server
 	server := &httpserver.FileServer{
 		IP:           ip,
 		Port:         port,
 		CLI:          cli,
 		Webroot:      webroot,
+		Clipboard:    clip,
+		Hub:          hub,
 		UploadFolder: uploadFolder,
 		SSL:          ssl,
 		SelfSigned:   selfsigned,
@@ -606,6 +645,31 @@ func main() {
 			HostKeyFile: sftpHostKeyfile,
 			Webhook:     *webhook,
 			Whitelist:   wl,
+		}
+
+		go s.Start()
+	}
+
+	// Start DNS Server
+	if dns {
+		d := &dnsserver.DNSServer{
+			IP:      "0.0.0.0",
+			ReplyIP: dnsIP,
+			Port:    dnsPort,
+			Hub:     hub,
+			WebHook: webhook,
+		}
+
+		go d.Start()
+	}
+
+	// Start SMTP Server
+	if smtp {
+		s := &smtpserver.SMTPServer{
+			IP:      ip,
+			Port:    smtpPort,
+			Hub:     hub,
+			WebHook: webhook,
 		}
 
 		go s.Start()

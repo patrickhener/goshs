@@ -53,6 +53,11 @@ type Config struct {
 	Whitelist           string   `json:"whitelist"`
 	TrustedProxies      string   `json:"trusted_proxies"`
 	Tunnel              bool     `json:"tunnel"`
+	DNSServer           bool     `json:"dns_server"`
+	DNSPort             int      `json:"dns_port"`
+	DNSIP               string   `json:"dns_ip"`
+	SMTPServer          bool     `json:"smtp_server"`
+	SMTPPort            int      `json:"smtp_port"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -114,6 +119,11 @@ func PrintExample() (string, error) {
 		Whitelist:           "",
 		TrustedProxies:      "",
 		Tunnel:              false,
+		DNSServer:           false,
+		DNSPort:             0,
+		DNSIP:               "127.0.0.1",
+		SMTPServer:          false,
+		SMTPPort:            0,
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")
