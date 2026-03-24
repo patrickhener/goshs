@@ -14,6 +14,12 @@ const ST = {
 
 // ── init ──
 document.addEventListener("DOMContentLoaded", () => {
+  const activeTab = sessionStorage.getItem("activeTab");
+  if (activeTab) {
+    sessionStorage.removeItem("activeTab");
+    const btn = document.getElementById(activeTab);
+    if (btn) btn.click();
+  }
   applyTheme(ST.theme);
   initDrop();
   initCliHistory();
@@ -90,7 +96,7 @@ function connectWS() {
     if (msg.type === "dns") onDNS(msg);
     else if (msg.type === "smtp") onSMTP(msg);
     else if (msg.type === "http") onHTTP(msg);
-    else if (msg.type === "clipboard") onClipboardUpdate(msg);
+    else if (msg.type === "refreshClipboard") onClipboardUpdate(msg);
     else if (msg.type === "reload") location.reload();
   };
 }
@@ -683,12 +689,9 @@ function clearSMTP() {
 
 // ══ CLIPBOARD ══
 function onClipboardUpdate(msg) {
-  // Re-render clipboard from WS push (entries from server)
-  const badge = document.getElementById("clip-badge");
-  if (badge) {
-    badge.classList.add("show");
-    badge.textContent = (msg.entries || []).length || "";
-  }
+  // Reload side and activate clipboard tab
+  sessionStorage.setItem("activeTab", "nav-clip");
+  location.reload();
 }
 function sendClip() {
   const txt = document.getElementById("clip-input").value.trim();

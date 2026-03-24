@@ -1,6 +1,4 @@
 # Broken
-- Clipboard live update
-- collab http events
 - bulk download
 - bulk delete
 - single delete
