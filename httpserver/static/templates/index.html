@@ -1067,7 +1067,269 @@
 
                 <!-- ████ SHARE LINKS PANEL ████ -->
                 <section class="panel" id="panel-share">
-                    <div class="share-layout"></div>
+                    <div class="share-layout">
+                        {{ if gt (len .SharedLinks) 0 }}
+                        <div class="share-cards" id="share-cards">
+                            {{ range $token, $link := .SharedLinks }}
+                            <div class="share-card" id="share-card-{{$token}}">
+                                <div class="share-card-header">
+                                    <div class="share-card-title">
+                                        {{ if $link.IsDir }}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            width="14"
+                                            height="14"
+                                            style="color: var(--warn)"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        {{ else }}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            width="14"
+                                            height="14"
+                                            style="color: var(--info)"
+                                        >
+                                            <path
+                                                d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"
+                                            />
+                                            <polyline points="13 2 13 9 20 9" />
+                                        </svg>
+                                        {{ end }}
+                                        <span class="share-card-path"
+                                            >{{ $link.FilePath }}</span
+                                        >
+                                    </div>
+                                    <div class="share-card-actions">
+                                        <button
+                                            class="btn btn-sm btn-ghost"
+                                            onclick="showShareQR('{{$token}}')"
+                                            title="Show QR"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <rect
+                                                    x="3"
+                                                    y="3"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="3"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="3"
+                                                    y="14"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="14"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="18"
+                                                    y="14"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="18"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="18"
+                                                    y="18"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            onclick="deleteShareLink('{{$token}}', '{{$link.FilePath}}')"
+                                            title="Delete"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <polyline
+                                                    points="3 6 5 6 21 6"
+                                                />
+                                                <path d="M19 6l-1 14H6L5 6" />
+                                                <path
+                                                    d="M10 11v6M14 11v6M9 6V4h6v2"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="share-card-body">
+                                    <div class="share-card-meta">
+                                        <div class="share-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                />
+                                                <polyline
+                                                    points="12 6 12 12 16 14"
+                                                />
+                                            </svg>
+                                            <span
+                                                >Expires
+                                                <span
+                                                    class="share-expiry-rel"
+                                                    data-expires="{{ $link.Expires.Unix }}"
+                                                ></span
+                                            ></span>
+                                            <span class="share-expiry-abs"
+                                                >{{ $link.Expires.Format
+                                                "2006-01-02 15:04:05" }}</span
+                                            >
+                                        </div>
+                                        <div class="share-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <path
+                                                    d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                                                />
+                                                <polyline
+                                                    points="7 10 12 15 17 10"
+                                                />
+                                                <line
+                                                    x1="12"
+                                                    y1="15"
+                                                    x2="12"
+                                                    y2="3"
+                                                />
+                                            </svg>
+                                            {{ if eq $link.DownloadLimit -1 }}
+                                            <span>Unlimited downloads</span>
+                                            {{ else }} {{ $used :=
+                                            $link.Downloaded }} {{ $left := sub
+                                            $link.DownloadLimit $used }}
+                                            <span
+                                                >{{ $left }} / {{
+                                                $link.DownloadLimit }}
+                                                remaining</span
+                                            >
+                                            <div class="share-dl-bar">
+                                                <div
+                                                    class="share-dl-bar-fill"
+                                                    style="width: {{ percent $used $link.DownloadLimit }}%"
+                                                ></div>
+                                            </div>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="share-card-url">
+                                        <span
+                                            class="share-token-url"
+                                            id="share-url-{{$token}}"
+                                        ></span>
+                                        <button
+                                            class="btn btn-sm btn-ghost"
+                                            onclick="copyShareUrl('{{$token}}')"
+                                            title="Copy URL"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <rect
+                                                    x="9"
+                                                    y="9"
+                                                    width="13"
+                                                    height="13"
+                                                    rx="2"
+                                                    ry="2"
+                                                />
+                                                <path
+                                                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {{ end }}
+                        </div>
+                        {{ else }}
+                        <div class="empty-state">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            >
+                                <circle cx="18" cy="5" r="3" />
+                                <circle cx="6" cy="12" r="3" />
+                                <circle cx="18" cy="19" r="3" />
+                                <line
+                                    x1="8.59"
+                                    y1="13.51"
+                                    x2="15.42"
+                                    y2="17.49"
+                                />
+                                <line
+                                    x1="15.41"
+                                    y1="6.51"
+                                    x2="8.59"
+                                    y2="10.49"
+                                />
+                            </svg>
+                            <p>No active shared links.</p>
+                        </div>
+                        {{ end }}
+                    </div>
                 </section>
 
                 <!-- ████ CLI PANEL ████ -->

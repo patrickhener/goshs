@@ -114,6 +114,7 @@ type SharedLink struct {
 	IsDir           bool
 	Expires         time.Time
 	DownloadLimit   int
+	Downloaded      int
 	DownloadEntries []DownloadEntry
 }
 

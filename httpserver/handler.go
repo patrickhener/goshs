@@ -745,6 +745,7 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		DownloadEntries: downloadEntries,
 		IsDir:           stat.IsDir(),
 		Expires:         expires,
+		Downloaded:      0,
 		DownloadLimit:   downloadLimit,
 	}
 
@@ -807,12 +808,10 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Subtract from download limit
-	if entry.DownloadLimit > 0 {
-		entry.DownloadLimit--
-	}
+	entry.Downloaded++
 
 	fs.SharedLinks[token] = entry
-	if fs.SharedLinks[token].DownloadLimit == 0 {
+	if fs.SharedLinks[token].Downloaded >= fs.SharedLinks[token].DownloadLimit {
 		// Remove the share link from map to keep it clean
 		delete(fs.SharedLinks, token)
 	}

@@ -69,6 +69,17 @@ func renderIndex(w http.ResponseWriter, data UIData) error {
 		Funcs(template.FuncMap{
 			// {{if not .Flag}} helper — Go templates don't have "not" built-in
 			"not": func(b bool) bool { return !b },
+			"sub": func(a, b int) int { return a - b },
+			"percent": func(used, total int) int {
+				if total <= 0 {
+					return 0
+				}
+				p := used * 100 / total
+				if p > 100 {
+					return 100
+				}
+				return p
+			},
 		}).
 		ParseFS(static, "static/templates/index.html")
 	if err != nil {

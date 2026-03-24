@@ -131,6 +131,12 @@ func (c *Client) dispatchReadPump(packet Packet) {
 			logger.Debugf("Output: %+v", output)
 			c.updateCLI(output)
 		}
+	case "clearHTTP":
+		c.hub.HTTPLog.Clear()
+	case "clearDNS":
+		c.hub.DNSLog.Clear()
+	case "clearSMTP":
+		c.hub.SMTPLog.Clear()
 
 	default:
 		logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)

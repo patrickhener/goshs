@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initCliHistory();
   connectWS();
   initContextMenu();
+  initSharedLinks();
 });
 
 // ══ THEME ══
@@ -98,7 +99,64 @@ function connectWS() {
     else if (msg.type === "http") onHTTP(msg);
     else if (msg.type === "refreshClipboard") onClipboardUpdate(msg);
     else if (msg.type === "reload") location.reload();
+    else if (msg.type === "catchup") onCatchup(msg);
+    else if (msg.type === "updateCLI") cliOutput(msg);
   };
+}
+
+function onCatchup(msg) {
+  // ── HTTP ──
+  const http = msg.http || [];
+  if (http.length) {
+    // unshift in reverse so newest ends up at index 0
+    for (let i = http.length - 1; i >= 0; i--) {
+      ST.httpEvents.push(http[i]);
+    }
+    ST.httpCnt = ST.httpEvents.length;
+    document.getElementById("http-badge").textContent = ST.httpCnt;
+  }
+
+  // ── DNS ──
+  const dns = msg.dns || [];
+  if (dns.length) {
+    for (let i = dns.length - 1; i >= 0; i--) {
+      const e = dns[i];
+      ST.dnsEvents.push(e);
+      ST.dnsCnt.total++;
+      if (e.qtype === "A") ST.dnsCnt.A++;
+      else if (e.qtype === "MX") ST.dnsCnt.MX++;
+      else if (e.qtype === "TXT") ST.dnsCnt.TXT++;
+      else ST.dnsCnt.other++;
+    }
+    document.getElementById("dns-badge").textContent = ST.dnsEvents.length;
+    document.getElementById("dns-cnt-total").textContent = ST.dnsCnt.total;
+    document.getElementById("dns-cnt-a").textContent = ST.dnsCnt.A;
+    document.getElementById("dns-cnt-mx").textContent = ST.dnsCnt.MX;
+    document.getElementById("dns-cnt-txt").textContent = ST.dnsCnt.TXT;
+    document.getElementById("dns-cnt-other").textContent = ST.dnsCnt.other;
+  }
+
+  // ── SMTP ──
+  const smtp = msg.smtp || [];
+  if (smtp.length) {
+    for (let i = smtp.length - 1; i >= 0; i--) {
+      ST.smtpEvents.push(smtp[i]);
+    }
+    document.getElementById("smtp-badge").textContent = ST.smtpEvents.length;
+  }
+
+  // ── Update the combined collab badge ──
+  const total = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  if (total > 0) {
+    const badge = document.getElementById("collab-badge");
+    badge.classList.add("show");
+    badge.textContent = total;
+  }
+
+  // ── Render everything once ──
+  if (http.length) renderHTTP();
+  if (dns.length) renderDNS();
+  if (smtp.length) renderSMTP();
 }
 
 // ══ HTTP LOG ══
@@ -545,6 +603,7 @@ function clearHTTP() {
   ST.httpEvents = [];
   ST.httpCnt = 0;
   document.getElementById("http-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearHTTP" }));
   renderHTTP();
 }
 
@@ -621,6 +680,7 @@ function clearDNS() {
     if (el) el.textContent = "0";
   });
   document.getElementById("dns-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearDNS" }));
   renderDNS();
 }
 
@@ -684,6 +744,7 @@ function renderSMTP() {
 function clearSMTP() {
   ST.smtpEvents = [];
   document.getElementById("smtp-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearSMTP" }));
   renderSMTP();
 }
 
@@ -1032,6 +1093,85 @@ function showQR(path) {
   openModal("qr-modal");
 }
 
+// ══ SHARED LINKS PANEL ══
+function initSharedLinks() {
+  // Build URLs and relative times for each card
+  const base = location.protocol + "//" + window.location.host;
+  document.querySelectorAll(".share-card").forEach((card) => {
+    const id = card.id.replace("share-card-", "");
+    const urlEl = document.getElementById("share-url-" + id);
+    if (urlEl) {
+      const path = card.querySelector(".share-card-path").textContent.trim();
+      urlEl.textContent = `${base}${path}?token=${id}`;
+    }
+  });
+  updateShareExpiries();
+  setInterval(updateShareExpiries, 30000);
+}
+
+function updateShareExpiries() {
+  const now = Math.floor(Date.now() / 1000);
+  document.querySelectorAll(".share-expiry-rel").forEach((el) => {
+    const exp = parseInt(el.dataset.expires, 10);
+    const diff = exp - now;
+    if (diff <= 0) {
+      el.textContent = "expired";
+      el.style.color = "var(--danger)";
+    } else if (diff < 60) {
+      el.textContent = `in ${diff}s`;
+      el.style.color = "var(--warn)";
+    } else if (diff < 3600) {
+      el.textContent = `in ${Math.floor(diff / 60)}m`;
+      el.style.color = "var(--warn)";
+    } else if (diff < 86400) {
+      el.textContent = `in ${Math.floor(diff / 3600)}h`;
+      el.style.color = "var(--text1)";
+    } else {
+      el.textContent = `in ${Math.floor(diff / 86400)}d`;
+      el.style.color = "var(--text1)";
+    }
+  });
+}
+
+function showShareQR(token) {
+  const urlEl = document.getElementById("share-url-" + token);
+  if (!urlEl) return;
+  const url = urlEl.textContent.trim();
+  new QRious({
+    element: document.getElementById("qr-canvas"),
+    value: url,
+    size: 200,
+  });
+  document.getElementById("qr-url").textContent = url;
+  openModal("qr-modal");
+}
+
+function copyShareUrl(token) {
+  const urlEl = document.getElementById("share-url-" + token);
+  if (!urlEl) return;
+  navigator.clipboard
+    .writeText(urlEl.textContent.trim())
+    .then(() => toast("URL copied", "success"))
+    .catch(() => toast("Copy failed", "error"));
+}
+
+function deleteShareLink(token, path) {
+  // Adjust the endpoint path to match your handler if needed
+  let ok;
+  ok = confirm("Do you really want to delete the shared link?");
+
+  if (ok) {
+    var url = "";
+    location.protocol !== "https:"
+      ? (url = "http://" + window.location.host + "/" + "?token=" + token)
+      : (url = "https://" + window.location.host + "/" + "?token=" + token);
+  }
+
+  fetch(url, { method: "DELETE" });
+  sessionStorage.setItem("activeTab", "nav-share");
+  location.reload();
+}
+
 // ══ CLI ══
 const cliHistory = [];
 let cliHistIdx = -1;
@@ -1046,17 +1186,7 @@ function initCliHistory() {
       cliHistIdx = -1;
       appendCLI(cmd, "cmd");
       input.value = "";
-      fetch("/cli", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cmd }),
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.output) appendCLI(d.output, "");
-          if (d.error) appendCLI(d.error, "err");
-        })
-        .catch(() => appendCLI("error executing command", "err"));
+      ST.ws.send(JSON.stringify({ type: "command", content: cmd }));
     } else if (e.key === "ArrowUp") {
       cliHistIdx = Math.min(cliHistIdx + 1, cliHistory.length - 1);
       input.value = cliHistory[cliHistIdx] || "";
@@ -1071,11 +1201,18 @@ function initCliHistory() {
 function appendCLI(text, cls) {
   const out = document.getElementById("cli-output");
   if (!out) return;
-  const line = document.createElement("p");
+  const line = document.createElement("pre");
   line.className = "cli-line" + (cls ? " " + cls : "");
   line.textContent = text;
   out.appendChild(line);
   out.scrollTop = out.scrollHeight;
+}
+function cliOutput(msg) {
+  if (msg.content) {
+    appendCLI(msg.content, "");
+  } else {
+    appendCLI("something went wrong", "err");
+  }
 }
 
 // ══ MODALS ══

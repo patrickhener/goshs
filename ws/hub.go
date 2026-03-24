@@ -1,6 +1,10 @@
 package ws
 
 import (
+	"bytes"
+	"encoding/json"
+	"sync"
+
 	"github.com/patrickhener/goshs/clipboard"
 )
 
@@ -19,11 +23,19 @@ type Hub struct {
 	// Unregister requests from clients.
 	unregister chan *Client
 
+	// Mutex
+	mu sync.RWMutex
+
 	// Handle clipboard
 	cb *clipboard.Clipboard
 
 	// CLI Enabled
 	cliEnabled bool
+
+	// Ring BUffers - capped storage survives client reconnect
+	HTTPLog *RingBuffer
+	DNSLog  *RingBuffer
+	SMTPLog *RingBuffer
 }
 
 // NewHub will create a new hub
@@ -35,6 +47,9 @@ func NewHub(cb *clipboard.Clipboard, cliEnabled bool) *Hub {
 		clients:    make(map[*Client]bool),
 		cb:         cb,
 		cliEnabled: cliEnabled,
+		HTTPLog:    NewRingBuffer(1000),
+		DNSLog:     NewRingBuffer(1000),
+		SMTPLog:    NewRingBuffer(1000),
 	}
 }
 
@@ -43,13 +58,25 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
+			h.mu.Lock()
 			h.clients[client] = true
+			h.mu.Unlock()
+			// Send existing history to new client
+			go h.sendCatchup(client)
+
 		case client := <-h.unregister:
+			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
+			h.mu.Unlock()
+
 		case message := <-h.Broadcast:
+			// Store in the appropriate ring buffer based on the type field
+			h.classifyAndStore(message)
+			// Fan out to all clients
+			h.mu.RLock()
 			for client := range h.clients {
 				select {
 				case client.send <- message:
@@ -58,6 +85,66 @@ func (h *Hub) Run() {
 					delete(h.clients, client)
 				}
 			}
+			h.mu.RUnlock()
 		}
+	}
+}
+
+// classifyAndStore peeks at the "type" field of the JSON message
+// and stores it in the correct ring buffer.
+func (h *Hub) classifyAndStore(msg []byte) {
+	var peek struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(msg, &peek); err != nil {
+		return
+	}
+	switch peek.Type {
+	case "http":
+		h.HTTPLog.Add(msg)
+	case "dns":
+		h.DNSLog.Add(msg)
+	case "smtp":
+		h.SMTPLog.Add(msg)
+	}
+}
+
+// sendCatchup serialises up to 200 entries from each buffer and sends
+// them as a single "catchup" message to a newly connected client.
+func (h *Hub) sendCatchup(client *Client) {
+	httpEntries := h.HTTPLog.Last(200)
+	dnsEntries := h.DNSLog.Last(200)
+	smtpEntries := h.SMTPLog.Last(200)
+
+	// Marshal each slice of raw JSON messages into a JSON array
+	marshal := func(entries [][]byte) json.RawMessage {
+		if len(entries) == 0 {
+			return json.RawMessage("[]")
+		}
+		var buf bytes.Buffer
+		buf.WriteByte('[')
+		for i, e := range entries {
+			if i > 0 {
+				buf.WriteByte(',')
+			}
+			buf.Write(e)
+		}
+		buf.WriteByte(']')
+		return buf.Bytes()
+	}
+
+	payload := map[string]interface{}{
+		"type": "catchup",
+		"http": marshal(httpEntries),
+		"dns":  marshal(dnsEntries),
+		"smtp": marshal(smtpEntries),
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	select {
+	case client.send <- data:
+	default:
 	}
 }

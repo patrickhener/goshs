@@ -1757,3 +1757,112 @@ textarea {
 .monospace {
     font-family: var(--mono);
 }
+
+/* ── Share Links Panel ── */
+.share-layout {
+    padding: 16px;
+    height: 100%;
+    overflow-y: auto;
+}
+.share-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 12px;
+}
+.share-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+.share-card:hover {
+    border-color: var(--border-hover);
+}
+.share-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+}
+.share-card-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.share-card-path {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.share-card-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.share-card-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.share-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.share-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text1);
+}
+.share-expiry-abs {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    margin-left: 2px;
+}
+.share-dl-count {
+    color: var(--text2);
+    font-size: 11px;
+}
+.share-dl-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg4);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.share-dl-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+.share-card-url {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 6px 8px;
+}
+.share-token-url {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
