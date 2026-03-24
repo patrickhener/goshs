@@ -151,7 +151,7 @@
                 <div class="sidebar-spacer"></div>
                 <button
                     class="snav"
-                    onclick="window.open('/goshs-info', '_blank')"
+                    onclick="window.open('/?goshs-info', '_blank')"
                     title="Info"
                     style="opacity: 0.5"
                 >
@@ -165,7 +165,7 @@
                         <line x1="12" y1="8" x2="12" y2="12" />
                         <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
-                    <span class="snav-label">v{{.GoshsVersion}}</span>
+                    <span class="snav-label">{{.GoshsVersion}}</span>
                 </button>
             </nav>
 
@@ -633,6 +633,12 @@
                                     onclick="downloadClipboard()"
                                 >
                                     Export
+                                </button>
+                                <button
+                                    class="btn btn-danger"
+                                    onclick="clearClipboard()"
+                                >
+                                    Clear
                                 </button>
                             </div>
                         </div>

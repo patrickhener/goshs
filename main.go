@@ -571,10 +571,7 @@ func main() {
 	webhook := webhook.Register(webhookEnable, webhookURL, webhookProvider, webhookEventsParsed)
 
 	// Init clipboard and hub
-	var clip *clipboard.Clipboard
-	if !noClipboard {
-		clip = clipboard.New()
-	}
+	clip := clipboard.New()
 	hub := ws.NewHub(clip, cli)
 
 	go hub.Run()

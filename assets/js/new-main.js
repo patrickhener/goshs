@@ -334,7 +334,17 @@ function deleteClip(id) {
   ST.ws.send(JSON.stringify(msg));
 }
 function downloadClipboard() {
-  window.open("/clipboard/download", "_blank");
+  window.open("/?cbDown", "_blank");
+}
+function clearClipboard() {
+  result = confirm("Are you sure you want to clear the clipboard?");
+  if (result) {
+    var msg = {
+      type: "clearClipboard",
+      content: "",
+    };
+    ST.ws.send(JSON.stringify(msg)).then(() => toast("Cleared!", "success"));
+  }
 }
 
 // ══ FILE OPERATIONS ══
@@ -508,6 +518,7 @@ function startUpload() {
 function createDir() {
   const name = document.getElementById("mkdir-input").value.trim();
   if (!name) return;
+  /*
   fetch("/mkdir", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -521,6 +532,8 @@ function createDir() {
       } else toast("Failed", "error");
     })
     .catch(() => toast("Network error", "error"));
+    */
+  alert("Needs implementation");
 }
 
 // ══ DRAG-DROP ══
