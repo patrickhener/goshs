@@ -85,6 +85,7 @@ type FileServer struct {
 	Whitelist      *Whitelist
 	SharedLinks    map[string]SharedLink
 	Tunnel         bool
+	TunnelURL      string
 }
 
 type httperror struct {

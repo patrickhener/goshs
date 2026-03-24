@@ -129,7 +129,28 @@
                     <span class="snav-label">Collab</span>
                     <span class="badge" id="collab-badge"></span>
                 </button>
-                {{if .CLI}}
+                {{ if gt (len .SharedLinks) 0}}
+                <button
+                    class="snav"
+                    id="nav-share"
+                    onclick="switchPanel('share', this)"
+                    title="Shared Links"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    <span class="snav-label">Shared Links</span>
+                </button>
+                {{ end}} {{if .CLI}}
                 <button
                     class="snav"
                     id="nav-cli"
@@ -492,9 +513,10 @@
                                                     ></rect>
                                                 </svg>
                                             </button>
+                                            {{ if .Auth }}
                                             <button
                                                 class="btn btn-sm"
-                                                onclick="shareFile('{{.Name}}')"
+                                                onclick="shareFile('{{.RelPath}}/{{.Name}}')"
                                                 title="Share link"
                                             >
                                                 <svg
@@ -532,8 +554,8 @@
                                                     />
                                                 </svg>
                                             </button>
-                                            {{if and (not $.NoDelete) (not
-                                            $.ReadOnly)}}
+                                            {{ end }} {{if and (not $.NoDelete)
+                                            (not $.ReadOnly)}}
                                             <button
                                                 class="btn btn-sm btn-danger"
                                                 onclick="deleteFile('{{.RelPath}}/{{.Name}}',false)"
@@ -1043,6 +1065,11 @@
                     </div>
                 </section>
 
+                <!-- ████ SHARE LINKS PANEL ████ -->
+                <section class="panel" id="panel-share">
+                    <div class="share-layout"></div>
+                </section>
+
                 <!-- ████ CLI PANEL ████ -->
                 {{if .CLI}}
                 <section class="panel" id="panel-cli">
@@ -1220,16 +1247,23 @@
                             />
                         </div>
                         <div class="share-opt-row">
-                            <label>Expire after (minutes, 0 = never)</label>
+                            <label>Expire after (minutes, default = 60)</label>
                             <input
                                 type="number"
                                 id="share-expire"
-                                value="0"
+                                value="60"
                                 min="0"
                             />
                         </div>
                     </div>
                     <div class="share-link-result" id="share-result"></div>
+                    <div class="share-link-result" id="share-result-qr">
+                        <img
+                            id="share-qr-canvas"
+                            alt="QR Code"
+                            style="width: 200px; height: 200px"
+                        />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn" onclick="closeModal('share-modal')">

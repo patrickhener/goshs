@@ -979,19 +979,41 @@ function shareFile(name) {
 }
 function generateShareLink() {
   const limit = document.getElementById("share-limit").value;
-  const expire = document.getElementById("share-expire").value;
-  const params = new URLSearchParams({ file: _shareTarget });
-  if (parseInt(limit) > 0) params.set("limit", limit);
-  if (parseInt(expire) > 0) params.set("expire", expire);
-  fetch("/share?" + params.toString())
+  const expire = parseInt(document.getElementById("share-expire").value) || 60;
+  const expireSeconds = expire * 60;
+
+  var base = "";
+  location.protocol !== "https:"
+    ? (base = "http://" + window.location.host)
+    : (base = "https://" + window.location.host);
+
+  let url = `${base}${_shareTarget}?share&expires=${expireSeconds}`;
+  if (parseInt(limit) > 0) {
+    url += `&limit=${encodeURIComponent(limit)}`;
+  } else {
+    url += "&limit=-1";
+  }
+
+  fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  })
     .then((r) => r.json())
     .then((d) => {
       const res = document.getElementById("share-result");
-      res.textContent = location.origin + d.url;
+      res.style.whiteSpace = "pre";
       res.style.display = "block";
-      navigator.clipboard
-        .writeText(location.origin + d.url)
-        .then(() => toast("Link copied!", "success"));
+      res.textContent = d.urls.join("\n");
+
+      const qr = document.getElementById("share-result-qr");
+      qr.style.display = "block";
+      new QRious({
+        element: document.getElementById("share-qr-canvas"),
+        value: d.urls[0],
+        size: 200,
+      });
     })
     .catch(() => toast("Share failed", "error"));
 }
@@ -1005,7 +1027,7 @@ function showQR(path) {
   link = `${url}/${path}`.replaceAll("//", "/");
 
   // Generate QR code on canvas
-  var qr = new QRious({
+  new QRious({
     element: document.getElementById("qr-canvas"),
     value: link,
     size: 200,
@@ -1067,6 +1089,9 @@ function openModal(id) {
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove("open");
+  if (id === "share-modal") {
+    location.reload();
+  }
 }
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) closeModal(e.target.id);

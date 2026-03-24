@@ -101,6 +101,10 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 }
 
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
+	if _, ok := req.URL.Query()["goshs-info"]; ok {
+		fs.handleInfo(w)
+		return true
+	}
 	if _, ok := req.URL.Query()["ws"]; ok {
 		fs.socket(w, req)
 		return true
@@ -357,6 +361,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 			LastModRaw: item.SortLastModified,
 			Extension:  item.Ext,
 			QRCode:     qrcode,
+			Auth:       fileS.Pass != "" || fileS.CACert != "",
 		})
 	}
 
@@ -400,6 +405,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		Embedded:        fileS.Embedded,
 		Items:           fileItems,
 		Clipboard:       clipEntries,
+		SharedLinks:     fileS.SharedLinks,
 	}
 
 	renderIndex(w, uiData)

@@ -124,8 +124,8 @@ func (fs *FileServer) StartListener(server *http.Server, what string, listener n
 				fs.AddCertAuth(server)
 			}
 
-			fs.Fingerprint256 = fingerprint256
-			fs.Fingerprint1 = fingerprint1
+			fs.Fingerprint256 = strings.TrimRight(fingerprint256, " ")
+			fs.Fingerprint1 = strings.TrimRight(fingerprint1, " ")
 			fs.logStart(what)
 
 			// Drop privs if needed
@@ -247,16 +247,6 @@ func (fs *FileServer) Start(what string) {
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
-	// init clipboard
-	/*
-		if !fs.NoClipboard {
-			fs.Clipboard = clipboard.New()
-
-			// init websocket hub
-			fs.Hub = ws.NewHub(fs.Clipboard, fs.CLI)
-			go fs.Hub.Run()
-			}*/
-
 	// Print silent banner
 	if fs.Silent {
 		logger.Info("Serving in silent mode - no dir listing available at HTTP Listener")
@@ -273,6 +263,7 @@ func (fs *FileServer) Start(what string) {
 		} else {
 			defer t.Close()
 			logger.Infof("Public tunnel URL: %s", t.PublicURL)
+			fs.TunnelURL = t.PublicURL
 		}
 	}
 

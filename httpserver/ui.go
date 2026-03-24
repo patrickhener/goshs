@@ -19,6 +19,7 @@ type UIData struct {
 	BreadcrumbParts []BreadcrumbPart
 	Subdirectory    bool
 	QRCode          string
+	SharedLinks     map[string]SharedLink
 
 	// Feature flags (controls which tabs/buttons appear)
 	ReadOnly    bool
@@ -52,6 +53,7 @@ type FileItem struct {
 	LastModRaw int64  // unix timestamp, used for JS sorting
 	Extension  string // lowercase with dot, e.g. ".go"
 	QRCode     string
+	Auth       bool
 }
 
 // ClipEntry is a single clipboard entry rendered server-side.
