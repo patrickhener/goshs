@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>goshs {{.GoshsVersion}} — {{.AbsPath}}</title>
-        <link rel="stylesheet" href="/css/new_style.css?static" />
+        <link rel="stylesheet" href="/css/style.css?static" />
     </head>
     <body>
         <!-- ═══════════ TOPBAR ═══════════ -->
@@ -27,7 +27,7 @@
                 <span class="path-seg">{{.AbsPath}}</span>
             </div>
             <div class="topbar-actions">
-                <button class="ibtn" onclick="showQR()" title="QR Code">
+                <button class="ibtn" onclick="showQR('')" title="QR Code">
                     <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -370,6 +370,8 @@
                                     data-size="{{.SizeRaw}}"
                                     data-mtime="{{.LastModRaw}}"
                                     data-isdir="{{.IsDir}}"
+                                    data-value="{{.RelPath}}/{{.Name}}"
+                                    data-qr="{{.QRCode}}"
                                 >
                                     {{if not $.ReadOnly}}
                                     <td class="row-check">
@@ -434,6 +436,64 @@
                                             {{end}}
                                             <button
                                                 class="btn btn-sm"
+                                                onclick="showQR('{{.RelPath}}/{{.Name}}')"
+                                                title="QRCode"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <rect
+                                                        x="3"
+                                                        y="3"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="3"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="3"
+                                                        y="14"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="14"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="18"
+                                                        y="14"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="18"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="18"
+                                                        y="18"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                </svg>
+                                            </button>
+                                            <button
+                                                class="btn btn-sm"
                                                 onclick="shareFile('{{.Name}}')"
                                                 title="Share link"
                                             >
@@ -476,7 +536,7 @@
                                             $.ReadOnly)}}
                                             <button
                                                 class="btn btn-sm btn-danger"
-                                                onclick="deleteFile('{{.Name}}')"
+                                                onclick="deleteFile('{{.RelPath}}/{{.Name}}',false)"
                                                 title="Delete"
                                             >
                                                 <svg
@@ -1116,7 +1176,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="qr-container">
-                        <canvas id="qr-canvas"></canvas>
+                        <img
+                            id="qr-canvas"
+                            alt="QR Code"
+                            style="width: 200px; height: 200px"
+                        />
                     </div>
                     <div
                         style="
@@ -1352,6 +1416,7 @@
         {{end}} {{end}}
 
         <!-- ═══════════ JAVASCRIPT ═══════════ -->
-        <script src="/js/new-main.min.js?static"></script>
+        <script src="/js/main.min.js?static"></script>
+        <script src="/js/qrious.js?static"></script>
     </body>
 </html>

@@ -18,6 +18,7 @@ type UIData struct {
 	AbsPath         string
 	BreadcrumbParts []BreadcrumbPart
 	Subdirectory    bool
+	QRCode          string
 
 	// Feature flags (controls which tabs/buttons appear)
 	ReadOnly    bool
@@ -42,6 +43,7 @@ type BreadcrumbPart struct {
 
 // FileItem represents one row in the file listing table.
 type FileItem struct {
+	RelPath    string
 	Name       string
 	IsDir      bool
 	Size       string // human-readable, e.g. "1.4 MB"
@@ -49,6 +51,7 @@ type FileItem struct {
 	LastMod    string // formatted date string
 	LastModRaw int64  // unix timestamp, used for JS sorting
 	Extension  string // lowercase with dot, e.g. ".go"
+	QRCode     string
 }
 
 // ClipEntry is a single clipboard entry rendered server-side.

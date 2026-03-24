@@ -2,17 +2,17 @@
 Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
 */
 !(function (t, e) {
-  'object' == typeof exports && 'undefined' != typeof module
+  "object" == typeof exports && "undefined" != typeof module
     ? (module.exports = e())
-    : 'function' == typeof define && define.amd
-    ? define(e)
-    : (t.QRious = e());
+    : "function" == typeof define && define.amd
+      ? define(e)
+      : (t.QRious = e());
 })(this, function () {
-  'use strict';
+  "use strict";
   function t(t, e) {
     var n;
     return (
-      'function' == typeof Object.create
+      "function" == typeof Object.create
         ? (n = Object.create(t))
         : ((s.prototype = t), (n = new s()), (s.prototype = null)),
       e && i(!0, n, e),
@@ -22,8 +22,8 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
   function e(e, n, s, r) {
     var o = this;
     return (
-      'string' != typeof e && ((r = s), (s = n), (n = e), (e = null)),
-      'function' != typeof n &&
+      "string" != typeof e && ((r = s), (s = n), (n = e), (e = null)),
+      "function" != typeof n &&
         ((r = s),
         (s = n),
         (n = function () {
@@ -48,20 +48,21 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
     r = Object.prototype.hasOwnProperty,
     o = Array.prototype.slice,
     a = e;
-  (n.class_ = 'Nevis'), (n.super_ = Object), (n.extend = a);
+  ((n.class_ = "Nevis"), (n.super_ = Object), (n.extend = a));
   var h = n,
     f = h.extend(
       function (t, e, i) {
-        (this.qrious = t),
+        ((this.qrious = t),
           (this.element = e),
           (this.element.qrious = t),
-          (this.enabled = Boolean(i));
+          (this.enabled = Boolean(i)));
       },
       {
         draw: function (t) {},
         getElement: function () {
           return (
-            this.enabled || ((this.enabled = !0), this.render()), this.element
+            this.enabled || ((this.enabled = !0), this.render()),
+            this.element
           );
         },
         getModuleSize: function (t) {
@@ -83,7 +84,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         },
         reset: function () {},
         resize: function () {},
-      }
+      },
     ),
     c = f.extend({
       draw: function (t) {
@@ -92,7 +93,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           n = this.qrious,
           s = this.getModuleSize(t),
           r = this.getOffset(t),
-          o = this.element.getContext('2d');
+          o = this.element.getContext("2d");
         for (
           o.fillStyle = n.foreground, o.globalAlpha = n.foregroundAlpha, e = 0;
           e < t.width;
@@ -103,13 +104,13 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
       },
       reset: function () {
         var t = this.qrious,
-          e = this.element.getContext('2d'),
+          e = this.element.getContext("2d"),
           i = t.size;
-        (e.lineWidth = 1),
+        ((e.lineWidth = 1),
           e.clearRect(0, 0, i, i),
           (e.fillStyle = t.background),
           (e.globalAlpha = t.backgroundAlpha),
-          e.fillRect(0, 0, i, i);
+          e.fillRect(0, 0, i, i));
       },
       resize: function () {
         var t = this.element;
@@ -238,14 +239,13 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           (i = l.BLOCKS[n]),
           (n = e * (s + r) + r - 3 + (this._version <= 9)),
           !(o <= n));
-
         );
-        (this._dataBlock = e),
+        ((this._dataBlock = e),
           (this._eccBlock = i),
           (this._neccBlock1 = s),
-          (this._neccBlock2 = r);
+          (this._neccBlock2 = r));
         var a = (this.width = 17 + 4 * this._version);
-        (this.buffer = v._createArray(a * a)),
+        ((this.buffer = v._createArray(a * a)),
           (this._ecc = v._createArray(e + (e + i) * (s + r) + r)),
           (this._mask = v._createArray((a * (a + 1) + 1) / 2)),
           this._insertFinders(),
@@ -261,7 +261,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           this._appendEccToData(),
           this._interleaveBlocks(),
           this._pack(),
-          this._finish();
+          this._finish());
       },
       {
         _addAlignment: function (t, e) {
@@ -269,15 +269,15 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             n = this.buffer,
             s = this.width;
           for (n[t + s * e] = 1, i = -2; i < 2; i++)
-            (n[t + i + s * (e - 2)] = 1),
+            ((n[t + i + s * (e - 2)] = 1),
               (n[t - 2 + s * (e + i + 1)] = 1),
               (n[t + 2 + s * (e + i)] = 1),
-              (n[t + i + 1 + s * (e + 2)] = 1);
+              (n[t + i + 1 + s * (e + 2)] = 1));
           for (i = 0; i < 2; i++)
-            this._setMask(t - 1, e + i),
+            (this._setMask(t - 1, e + i),
               this._setMask(t + 1, e - i),
               this._setMask(t - i, e - 1),
-              this._setMask(t + i, e + 1);
+              this._setMask(t + i, e + 1));
         },
         _appendData: function (t, e, i, n) {
           var s,
@@ -301,9 +301,9 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             n = this._calculateMaxLength(),
             s = this._eccBlock;
           for (t = 0; t < this._neccBlock1; t++)
-            this._appendData(e, i, n, s), (e += i), (n += s);
+            (this._appendData(e, i, n, s), (e += i), (n += s));
           for (t = 0; t < this._neccBlock2; t++)
-            this._appendData(e, i + 1, n, s), (e += i + 1), (n += s);
+            (this._appendData(e, i + 1, n, s), (e += i + 1), (n += s));
         },
         _applyMask: function (t) {
           var e,
@@ -326,44 +326,44 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             case 2:
               for (s = 0; s < o; s++)
                 for (e = 0, n = 0; n < o; n++, e++)
-                  3 === e && (e = 0),
-                    e || this._isMasked(n, s) || (r[n + s * o] ^= 1);
+                  (3 === e && (e = 0),
+                    e || this._isMasked(n, s) || (r[n + s * o] ^= 1));
               break;
             case 3:
               for (i = 0, s = 0; s < o; s++, i++)
                 for (3 === i && (i = 0), e = i, n = 0; n < o; n++, e++)
-                  3 === e && (e = 0),
-                    e || this._isMasked(n, s) || (r[n + s * o] ^= 1);
+                  (3 === e && (e = 0),
+                    e || this._isMasked(n, s) || (r[n + s * o] ^= 1));
               break;
             case 4:
               for (s = 0; s < o; s++)
                 for (e = 0, i = (s >> 1) & 1, n = 0; n < o; n++, e++)
-                  3 === e && ((e = 0), (i = !i)),
-                    i || this._isMasked(n, s) || (r[n + s * o] ^= 1);
+                  (3 === e && ((e = 0), (i = !i)),
+                    i || this._isMasked(n, s) || (r[n + s * o] ^= 1));
               break;
             case 5:
               for (i = 0, s = 0; s < o; s++, i++)
                 for (3 === i && (i = 0), e = 0, n = 0; n < o; n++, e++)
-                  3 === e && (e = 0),
+                  (3 === e && (e = 0),
                     (n & s & 1) + !(!e | !i) ||
                       this._isMasked(n, s) ||
-                      (r[n + s * o] ^= 1);
+                      (r[n + s * o] ^= 1));
               break;
             case 6:
               for (i = 0, s = 0; s < o; s++, i++)
                 for (3 === i && (i = 0), e = 0, n = 0; n < o; n++, e++)
-                  3 === e && (e = 0),
+                  (3 === e && (e = 0),
                     ((n & s & 1) + (e && e === i)) & 1 ||
                       this._isMasked(n, s) ||
-                      (r[n + s * o] ^= 1);
+                      (r[n + s * o] ^= 1));
               break;
             case 7:
               for (i = 0, s = 0; s < o; s++, i++)
                 for (3 === i && (i = 0), e = 0, n = 0; n < o; n++, e++)
-                  3 === e && (e = 0),
+                  (3 === e && (e = 0),
                     ((e && e === i) + ((n + s) & 1)) & 1 ||
                       this._isMasked(n, s) ||
-                      (r[n + s * o] ^= 1);
+                      (r[n + s * o] ^= 1));
           }
         },
         _calculateMaxLength: function () {
@@ -412,17 +412,17 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           var f = 0;
           for (s = 0; s < h; s++) {
             for (i = 0, o[0] = 0, t = 0, n = 0; n < h; n++)
-              t === (e = a[n + h * s]) ? o[i]++ : (o[++i] = 1),
-                (f += (t = e) ? 1 : -1);
+              (t === (e = a[n + h * s]) ? o[i]++ : (o[++i] = 1),
+                (f += (t = e) ? 1 : -1));
             r += this._getBadness(i);
           }
           f < 0 && (f = -f);
           var c = 0,
             u = f;
-          for (u += u << 2, u <<= 1; u > h * h; ) (u -= h * h), c++;
+          for (u += u << 2, u <<= 1; u > h * h; ) ((u -= h * h), c++);
           for (r += c * v.N4, n = 0; n < h; n++) {
             for (i = 0, o[0] = 0, t = 0, s = 0; s < h; s++)
-              t === (e = a[n + h * s]) ? o[i]++ : (o[++i] = 1), (t = e);
+              (t === (e = a[n + h * s]) ? o[i]++ : (o[++i] = 1), (t = e));
             r += this._getBadness(i);
           }
           return r;
@@ -439,14 +439,16 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           var a = t;
           if (s > 9) {
             for (r[a + 2] = 0, r[a + 3] = 0; a--; )
-              (e = r[a]), (r[a + 3] |= 255 & (e << 4)), (r[a + 2] = e >> 4);
-            (r[2] |= 255 & (t << 4)), (r[1] = t >> 4), (r[0] = 64 | (t >> 12));
+              ((e = r[a]), (r[a + 3] |= 255 & (e << 4)), (r[a + 2] = e >> 4));
+            ((r[2] |= 255 & (t << 4)),
+              (r[1] = t >> 4),
+              (r[0] = 64 | (t >> 12)));
           } else {
             for (r[a + 1] = 0, r[a + 2] = 0; a--; )
-              (e = r[a]), (r[a + 2] |= 255 & (e << 4)), (r[a + 1] = e >> 4);
-            (r[1] |= 255 & (t << 4)), (r[0] = 64 | (t >> 4));
+              ((e = r[a]), (r[a + 2] |= 255 & (e << 4)), (r[a + 1] = e >> 4));
+            ((r[1] |= 255 & (t << 4)), (r[0] = 64 | (t >> 4)));
           }
-          for (a = t + 3 - (s < 10); a < o; ) (r[a++] = 236), (r[a++] = 17);
+          for (a = t + 3 - (s < 10); a < o; ) ((r[a++] = 236), (r[a++] = 17));
         },
         _getBadness: function (t) {
           var e,
@@ -480,8 +482,8 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             e++
           )
             this.buffer = this._stringBuffer.slice();
-          i !== e && this._applyMask(i),
-            (n = l.FINAL_FORMAT[i + ((this._level - 1) << 3)]);
+          (i !== e && this._applyMask(i),
+            (n = l.FINAL_FORMAT[i + ((this._level - 1) << 3)]));
           var s = this.buffer,
             r = this.width;
           for (e = 0; e < 8; e++, n >>= 1)
@@ -524,11 +526,10 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
               for (
                 e = s - 7;
                 e > t - 3 && (this._addAlignment(e, i), !(e < t));
-
               )
                 e -= t;
               if (i <= t + 9) break;
-              (i -= t), this._addAlignment(6, i), this._addAlignment(i, 6);
+              ((i -= t), this._addAlignment(6, i), this._addAlignment(i, 6));
             }
         },
         _insertFinders: function () {
@@ -549,20 +550,20 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
               i < 6;
               i++
             )
-              (s[n + i + r * e] = 1),
+              ((s[n + i + r * e] = 1),
                 (s[n + r * (e + i + 1)] = 1),
                 (s[n + 6 + r * (e + i)] = 1),
-                (s[n + i + 1 + r * (e + 6)] = 1);
+                (s[n + i + 1 + r * (e + 6)] = 1));
             for (i = 1; i < 5; i++)
-              this._setMask(n + i, e + 1),
+              (this._setMask(n + i, e + 1),
                 this._setMask(n + 1, e + i + 1),
                 this._setMask(n + 5, e + i),
-                this._setMask(n + i + 1, e + 5);
+                this._setMask(n + i + 1, e + 5));
             for (i = 2; i < 4; i++)
-              (s[n + i + r * (e + 2)] = 1),
+              ((s[n + i + r * (e + 2)] = 1),
                 (s[n + 2 + r * (e + i + 1)] = 1),
                 (s[n + 4 + r * (e + i)] = 1),
-                (s[n + i + 1 + r * (e + 4)] = 1);
+                (s[n + i + 1 + r * (e + 4)] = 1));
           }
         },
         _insertTimingGap: function () {
@@ -570,13 +571,13 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             e,
             i = this.width;
           for (e = 0; e < 7; e++)
-            this._setMask(7, e),
+            (this._setMask(7, e),
               this._setMask(i - 8, e),
-              this._setMask(7, e + i - 7);
+              this._setMask(7, e + i - 7));
           for (t = 0; t < 8; t++)
-            this._setMask(t, 7),
+            (this._setMask(t, 7),
               this._setMask(t + i - 8, 7),
-              this._setMask(t, i - 8);
+              this._setMask(t, i - 8));
         },
         _insertTimingRowAndColumn: function () {
           var t,
@@ -625,7 +626,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             for (t = this._stringBuffer[e], i = 0; i < 8; i++, t <<= 1) {
               128 & t && (this.buffer[o + r * a] = 1);
               do {
-                s
+                (s
                   ? o--
                   : (o++,
                     n
@@ -633,9 +634,9 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
                         ? a--
                         : ((n = !n), 6 === (o -= 2) && (o--, (a = 9)))
                       : a !== r - 1
-                      ? a++
-                      : ((n = !n), 6 === (o -= 2) && (o--, (a -= 8)))),
-                  (s = !s);
+                        ? a++
+                        : ((n = !n), 6 === (o -= 2) && (o--, (a -= 8)))),
+                  (s = !s));
               } while (this._isMasked(o, a));
             }
         },
@@ -645,7 +646,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
             i = this.width;
           for (t = 0; t < 9; t++) this._setMask(t, 8);
           for (t = 0; t < 8; t++)
-            this._setMask(t + i - 8, 8), this._setMask(8, t);
+            (this._setMask(t + i - 8, 8), this._setMask(8, t));
           for (e = 0; e < 7; e++) this._setMask(8, e + i - 7);
         },
         _setMask: function (t, e) {
@@ -686,7 +687,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         N2: 3,
         N3: 40,
         N4: 10,
-      }
+      },
     ),
     p = v,
     m = f.extend({
@@ -694,7 +695,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         this.element.src = this.qrious.toDataURL();
       },
       reset: function () {
-        this.element.src = '';
+        this.element.src = "";
       },
       resize: function () {
         var t = this.element;
@@ -703,17 +704,17 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
     }),
     g = h.extend(
       function (t, e, i, n) {
-        (this.name = t),
+        ((this.name = t),
           (this.modifiable = Boolean(e)),
           (this.defaultValue = i),
-          (this._valueTransformer = n);
+          (this._valueTransformer = n));
       },
       {
         transform: function (t) {
           var e = this._valueTransformer;
-          return 'function' == typeof e ? e(t, this) : t;
+          return "function" == typeof e ? e(t, this) : t;
         },
-      }
+      },
     ),
     k = h.extend(null, {
       abs: function (t) {
@@ -729,10 +730,10 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
     }),
     w = h.extend(
       function (t) {
-        (this.options = {}),
+        ((this.options = {}),
           t.forEach(function (t) {
             this.options[t.name] = t;
-          }, this);
+          }, this));
       },
       {
         exists: function (t) {
@@ -749,7 +750,7 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           return n;
         },
         init: function (t, e, i) {
-          'function' != typeof i && (i = k.noop);
+          "function" != typeof i && (i = k.noop);
           var n, s;
           for (n in this.options)
             k.hasOwn(this.options, n) &&
@@ -766,9 +767,9 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         },
         _set: function (t, e, i, n) {
           var s = this.options[t];
-          if (!s) throw new Error('Invalid option: ' + t);
+          if (!s) throw new Error("Invalid option: " + t);
           if (!s.modifiable && !n)
-            throw new Error('Option cannot be modified: ' + t);
+            throw new Error("Option cannot be modified: " + t);
           return w._set(s, e, i);
         },
         _setAll: function (t, e, i) {
@@ -786,22 +787,22 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
               return w._get(t, e);
             },
           };
-          t.modifiable &&
+          (t.modifiable &&
             (n.set = function (n) {
               w._set(t, n, e) && i(n, t);
             }),
-            Object.defineProperty(e, t.name, n);
+            Object.defineProperty(e, t.name, n));
         },
         _get: function (t, e) {
-          return e['_' + t.name];
+          return e["_" + t.name];
         },
         _set: function (t, e, i) {
-          var n = '_' + t.name,
+          var n = "_" + t.name,
             s = i[n],
             r = t.transform(null != e ? e : t.defaultValue);
-          return (i[n] = r), r !== s;
+          return ((i[n] = r), r !== s);
         },
-      }
+      },
     ),
     M = w,
     b = h.extend(
@@ -812,39 +813,39 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         getService: function (t) {
           var e = this._services[t];
           if (!e)
-            throw new Error('Service is not being managed with name: ' + t);
+            throw new Error("Service is not being managed with name: " + t);
           return e;
         },
         setService: function (t, e) {
           if (this._services[t])
-            throw new Error('Service is already managed with name: ' + t);
+            throw new Error("Service is already managed with name: " + t);
           e && (this._services[t] = e);
         },
-      }
+      },
     ),
     B = new M([
-      new g('background', !0, 'white'),
-      new g('backgroundAlpha', !0, 1, k.abs),
-      new g('element'),
-      new g('foreground', !0, 'black'),
-      new g('foregroundAlpha', !0, 1, k.abs),
-      new g('level', !0, 'L', k.toUpperCase),
-      new g('mime', !0, 'image/png'),
-      new g('padding', !0, null, k.abs),
-      new g('size', !0, 100, k.abs),
-      new g('value', !0, ''),
+      new g("background", !0, "white"),
+      new g("backgroundAlpha", !0, 1, k.abs),
+      new g("element"),
+      new g("foreground", !0, "black"),
+      new g("foregroundAlpha", !0, 1, k.abs),
+      new g("level", !0, "L", k.toUpperCase),
+      new g("mime", !0, "image/png"),
+      new g("padding", !0, null, k.abs),
+      new g("size", !0, 100, k.abs),
+      new g("value", !0, ""),
     ]),
     y = new b(),
     O = h.extend(
       function (t) {
         B.init(t, this, this.update.bind(this));
-        var e = B.get('element', this),
-          i = y.getService('element'),
+        var e = B.get("element", this),
+          i = y.getService("element"),
           n = e && i.isCanvas(e) ? e : i.createCanvas(),
           s = e && i.isImage(e) ? e : i.createImage();
-        (this._canvasRenderer = new c(this, n, !0)),
+        ((this._canvasRenderer = new c(this, n, !0)),
           (this._imageRenderer = new m(this, s, s === e)),
-          this.update();
+          this.update());
       },
       {
         get: function () {
@@ -858,14 +859,14 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         },
         update: function () {
           var t = new p({ level: this.level, value: this.value });
-          this._canvasRenderer.render(t), this._imageRenderer.render(t);
+          (this._canvasRenderer.render(t), this._imageRenderer.render(t));
         },
       },
       {
         use: function (t) {
           y.setService(t.getName(), t);
         },
-      }
+      },
     );
   Object.defineProperties(O.prototype, {
     canvas: {
@@ -886,17 +887,17 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
         createCanvas: function () {},
         createImage: function () {},
         getName: function () {
-          return 'element';
+          return "element";
         },
         isCanvas: function (t) {},
         isImage: function (t) {},
       })
       .extend({
         createCanvas: function () {
-          return document.createElement('canvas');
+          return document.createElement("canvas");
         },
         createImage: function () {
-          return document.createElement('img');
+          return document.createElement("img");
         },
         isCanvas: function (t) {
           return t instanceof HTMLCanvasElement;
@@ -905,5 +906,5 @@ Based on jsqrencode | (C) 2010 tz@execpc.com | GPL v3 License
           return t instanceof HTMLImageElement;
         },
       });
-  return A.use(new L()), A;
+  return (A.use(new L()), A);
 });
