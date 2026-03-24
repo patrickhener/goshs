@@ -105,6 +105,7 @@ function onHTTP(e) {
   badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
   renderHTTP();
 }
+
 function methodClass(m) {
   const map = {
     GET: "m-get",
@@ -112,7 +113,7 @@ function methodClass(m) {
     PUT: "m-put",
     DELETE: "m-delete",
   };
-  return map[m.toUpperCase()] || "m-other";
+  return map[(m || "").toUpperCase()] || "m-other";
 }
 function statusClass(s) {
   if (s >= 200 && s < 300) return "s2xx";
@@ -121,38 +122,419 @@ function statusClass(s) {
   if (s >= 500) return "s5xx";
   return "";
 }
+
 function renderHTTP() {
   const filter = (
     document.getElementById("http-search").value || ""
   ).toLowerCase();
   const tbody = document.getElementById("http-tbody");
   const empty = document.getElementById("http-empty-row");
+
   const vis = ST.httpEvents.filter(
     (e) =>
       !filter ||
-      (e.path || "").toLowerCase().includes(filter) ||
+      (e.url || "").toLowerCase().includes(filter) ||
       (e.method || "").toLowerCase().includes(filter) ||
-      (e.ip || "").toLowerCase().includes(filter),
+      (e.source || "").toLowerCase().includes(filter) ||
+      (e.useragent || "").toLowerCase().includes(filter) ||
+      String(e.status || "").includes(filter),
   );
+
   empty.style.display = vis.length ? "none" : "";
-  tbody.querySelectorAll("tr.data-row").forEach((r) => r.remove());
+  tbody
+    .querySelectorAll("tr.data-row, tr.http-detail-row")
+    .forEach((r) => r.remove());
+
   vis.slice(0, 500).forEach((e, i) => {
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+    const hasBody = e.body && e.body.trim().length > 0;
+    const hasParams = e.parameters && e.parameters.trim().length > 0;
+    const detailId = "http-detail-" + i;
+    //
+    // detect & decode params
+    const paramDisplay = hasParams
+      ? (() => {
+          const decoded = decodeParams(e.parameters);
+          // check if any decoding happened
+          const hasDecoded = e.parameters !== decoded;
+          return { text: decoded, decoded: hasDecoded };
+        })()
+      : null;
+
+    // detect & decode body
+    const bodyDisplay = hasBody ? smartDecode(e.body) : null;
+
+    // ── main row ──
     const tr = document.createElement("tr");
     tr.className = "data-row" + (i === 0 && !filter ? " new-row" : "");
     tr.innerHTML = `
-<td class="http-ts">${e.time || ""}</td>
-<td><span class="http-method ${methodClass(e.method || "")}">${esc(e.method || "?")}</span></td>
-<td><span class="status-code ${statusClass(e.status || 0)}">${e.status || "?"}</span></td>
-<td class="http-path">${esc(e.path || "")}</td>
-<td class="http-ip">${esc(e.ip || "")}</td>
-<td class="http-ts">${esc(e.size || "")}</td>`;
+      <td class="http-ts">${esc(ts)}</td>
+      <td><span class="http-method ${methodClass(e.method)}">${esc(e.method || "?")}</span></td>
+      <td><span class="status-code ${statusClass(e.status)}">${esc(String(e.status || "?"))}</span></td>
+      <td class="http-path" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.url || "")}">${esc(e.url || "")}</td>
+      <td class="http-ip">${esc(e.source || "")}</td>
+      <td><button class="http-expand-btn" onclick="toggleHTTPDetail(this, '${detailId}')" title="Details">▾</button></td>`;
+
     tbody.insertBefore(tr, empty.nextSibling || null);
     tbody.appendChild(tr);
+
+    // ── detail row (hidden by default) ──
+    const dr = document.createElement("tr");
+    dr.className = "http-detail-row";
+    dr.id = detailId;
+    dr.style.display = "none";
+    dr.innerHTML = `<td colspan="6">
+      <div class="http-detail-inner">
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Full URL</span>
+          <div class="http-detail-value">${esc(e.url || "—")}</div>
+        </div>
+        ${
+          paramDisplay
+            ? `
+        <div class="http-detail-field full">
+          <span class="http-detail-label">
+            Query parameters
+            ${paramDisplay.decoded ? '<span class="decode-tag">decoded</span>' : ""}
+          </span>
+          <div class="http-detail-value">${esc(paramDisplay.text)}</div>
+        </div>`
+            : ""
+        }
+        <div class="http-detail-field">
+          <span class="http-detail-label">Source IP</span>
+          <div class="http-detail-value">${esc(e.source || "—")}</div>
+        </div>
+        <div class="http-detail-field">
+          <span class="http-detail-label">Status</span>
+          <div class="http-detail-value">${esc(String(e.status || "—"))}</div>
+        </div>
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Headers</span>
+          <div class="http-detail-value">${esc(fmtHeaders(e.headers))}</div>
+        </div>
+        ${
+          bodyDisplay
+            ? `
+        <div class="http-detail-field full">
+          <span class="http-detail-label">
+            Request body
+            ${bodyDisplay.tag ? `<span class="decode-tag">${esc(bodyDisplay.tag)}</span>` : ""}
+          </span>
+          <div class="http-detail-value">${esc(bodyDisplay.text)}</div>
+        </div>`
+            : ""
+        }
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Timestamp</span>
+          <div class="http-detail-value">${esc(e.timestamp ? new Date(e.timestamp).toLocaleString() : "—")}</div>
+        </div>
+      </div>
+    </td>`;
+    tbody.appendChild(dr);
   });
 }
+
+function toggleHTTPDetail(btn, id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  const open = row.style.display !== "none";
+  row.style.display = open ? "none" : "";
+  btn.textContent = open ? "▾" : "▴";
+  btn.closest("tr").classList.toggle("expanded", !open);
+}
+
+// ══ SMART CONTENT DETECTION ══
+function tryJSON(s) {
+  if (!/^[\[{]/.test(s.trim())) return null;
+  try {
+    const parsed = JSON.parse(s);
+    const walked = walkJSON(parsed);
+    return JSON.stringify(walked, null, 2);
+  } catch {
+    return null;
+  }
+}
+
+// Recursively walk a parsed JSON value and attempt to decode any string leaves
+function walkJSON(node) {
+  if (Array.isArray(node)) {
+    return node.map(walkJSON);
+  }
+  if (node !== null && typeof node === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      out[k] = walkJSON(v);
+    }
+    return out;
+  }
+  if (typeof node === "string") {
+    return decodeStringLeaf(node);
+  }
+  return node;
+}
+
+// Try to decode a single string value — returns either the original string
+// or an object like { __decoded: "base64", __value: <decoded> } so the
+// caller can see both the tag and the result in the pretty-printed output
+function decodeStringLeaf(s) {
+  if (!s || s.length < 8) return s;
+
+  // JWT first
+  const jwt = tryJWT(s);
+  if (jwt) {
+    try {
+      return { __decoded: "JWT", __value: JSON.parse(jwt) };
+    } catch {
+      return { __decoded: "JWT", __value: jwt };
+    }
+  }
+
+  // Base64
+  const b64 = tryBase64(s);
+  if (b64) {
+    // Decoded value might itself be JSON
+    const nested = (() => {
+      try {
+        if (!/^[\[{]/.test(b64.trim())) return null;
+        return JSON.parse(b64);
+      } catch {
+        return null;
+      }
+    })();
+    if (nested) return { __decoded: "base64→JSON", __value: walkJSON(nested) };
+    return { __decoded: "base64", __value: b64 };
+  }
+
+  return s;
+}
+
+function tryBase64(s) {
+  if (!s || s.length < 8) return null;
+  // Strip any whitespace/newlines that might wrap multiline base64
+  const clean = s.replace(/[\r\n\s]/g, "");
+  // Two separate checks — standard (+/) and URL-safe (-_)
+  const isStd = /^[A-Za-z0-9+/]+=*$/.test(clean);
+  const isUrlSafe = /^[A-Za-z0-9\-_]+=*$/.test(clean);
+  if (!isStd && !isUrlSafe) return null;
+  // Normalize URL-safe to standard then fix padding
+  const norm = clean.replace(/-/g, "+").replace(/_/g, "/");
+  const rem = norm.length % 4;
+  const padded = rem === 0 ? norm : norm + "=".repeat(4 - rem);
+  try {
+    const decoded = atob(padded);
+    // Reject binary blobs — more than 10% non-printable = not useful text
+    let bad = 0;
+    for (let i = 0; i < decoded.length; i++) {
+      const c = decoded.charCodeAt(i);
+      if (c < 9 || (c > 13 && c < 32) || c === 127) bad++;
+    }
+    if (decoded.length > 0 && bad / decoded.length > 0.1) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function tryDecodeValue(raw) {
+  // JSON first — walkJSON handles nested b64/JWT inside
+  const json = tryJSON(raw);
+  if (json) return { text: json, tag: "JSON" };
+
+  // JWT before generic base64
+  const jwt = tryJWT(raw);
+  if (jwt) return { text: jwt, tag: "JWT" };
+
+  // Generic base64
+  const b64 = tryBase64(raw);
+  if (b64) {
+    const nested = tryJSON(b64); // tryJSON will also walk any nested b64
+    if (nested) return { text: nested, tag: "base64 → JSON" };
+    return { text: b64, tag: "base64" };
+  }
+  return null;
+}
+
+function smartDecode(raw) {
+  if (!raw || !raw.trim()) return { text: raw, tag: null };
+  const trimmed = raw.trim();
+
+  // Try decoding the whole value first
+  const direct = tryDecodeValue(trimmed);
+  if (direct) return direct;
+
+  // Try form-encoded: key=value&key=value
+  // Each value is decoded independently
+  if (
+    trimmed.includes("=") &&
+    !trimmed.startsWith("{") &&
+    !trimmed.startsWith("[")
+  ) {
+    const lines = trimmed.split("&").map((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return decodeURIComponent(pair);
+      const k = decodeURIComponent(pair.slice(0, eq));
+      const v = decodeURIComponent(pair.slice(eq + 1));
+      const dec = tryDecodeValue(v);
+      if (dec)
+        return `${k} [${dec.tag}] = ${
+          dec.text.includes("\n")
+            ? "\n" +
+              dec.text
+                .split("\n")
+                .map((l) => "  " + l)
+                .join("\n")
+            : dec.text
+        }`;
+      return `${k} = ${v}`;
+    });
+    const result = lines.join("\n\n");
+    // Only label as decoded if at least one value was transformed
+    const anyDecoded = trimmed.split("&").some((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return false;
+      return tryDecodeValue(decodeURIComponent(pair.slice(eq + 1))) !== null;
+    });
+    return { text: result, tag: anyDecoded ? "form-decoded" : null };
+  }
+
+  return { text: raw, tag: null };
+}
+
+function decodeParams(paramStr) {
+  if (!paramStr) return "";
+  try {
+    return paramStr
+      .split("&")
+      .map((p) => {
+        const eq = p.indexOf("=");
+        if (eq === -1) return decodeURIComponent(p);
+        const k = decodeURIComponent(p.slice(0, eq));
+        const raw = decodeURIComponent(p.slice(eq + 1));
+        const dec = tryDecodeValue(raw);
+        if (!dec) return `${k} = ${raw}`;
+        const tagStr = ` [${dec.tag}]`;
+        const valStr = dec.text.includes("\n")
+          ? "\n" +
+            dec.text
+              .split("\n")
+              .map((l) => "  " + l)
+              .join("\n")
+          : dec.text;
+        return `${k}${tagStr} = ${valStr}`;
+      })
+      .join("\n\n");
+  } catch {
+    return paramStr;
+  }
+}
+
+function tryJWT(s) {
+  const parts = s.replace(/^Bearer\s+/i, "").split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(
+      atob(parts[0].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return JSON.stringify({ header, payload, signature: parts[2] }, null, 2);
+  } catch {
+    return null;
+  }
+}
+
+function decodeAuthHeader(value) {
+  const v = (value || "").trim();
+
+  // JWT / Bearer
+  if (/^Bearer\s+/i.test(v)) {
+    const jwt = tryJWT(v);
+    if (jwt) return { text: jwt, tag: "JWT" };
+    // Bearer but not JWT — decode the token part as plain base64
+    const token = v.replace(/^Bearer\s+/i, "");
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: "Bearer → base64" };
+    return { text: v, tag: null };
+  }
+
+  // Basic auth — "Basic <base64(user:pass)>"
+  if (/^Basic\s+/i.test(v)) {
+    const token = v.replace(/^Basic\s+/i, "");
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: "Basic auth" };
+    return { text: v, tag: null };
+  }
+
+  // Digest, NTLM, Negotiate, AWS4-HMAC-SHA256 etc — label the scheme at minimum
+  const schemeMatch = v.match(/^([A-Za-z0-9\-]+)\s+(.+)$/);
+  if (schemeMatch) {
+    const scheme = schemeMatch[1];
+    const token = schemeMatch[2];
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: `${scheme} → base64` };
+    // Try treating it as comma-separated key=value (Digest/AWS style)
+    if (token.includes(",")) {
+      const pretty = token
+        .split(",")
+        .map((p) => "  " + p.trim())
+        .join("\n");
+      return { text: pretty, tag: scheme };
+    }
+    return { text: v, tag: null };
+  }
+
+  // Plain value with no scheme — try generic base64
+  const b64 = tryBase64(v);
+  if (b64) return { text: b64, tag: "base64" };
+
+  return { text: v, tag: null };
+}
+
+function fmtHeaders(headers) {
+  if (!headers || typeof headers !== "object") return "(none)";
+  return Object.entries(headers)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => {
+      // Authorization gets the full scheme-aware decoder
+      if (k.toLowerCase() === "authorization") {
+        const dec = decodeAuthHeader(v);
+        if (dec.tag) {
+          const indented = dec.text.includes("\n")
+            ? "\n" +
+              dec.text
+                .split("\n")
+                .map((l) => "    " + l)
+                .join("\n")
+            : dec.text;
+          return `${k} [${dec.tag}]: ${indented}`;
+        }
+        return `${k}: ${v}`;
+      }
+
+      // Every other header — try generic decode
+      const dec = tryDecodeValue(v);
+      if (dec) {
+        const indented = dec.text.includes("\n")
+          ? "\n" +
+            dec.text
+              .split("\n")
+              .map((l) => "    " + l)
+              .join("\n")
+          : dec.text;
+        return `${k} [${dec.tag}]: ${indented}`;
+      }
+
+      return `${k}: ${v}`;
+    })
+    .join("\n");
+}
+
 function filterHTTP() {
   renderHTTP();
 }
+
 function clearHTTP() {
   ST.httpEvents = [];
   ST.httpCnt = 0;
