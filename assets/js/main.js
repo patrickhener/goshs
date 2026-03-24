@@ -905,22 +905,17 @@ function startUpload() {
 function createDir() {
   const name = document.getElementById("mkdir-input").value.trim();
   if (!name) return;
-  /*
-  fetch("/mkdir", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  })
+
+  fetch(`${name}?mkdir`)
     .then((r) => {
-      if (r.ok) {
+      // if response http.Created
+      if (r.status === 201) {
         toast("Created: " + name, "success");
         closeModal("mkdir-modal");
         setTimeout(() => location.reload(), 600);
       } else toast("Failed", "error");
     })
     .catch(() => toast("Network error", "error"));
-    */
-  alert("Needs implementation");
 }
 
 // ══ DRAG-DROP ══

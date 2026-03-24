@@ -105,6 +105,10 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		fs.handleInfo(w)
 		return true
 	}
+	if _, ok := req.URL.Query()["mkdir"]; ok {
+		fs.handleMkdir(w, req)
+		return true
+	}
 	if _, ok := req.URL.Query()["ws"]; ok {
 		fs.socket(w, req)
 		return true
@@ -827,4 +831,35 @@ func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(204)
 	w.Write([]byte("shared link deleted successfully"))
+}
+
+func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
+	if !fs.Invisible {
+		// if not read only or upload only create directory from mkdir query param
+		if fs.ReadOnly || fs.UploadOnly {
+			http.Error(w, "read only or upload only mode", 403)
+			return
+		}
+
+		// Get path
+		upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(r.URL.Path, "/")))
+		finalPath := filepath.Join(fs.Webroot, upath)
+
+		// Create directory upath
+		err := os.MkdirAll(finalPath, 0755)
+		if err != nil {
+			logger.LogRequest(r, http.StatusInternalServerError, fs.Verbose, fs.Webhook)
+			logger.Errorf("Error creating directory %s: %+v", finalPath, err)
+			return
+		}
+
+		fs.emitCollabEvent(r, http.StatusCreated)
+		logger.LogRequest(r, http.StatusCreated, fs.Verbose, fs.Webhook)
+		// Send success response
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("directory created successfully"))
+		return
+	}
+
+	fs.handleInvisible(w)
 }
