@@ -12,28 +12,41 @@
 }
 
 :root {
-    --bg0: #16181c;
-    --bg1: #1e2024;
-    --bg2: #25282e;
-    --bg3: #2e3138;
-    --bg4: #383c45;
-    --border: rgba(255, 255, 255, 0.07);
-    --border-hover: rgba(255, 255, 255, 0.14);
-    --text0: #e8eaed;
-    --text1: #b0b4bc;
-    --text2: #6e737d;
-    --accent: #4ec9b0;
-    --accent-dim: rgba(78, 201, 176, 0.12);
-    --accent-hover: #3aac94;
-    --danger: #e06c75;
-    --danger-dim: rgba(224, 108, 117, 0.1);
-    --warn: #d19a66;
-    --warn-dim: rgba(209, 154, 102, 0.1);
-    --info: #61afef;
-    --info-dim: rgba(97, 175, 239, 0.1);
-    --purple: #c678dd;
-    --purple-dim: rgba(198, 120, 221, 0.1);
-    --green: #98c379;
+    /* Polar Night */
+    --bg0: #2e3440;
+    --bg1: #3b4252;
+    --bg2: #434c5e;
+    --bg3: #4c566a;
+    --bg4: #596275;
+
+    --border: rgba(216, 222, 233, 0.08);
+    --border-hover: rgba(216, 222, 233, 0.18);
+
+    /* Snow Storm (text) */
+    --text0: #eceff4;
+    --text1: #d8dee9;
+    --text2: #aeb6c2;
+
+    /* Frost (primary accent) */
+    --accent: #88c0d0;
+    --accent-hover: #81a1c1;
+    --accent-dim: rgba(136, 192, 208, 0.12);
+
+    /* Aurora */
+    --danger: #bf616a;
+    --danger-dim: rgba(191, 97, 106, 0.12);
+
+    --warn: #d08770;
+    --warn-dim: rgba(208, 135, 112, 0.12);
+
+    --info: #5e81ac;
+    --info-dim: rgba(94, 129, 172, 0.12);
+
+    --purple: #b48ead;
+    --purple-dim: rgba(180, 142, 173, 0.12);
+
+    --green: #a3be8c;
+
     --mono:
         "Fira Code VF", "JetBrains Mono", "Cascadia Code", "Fira Code",
         "Consolas", monospace;
@@ -44,30 +57,42 @@
     --topbar-h: 44px;
     --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
+
 [data-theme="light"] {
-    --bg0: #f0f2f5;
-    --bg1: #ffffff;
-    --bg2: #f7f8fa;
-    --bg3: #eef0f3;
-    --bg4: #e4e6ea;
-    --border: rgba(0, 0, 0, 0.08);
-    --border-hover: rgba(0, 0, 0, 0.16);
-    --text0: #1a1d23;
-    --text1: #4a4f5a;
-    --text2: #868c99;
-    --accent: #00897b;
-    --accent-dim: rgba(0, 137, 123, 0.1);
-    --accent-hover: #00796b;
-    --danger: #c0392b;
-    --danger-dim: rgba(192, 57, 43, 0.08);
-    --warn: #b8680f;
-    --warn-dim: rgba(184, 104, 15, 0.08);
-    --info: #1565c0;
-    --info-dim: rgba(21, 101, 192, 0.08);
-    --purple: #6a1b9a;
-    --purple-dim: rgba(106, 27, 154, 0.08);
-    --green: #2e7d32;
-    --shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    /* Snow Storm */
+    --bg0: #eceff4;
+    --bg1: #e5e9f0;
+    --bg2: #d8dee9;
+    --bg3: #cfd6e3;
+    --bg4: #c0c8d8;
+
+    --border: rgba(46, 52, 64, 0.08);
+    --border-hover: rgba(46, 52, 64, 0.18);
+
+    /* Polar Night (text) */
+    --text0: #2e3440;
+    --text1: #3b4252;
+    --text2: #4c566a;
+
+    /* Frost */
+    --accent: #5e81ac;
+    --accent-hover: #81a1c1;
+    --accent-dim: rgba(94, 129, 172, 0.12);
+
+    /* Aurora */
+    --danger: #bf616a;
+    --danger-dim: rgba(191, 97, 106, 0.1);
+
+    --warn: #d08770;
+    --warn-dim: rgba(208, 135, 112, 0.1);
+
+    --info: #5e81ac;
+    --info-dim: rgba(94, 129, 172, 0.1);
+
+    --purple: #b48ead;
+    --purple-dim: rgba(180, 142, 173, 0.1);
+
+    --green: #a3be8c;
 }
 
 /* ── reset ── */

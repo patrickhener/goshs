@@ -36,14 +36,12 @@ function toggleTheme() {
 }
 function applyTheme(t) {
   document.documentElement.setAttribute("data-theme", t);
-  const icon = document.getElementById("theme-icon");
-  if (icon) {
+  const logo = document.getElementById("goshs-logo");
+  if (logo) {
     if (t === "light") {
-      icon.innerHTML =
-        '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+      logo.src = "/images/logo-light.png?static";
     } else {
-      icon.innerHTML =
-        '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+      logo.src = "/images/logo-dark.png?static";
     }
   }
 }
@@ -655,6 +653,9 @@ function clearHTTP() {
   ST.httpCnt = 0;
   document.getElementById("http-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearHTTP" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
   renderHTTP();
 }
 
@@ -732,6 +733,9 @@ function clearDNS() {
   });
   document.getElementById("dns-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearDNS" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
   renderDNS();
 }
 
@@ -1023,6 +1027,9 @@ function clearSMTP() {
   ST.smtpEvents = [];
   document.getElementById("smtp-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearSMTP" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
   renderSMTP();
 }
 
@@ -1225,8 +1232,9 @@ function startUpload() {
   const bar = document.getElementById("upload-progress-bar");
   wrap.style.display = "block";
   bar.style.width = "0";
+
   const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/upload");
+  xhr.open("POST", `${window.location.href}upload`);
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) bar.style.width = (e.loaded / e.total) * 100 + "%";
   };
