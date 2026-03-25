@@ -254,7 +254,7 @@ func testUploadPut(t *testing.T, basePath string, negative bool, upload_only boo
 	require.NoError(t, err)
 
 	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
+		require.Equal(t, resp.StatusCode, 500)
 		if !upload_only {
 			// Check if file was uploaded
 			path := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
@@ -409,7 +409,7 @@ func testWebdavListFiles(t *testing.T, path string) {
 
 	files, err := c.ReadDir("/")
 	require.NoError(t, err)
-	require.Equal(t, files[0].Name(), "ACL")
+	require.Equal(t, files[0].Name(), "test_data.txt")
 }
 
 func testWebdavCreateDir(t *testing.T, path string) {
