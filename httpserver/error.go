@@ -3,7 +3,6 @@ package httpserver
 import (
 	"html/template"
 	"net/http"
-	"path"
 
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/utils"
@@ -39,20 +38,14 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	logger.LogRequest(req, status, fs.Verbose, fs.Webhook, body)
 
 	// Construct error for template filling
-	e.ErrorCode = status
-	e.ErrorMessage = err.Error()
 	if fs.Silent {
-		e.Directory = &directory{
-			AbsPath: "silent mode",
-		}
+		e.ErrorMessage = "No detailed error message due to silent mode"
 	} else {
-		e.Directory = &directory{
-			AbsPath: path.Join(fs.Webroot, req.URL.Path),
-		}
+		e.ErrorMessage = err.Error()
 	}
 	e.GoshsVersion = fs.Version
 
-	files := []string{"static/templates/error.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
+	files := []string{"static/templates/error.html"}
 
 	// Template handling
 	t, err := template.ParseFS(static, files...)

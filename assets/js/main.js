@@ -1159,8 +1159,15 @@ function downloadSelected() {
   clearSelection();
 }
 function downloadBulk() {
-  //This one selects everything in the current view and forms the right zip download
-  window.open("?zip", "_blank");
+  // This one selects everything in the current view and forms the right zip download
+  document.querySelectorAll("#file-tbody tr[data-name]").forEach((tr) => {
+    if (tr.style.display !== "none") {
+      const cb = tr.querySelector(".row-check-item");
+      if (cb) cb.checked = true;
+    }
+  });
+  updateBulkBar();
+  downloadSelected();
 }
 function deleteSelected() {
   const vals = getSelectedValues();

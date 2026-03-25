@@ -322,10 +322,9 @@ func returnJsonDirListing(w http.ResponseWriter, items []item) {
 func (fileS *FileServer) constructSilent(w http.ResponseWriter) {
 	tem := &baseTemplate{
 		GoshsVersion: fileS.Version,
-		Directory:    &directory{AbsPath: "silent mode"},
 	}
 
-	files := []string{"static/templates/silent.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
+	files := []string{"static/templates/silent.html"}
 
 	t, err := template.ParseFS(static, files...)
 	if err != nil {
