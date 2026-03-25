@@ -1514,6 +1514,159 @@ textarea {
 .mail-card.open .mail-footer {
     display: flex;
 }
+/* ── SMTP attachment list ── */
+.mail-attachments {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.mail-attachments-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+.attach-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.attach-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 6px 10px;
+    font-size: 12px;
+    transition: border-color 0.15s;
+}
+.attach-item:hover {
+    border-color: var(--border-hover);
+}
+.attach-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--text2);
+    flex-shrink: 0;
+}
+.attach-icon.img {
+    color: var(--purple);
+}
+.attach-icon.html {
+    color: var(--info);
+}
+.attach-icon.pdf {
+    color: var(--danger);
+}
+.attach-icon.arch {
+    color: var(--warn);
+}
+.attach-name {
+    font-family: var(--mono);
+    color: var(--text1);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.attach-size {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+}
+.attach-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 4px;
+}
+
+/* ── mail body tabs (plain / html) ── */
+.mail-body-tabs {
+    display: flex;
+    gap: 1px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 14px;
+}
+.mail-body-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s;
+    user-select: none;
+}
+.mail-body-tab:hover {
+    color: var(--text1);
+}
+.mail-body-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* ── image preview ── */
+.attach-preview {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.preview-img {
+    max-width: 220px;
+    max-height: 160px;
+    border-radius: var(--r);
+    border: 1px solid var(--border);
+    cursor: zoom-in;
+    transition: border-color 0.15s;
+    object-fit: contain;
+    background: var(--bg0);
+}
+.preview-img:hover {
+    border-color: var(--accent);
+}
+
+/* ── HTML render frame ── */
+.html-frame-wrap {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+}
+.html-frame {
+    width: 100%;
+    min-height: 120px;
+    max-height: 320px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: #fff;
+}
+
+/* ── lightbox ── */
+.lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, 0.85);
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+.lightbox.open {
+    display: flex;
+}
+.lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: var(--r);
+}
 
 /* ── empty state ── */
 .empty-state {

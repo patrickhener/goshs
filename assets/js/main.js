@@ -48,6 +48,57 @@ function applyTheme(t) {
   }
 }
 
+// ══ EMBEDDED FILES ══
+function filterEmbedded() {
+  const q = document.getElementById("emb-search").value.toLowerCase();
+  document.querySelectorAll("#emb-tbody tr[data-name]").forEach((tr) => {
+    const name = (tr.dataset.name || "").toLowerCase();
+    tr.style.display = !q || name.includes(q) ? "" : "none";
+  });
+}
+
+const embSortDir = { name: true, size: true, mtime: true };
+function sortEmbedded(col) {
+  const asc = (embSortDir[col] = !embSortDir[col]);
+  const tbody = document.getElementById("emb-tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+
+  rows.sort((a, b) => {
+    let va = a.dataset[col] || "",
+      vb = b.dataset[col] || "";
+    if (col === "size" || col === "mtime") {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return asc ? va - vb : vb - va;
+    }
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  rows.forEach((r) => tbody.appendChild(r));
+
+  // Update sort indicators
+  document.querySelectorAll("#emb-table th[id]").forEach((th) => {
+    th.classList.remove("sorted");
+    th.querySelector(".sort-arrow").textContent = "↕";
+  });
+  const th = document.getElementById("emb-th-" + col);
+  if (th) {
+    th.classList.add("sorted");
+    th.querySelector(".sort-arrow").textContent = asc ? "↑" : "↓";
+  }
+}
+
+function copyEmbLink(name) {
+  const url =
+    location.origin +
+    encodeURIComponent(name).replace("%2F", "/") +
+    "?embedded";
+  navigator.clipboard
+    .writeText(url)
+    .then(() => toast("Link copied!", "success"))
+    .catch(() => toast("Copy failed", "error"));
+}
+
 // ══ PANEL / TAB SWITCHING ══
 function switchPanel(name, el) {
   document
@@ -693,12 +744,235 @@ function onSMTP(e) {
   badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
   renderSMTP();
 }
+function attachIcon(contentType) {
+  if (!contentType) return "";
+  if (contentType.startsWith("image/"))
+    return `<svg class="attach-icon img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+  if (contentType === "text/html")
+    return `<svg class="attach-icon html" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+  if (contentType === "application/pdf")
+    return `<svg class="attach-icon pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+  if (
+    contentType.includes("zip") ||
+    contentType.includes("tar") ||
+    contentType.includes("gz")
+  )
+    return `<svg class="attach-icon arch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`;
+  return `<svg class="attach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+}
+function buildMailCard(e, isNew) {
+  const card = document.createElement("div");
+  card.className = "mail-card" + (isNew ? " new-card" : "");
+
+  const toStr = (e.to || []).join(", ") || "—";
+  const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+  const init = (e.from || "?")[0].toUpperCase();
+  const subj = e.subject || "(no subject)";
+  const hasHTML = e.htmlBody && e.htmlBody.trim().length > 0;
+  const hasText = e.body && e.body.trim().length > 0;
+  const atts = e.attachments || [];
+  const imgAtts = atts.filter(
+    (a) => a.contentType && a.contentType.startsWith("image/"),
+  );
+  const hasImgs = imgAtts.length > 0;
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "mail-header";
+  header.innerHTML = `
+        <div class="mail-avatar">${esc(init)}</div>
+        <div class="mail-meta">
+          <div class="mail-from">${esc(e.from || "")}</div>
+          <div class="mail-to">→ ${esc(toStr)}</div>
+        </div>
+        <div class="mail-time">${esc(ts)}</div>`;
+
+  // Subject row
+  const subjRow = document.createElement("div");
+  subjRow.className = "mail-subject-row";
+  subjRow.innerHTML = `
+        <span>${esc(subj)}</span>
+        ${atts.length ? `<span style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-left:8px">📎 ${atts.length}</span>` : ""}
+        <span class="mail-chevron">▾</span>`;
+
+  // Body tabs (only if both exist)
+  let bodyTabsEl = null;
+  if (hasHTML && hasText) {
+    bodyTabsEl = document.createElement("div");
+    bodyTabsEl.className = "mail-body-tabs";
+    bodyTabsEl.style.display = "none";
+    bodyTabsEl.innerHTML = `
+            <div class="mail-body-tab active" data-tab="plain">Plain text</div>
+            <div class="mail-body-tab" data-tab="html">HTML</div>
+            ${hasImgs ? `<div class="mail-body-tab" data-tab="preview">Preview</div>` : ""}`;
+  }
+
+  // Plain body
+  const plainSection = document.createElement("div");
+  plainSection.className = "mail-body-section";
+  plainSection.style.display = "none";
+  plainSection.dataset.pane = "plain";
+  plainSection.innerHTML = `<pre>${esc(e.body || "(empty)")}</pre>`;
+
+  // HTML render pane (sandboxed iframe)
+  const htmlSection = document.createElement("div");
+  htmlSection.className = "html-frame-wrap";
+  htmlSection.style.display = "none";
+  htmlSection.dataset.pane = "html";
+  if (hasHTML) {
+    const iframe = document.createElement("iframe");
+    iframe.className = "html-frame";
+    iframe.sandbox = "allow-same-origin"; // no scripts
+    iframe.srcdoc = e.htmlBody;
+    htmlSection.appendChild(iframe);
+  }
+
+  // Image preview pane
+  const previewSection = document.createElement("div");
+  previewSection.className = "attach-preview";
+  previewSection.style.display = "none";
+  previewSection.dataset.pane = "preview";
+  imgAtts.forEach((a) => {
+    const img = document.createElement("img");
+    img.className = "preview-img";
+    img.src = `/?smtp&id=${a.id}`;
+    img.alt = a.filename;
+    img.title = a.filename;
+    img.onclick = () => openLightbox(img.src);
+    previewSection.appendChild(img);
+  });
+
+  // Attachment list
+  const attSection = document.createElement("div");
+  attSection.className = "mail-attachments";
+  attSection.style.display = "none";
+  if (atts.length) {
+    attSection.innerHTML = `<div class="mail-attachments-label">Attachments (${atts.length})</div>`;
+    const list = document.createElement("div");
+    list.className = "attach-list";
+    atts.forEach((a) => {
+      const item = document.createElement("div");
+      item.className = "attach-item";
+      item.innerHTML = `
+                ${attachIcon(a.contentType)}
+                <span class="attach-name" title="${esc(a.filename)}">${esc(a.filename)}</span>
+                <span class="attach-size">${fmtBytes(a.size)}</span>
+                <div class="attach-actions">
+                  <a class="btn btn-sm" href="/?smtp&id=${a.id}" download="${esc(a.filename)}" title="Download">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </a>
+                  ${
+                    a.contentType && a.contentType.startsWith("image/")
+                      ? `
+                  <button class="btn btn-sm" onclick="openLightbox('/?smtp&id=${a.id}')" title="Preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </button>`
+                      : ""
+                  }
+                  ${
+                    a.contentType === "text/html"
+                      ? `
+                  <button class="btn btn-sm" onclick="openHTMLPreview('/?smtp&id=${a.id}')" title="Render HTML">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  </button>`
+                      : ""
+                  }
+                </div>`;
+      list.appendChild(item);
+    });
+    attSection.appendChild(list);
+  }
+
+  // Raw headers
+  const rawSection = document.createElement("div");
+  rawSection.className = "mail-raw-section";
+  rawSection.style.display = "none";
+  rawSection.innerHTML = `<pre>${esc(e.rawHeader || "")}</pre>`;
+
+  // Footer
+  const footer = document.createElement("div");
+  footer.className = "mail-footer";
+  footer.innerHTML = `<button class="btn btn-ghost btn-sm" data-action="raw">Raw headers</button>`;
+
+  // Toggle open/close
+  function setOpen(open) {
+    card.classList.toggle("open", open);
+    const chevron = subjRow.querySelector(".mail-chevron");
+    if (chevron) chevron.style.transform = open ? "rotate(180deg)" : "";
+
+    // Show the right default pane
+    const activeTab =
+      (bodyTabsEl ? bodyTabsEl.querySelector(".mail-body-tab.active") : null)
+        ?.dataset.tab || (hasHTML ? "html" : "plain");
+
+    if (bodyTabsEl) bodyTabsEl.style.display = open ? "flex" : "none";
+    plainSection.style.display =
+      open && activeTab === "plain" ? "block" : "none";
+    htmlSection.style.display = open && activeTab === "html" ? "block" : "none";
+    previewSection.style.display =
+      open && activeTab === "preview" ? "flex" : "none";
+    if (!bodyTabsEl) {
+      // Only one body type — show it directly
+      if (hasHTML) htmlSection.style.display = open ? "block" : "none";
+      else plainSection.style.display = open ? "block" : "none";
+    }
+    if (atts.length) attSection.style.display = open ? "block" : "none";
+    footer.style.display = open ? "flex" : "none";
+  }
+
+  header.onclick = () => setOpen(!card.classList.contains("open"));
+  subjRow.onclick = () => setOpen(!card.classList.contains("open"));
+
+  // Tab switching
+  if (bodyTabsEl) {
+    bodyTabsEl.addEventListener("click", (e) => {
+      const tab = e.target.closest(".mail-body-tab");
+      if (!tab) return;
+      bodyTabsEl
+        .querySelectorAll(".mail-body-tab")
+        .forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const which = tab.dataset.tab;
+      plainSection.style.display = which === "plain" ? "block" : "none";
+      htmlSection.style.display = which === "html" ? "block" : "none";
+      previewSection.style.display = which === "preview" ? "flex" : "none";
+    });
+  }
+
+  // Footer actions
+  footer.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-action]");
+    if (!btn) return;
+    if (btn.dataset.action === "raw") {
+      const showing = rawSection.style.display === "block";
+      rawSection.style.display = showing ? "none" : "block";
+      btn.textContent = showing ? "Raw headers" : "Hide raw";
+    }
+  });
+
+  // Assemble
+  card.appendChild(header);
+  card.appendChild(subjRow);
+  if (bodyTabsEl) card.appendChild(bodyTabsEl);
+  card.appendChild(plainSection);
+  card.appendChild(htmlSection);
+  if (hasImgs) card.appendChild(previewSection);
+  if (atts.length) card.appendChild(attSection);
+  card.appendChild(rawSection);
+  card.appendChild(footer);
+
+  // Init footer hidden
+  footer.style.display = "none";
+
+  return card;
+}
 function renderSMTP() {
   const filter = (
     document.getElementById("smtp-search").value || ""
   ).toLowerCase();
   const inbox = document.getElementById("smtp-inbox");
   const empty = document.getElementById("smtp-empty");
+
   const vis = ST.smtpEvents.filter(
     (e) =>
       !filter ||
@@ -707,40 +981,44 @@ function renderSMTP() {
       (e.subject || "").toLowerCase().includes(filter) ||
       (e.body || "").toLowerCase().includes(filter),
   );
+
   empty.style.display = vis.length ? "none" : "flex";
   inbox.querySelectorAll(".mail-card").forEach((c) => c.remove());
+
   vis.forEach((e, i) => {
-    const card = document.createElement("div");
-    card.className = "mail-card" + (i === 0 && !filter ? " new-card" : "");
-    const toStr = (e.to || []).join(", ") || "—";
-    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
-    const init = (e.from || "?")[0].toUpperCase();
-    const subj = e.subject || "(no subject)";
-    card.innerHTML = `
-<div class="mail-header">
-<div class="mail-avatar">${esc(init)}</div>
-<div class="mail-meta">
-<div class="mail-from">${esc(e.from || "")}</div>
-<div class="mail-to">→ ${esc(toStr)}</div>
-</div>
-<div class="mail-time">${esc(ts)}</div>
-</div>
-<div class="mail-subject-row">
-<span>${esc(subj)}</span>
-<span class="mail-chevron">▾</span>
-</div>
-<div class="mail-body-section"><pre>${esc(e.body || "(empty)")}</pre></div>
-<div class="mail-raw-section"><pre>${esc(e.rawHeader || "")}</pre></div>
-<div class="mail-footer">
-<button class="btn btn-ghost btn-sm" onclick="this.closest('.mail-card').classList.toggle('show-raw')">Raw headers</button>
-</div>`;
-    card.querySelector(".mail-header").onclick = () =>
-      card.classList.toggle("open");
-    card.querySelector(".mail-subject-row").onclick = () =>
-      card.classList.toggle("open");
-    inbox.appendChild(card);
+    inbox.appendChild(buildMailCard(e, i === 0 && !filter));
   });
 }
+
+// ── lightbox ──
+function openLightbox(src) {
+  let lb = document.getElementById("goshs-lightbox");
+  if (!lb) {
+    lb = document.createElement("div");
+    lb.id = "goshs-lightbox";
+    lb.className = "lightbox";
+    lb.innerHTML = '<img id="goshs-lb-img">';
+    lb.onclick = () => lb.classList.remove("open");
+    document.body.appendChild(lb);
+  }
+  document.getElementById("goshs-lb-img").src = src;
+  lb.classList.add("open");
+}
+
+// ── HTML attachment preview (opens in new tab safely) ──
+function openHTMLPreview(url) {
+  fetch(url)
+    .then((r) => r.text())
+    .then((html) => {
+      const win = window.open("", "_blank");
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                <meta http-equiv="Content-Security-Policy" content="script-src 'none'">
+                </head><body>${html}</body></html>`);
+      win.document.close();
+    })
+    .catch(() => toast("Failed to load HTML attachment", "error"));
+}
+
 function clearSMTP() {
   ST.smtpEvents = [];
   document.getElementById("smtp-badge").textContent = "0";

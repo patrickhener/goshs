@@ -3,7 +3,6 @@ package httpserver
 import (
 	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/patrickhener/goshs/logger"
 )
@@ -31,6 +30,9 @@ type UIData struct {
 
 	// File listing
 	Items []FileItem
+
+	// Embedded files
+	EmbeddedItems []FileItem
 
 	// Clipboard entries (pre-loaded from server state)
 	Clipboard []ClipEntry
@@ -92,25 +94,4 @@ func renderIndex(w http.ResponseWriter, data UIData) error {
 	}
 
 	return err
-}
-
-// buildBreadcrumb converts an absolute path string into BreadcrumbParts.
-// e.g. "/files/uploads/2024" → [{Name:"files",Path:"/files"}, ...]
-func buildBreadcrumb(absPath string) []BreadcrumbPart {
-	absPath = strings.TrimPrefix(absPath, "/")
-	if absPath == "" {
-		return nil
-	}
-	parts := strings.Split(absPath, "/")
-	crumbs := make([]BreadcrumbPart, 0, len(parts))
-	for i, p := range parts {
-		if p == "" {
-			continue
-		}
-		crumbs = append(crumbs, BreadcrumbPart{
-			Name: p,
-			Path: "/" + strings.Join(parts[:i+1], "/"),
-		})
-	}
-	return crumbs
 }

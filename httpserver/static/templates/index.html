@@ -129,7 +129,26 @@
                     <span class="snav-label">Collab</span>
                     <span class="badge" id="collab-badge"></span>
                 </button>
-                {{ if gt (len .SharedLinks) 0}}
+                {{ if .Embedded }}
+                <button
+                    class="snav"
+                    id="nav-embedded"
+                    onclick="switchPanel('embedded', this)"
+                    title="Embedded files"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                        <path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12" />
+                        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+                    </svg>
+                    <span class="snav-label">Embedded</span>
+                </button>
+                {{end}} {{ if gt (len .SharedLinks) 0}}
                 <button
                     class="snav"
                     id="nav-share"
@@ -1062,6 +1081,192 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- ████ EMBEDDED FILES PANEL ████ -->
+                <section class="panel" id="panel-embedded">
+                    <div class="files-toolbar">
+                        <div class="files-toolbar-left">
+                            <span
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 12px;
+                                    color: var(--text2);
+                                "
+                            >
+                                Read-only — compiled into binary
+                            </span>
+                        </div>
+                        <div class="files-toolbar-right">
+                            <div class="search-wrap">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="M21 21l-4.35-4.35" />
+                                </svg>
+                                <input
+                                    class="search-input"
+                                    id="emb-search"
+                                    type="text"
+                                    placeholder="Search embedded…"
+                                    oninput="filterEmbedded()"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="files-scroll">
+                        <table class="file-table" id="emb-table">
+                            <thead>
+                                <tr>
+                                    <th
+                                        onclick="sortEmbedded('name')"
+                                        id="emb-th-name"
+                                    >
+                                        Name <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th
+                                        onclick="sortEmbedded('size')"
+                                        id="emb-th-size"
+                                    >
+                                        Size <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th
+                                        onclick="sortEmbedded('mtime')"
+                                        id="emb-th-mtime"
+                                    >
+                                        Modified
+                                        <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emb-tbody">
+                                {{if .EmbeddedItems}} {{range .EmbeddedItems}}
+                                <tr
+                                    data-name="{{.Name}}"
+                                    data-size="{{.SizeRaw}}"
+                                    data-mtime="{{.LastModRaw}}"
+                                    data-isdir="{{.IsDir}}"
+                                >
+                                    <td class="fc-name">
+                                        {{if .IsDir}}
+                                        <svg
+                                            class="file-icon dir"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        {{else}} {{template "fileIcon"
+                                        .Extension}} {{end}}
+                                        <a
+                                            href="{{.Name}}?embedded"
+                                            title="{{.Name}}"
+                                            target="_blank"
+                                            >{{.Name}}</a
+                                        >
+                                    </td>
+                                    <td class="fc-size">
+                                        {{if .IsDir}}—{{else}}{{.Size}}{{end}}
+                                    </td>
+                                    <td class="fc-mtime">{{.LastMod}}</td>
+                                    <td>
+                                        <div class="fc-actions">
+                                            {{if not .IsDir}}
+                                            <a
+                                                class="btn btn-sm"
+                                                href="{{.Name}}?embedded"
+                                                download
+                                                title="Download"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <polyline
+                                                        points="7 10 12 15 17 10"
+                                                    />
+                                                    <line
+                                                        x1="12"
+                                                        y1="15"
+                                                        x2="12"
+                                                        y2="3"
+                                                    />
+                                                </svg>
+                                            </a>
+                                            <button
+                                                class="btn btn-sm"
+                                                onclick="copyEmbLink('{{.Name}}')"
+                                                title="Copy link"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <rect
+                                                        x="9"
+                                                        y="9"
+                                                        width="13"
+                                                        height="13"
+                                                        rx="2"
+                                                    />
+                                                    <path
+                                                        d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                    />
+                                                </svg>
+                                            </button>
+                                            {{end}}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{end}} {{else}}
+                                <tr id="emb-empty-row">
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                            >
+                                                <ellipse
+                                                    cx="12"
+                                                    cy="5"
+                                                    rx="9"
+                                                    ry="3"
+                                                />
+                                                <path
+                                                    d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"
+                                                />
+                                                <path
+                                                    d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"
+                                                />
+                                            </svg>
+                                            <p>
+                                                No embedded files.<br />Compile
+                                                with embedded assets to populate
+                                                this view.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 

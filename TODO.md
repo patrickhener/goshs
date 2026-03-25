@@ -1,9 +1,7 @@
 # Broken
 - Upload in sub directory lands in root
-- embedded tab and file list (claude)
 - Color scheme more nordish (claude)
 - Logo?
-- SMTP collab mail attachments - save to disk and preview/download
 
 # Test
 - Webhook + DNS + SMTP
@@ -11,3 +9,5 @@
 
 # New implementation
 - Error and Silent Page layout
+- Maybe implement StartTLS and TLS for smtp collab
+- Lightbox implementation for image mimetypes in file list

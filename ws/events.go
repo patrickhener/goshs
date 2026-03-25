@@ -10,16 +10,25 @@ type DNSEvent struct {
 	Time   time.Time `json:"timestamp"`
 }
 
+type SMTPAttachment struct {
+	ID          string `json:"id"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+	Size        int    `json:"size"`
+}
+
 type SMTPEvent struct {
-	Type      string    `json:"type"` // "smtp"
-	From      string    `json:"from"`
-	To        []string  `json:"to"`
-	CC        []string  `json:"cc"`
-	BCC       []string  `json:"bcc"`
-	Subject   string    `json:"subject"`
-	Body      string    `json:"body"`
-	RawHeader string    `json:"rawHeader"`
-	Timestamp time.Time `json:"timestamp"`
+	Type        string           `json:"type"` // "smtp"
+	From        string           `json:"from"`
+	To          []string         `json:"to"`
+	CC          []string         `json:"cc"`
+	BCC         []string         `json:"bcc"`
+	Subject     string           `json:"subject"`
+	Body        string           `json:"body"`
+	HTMLBody    string           `json:"htmlBody"`
+	RawHeader   string           `json:"rawHeader"`
+	Attachments []SMTPAttachment `json:"attachments"`
+	Timestamp   time.Time        `json:"timestamp"`
 }
 
 type HTTPEvent struct {

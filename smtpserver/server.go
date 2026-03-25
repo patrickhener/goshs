@@ -2,15 +2,23 @@ package smtpserver
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
+	"mime/quotedprintable"
+	"net/http"
 	"net/mail"
+	"net/textproto"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-smtp"
+	"github.com/google/uuid"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/smtpattach"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -50,22 +58,33 @@ func (s *Session) Data(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	body, _ := io.ReadAll(msg.Body)
 
-	// CC and BCC come from headers, not the SMTP envelope
-	cc := strings.Split(msg.Header.Get("Cc"), ",")
-	bcc := strings.Split(msg.Header.Get("Bcc"), ",")
+	var (
+		plainBody   string
+		htmlBody    string
+		attachments []ws.SMTPAttachment
+	)
+
+	// Convert mail.Header to textproto.MIMEHeader (same underlying type)
+	topHeader := textproto.MIMEHeader(msg.Header)
+	walkPart(topHeader, msg.Body, &plainBody, &htmlBody, &attachments)
+
+	// Collect CC/BCC from headers
+	cc := parseAddressList(msg.Header.Get("Cc"))
+	bcc := parseAddressList(msg.Header.Get("Bcc"))
 
 	event := ws.SMTPEvent{
-		Type:      "smtp",
-		From:      s.from,
-		To:        s.to,
-		CC:        cc,
-		BCC:       bcc,
-		Subject:   msg.Header.Get("Subject"),
-		Body:      string(body),
-		RawHeader: fmt.Sprintf("%v", msg.Header),
-		Timestamp: time.Now(),
+		Type:        "smtp",
+		From:        s.from,
+		To:          s.to,
+		CC:          cc,
+		BCC:         bcc,
+		Subject:     msg.Header.Get("Subject"),
+		Body:        plainBody,
+		HTMLBody:    htmlBody,
+		RawHeader:   fmt.Sprintf("%v", msg.Header),
+		Attachments: attachments,
+		Timestamp:   time.Now(),
 	}
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
@@ -78,6 +97,165 @@ func (s *Session) Data(r io.Reader) error {
 	logger.HandleWebhookSend(string(eventBytes), "smtp", *s.webhook)
 
 	return nil
+}
+
+func walkPart(header textproto.MIMEHeader, body io.Reader, plain, html *string, attachments *[]ws.SMTPAttachment) {
+	ct := header.Get("Content-Type")
+	if ct == "" {
+		ct = "text/plain"
+	}
+
+	mediaType, params, err := mime.ParseMediaType(ct)
+	if err != nil {
+		data, _ := io.ReadAll(decodeCTE(header.Get("Content-Transfer-Encoding"), body))
+		if *plain == "" {
+			*plain = string(data)
+		}
+		return
+	}
+
+	// Recurse into multipart
+	if strings.HasPrefix(mediaType, "multipart/") {
+		mr := multipart.NewReader(body, params["boundary"])
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				break
+			}
+			walkPart(textproto.MIMEHeader(part.Header), part, plain, html, attachments)
+		}
+		return
+	}
+
+	// Decode transfer encoding first — we need the real bytes
+	data, _ := io.ReadAll(decodeCTE(header.Get("Content-Transfer-Encoding"), body))
+
+	// Determine real MIME type.
+	// For text/* types: trust the declared type — sniffing short ASCII text
+	// is unreliable and causes false overrides on legitimate plain bodies.
+	// For everything else: sniff to catch binary data hiding behind fake types
+	// (e.g. a JPEG sent as text/html).
+	realMediaType := mediaType
+	if !strings.HasPrefix(mediaType, "text/") && len(data) > 0 {
+		sniffed := http.DetectContentType(data[:min512(data)])
+		sniffedBase := strings.TrimSpace(strings.Split(sniffed, ";")[0])
+		if sniffedBase != mediaType {
+			realMediaType = sniffedBase
+		}
+	}
+
+	// Check Content-Disposition for filename and attachment intent
+	filename := params["name"] // from Content-Type: ...; name="foo.jpg"
+	isAttach := false
+	if cd := header.Get("Content-Disposition"); cd != "" {
+		disp, cdParams, err := mime.ParseMediaType(cd)
+		if err == nil {
+			isAttach = strings.EqualFold(disp, "attachment")
+			if fn := cdParams["filename"]; fn != "" {
+				filename = fn // Content-Disposition wins over Content-Type name
+				isAttach = true
+			}
+		}
+	}
+
+	switch {
+	case realMediaType == "text/plain" && !isAttach:
+		if *plain == "" {
+			*plain = string(data)
+		}
+	case realMediaType == "text/html" && !isAttach:
+		if *html == "" {
+			*html = string(data)
+		}
+	default:
+		if filename == "" {
+			filename = deriveFilename(realMediaType)
+		}
+		id := uuid.NewString()
+		smtpattach.Save(id, filename, realMediaType, data)
+		*attachments = append(*attachments, ws.SMTPAttachment{
+			ID:          id,
+			Filename:    filename,
+			ContentType: realMediaType,
+			Size:        len(data),
+		})
+	}
+}
+
+// deriveFilename produces a meaningful filename from a MIME type when the
+// sender did not supply one, e.g. "image/jpeg" → "attachment.jpg"
+func deriveFilename(mimeType string) string {
+	// mime.ExtensionsByType returns all registered extensions for a type.
+	// We pick the first canonical one.
+	exts, err := mime.ExtensionsByType(mimeType)
+	if err == nil && len(exts) > 0 {
+		// Go returns extensions sorted — pick the shortest/most common one.
+		// e.g. for image/jpeg: [".jfif", ".jpe", ".jpeg", ".jpg"] — we want .jpg
+		ext := exts[len(exts)-1] // last is alphabetically last, usually the common one
+		// Override a few cases where the alphabetical last isn't the common choice
+		switch mimeType {
+		case "image/jpeg":
+			ext = ".jpg"
+		case "image/tiff":
+			ext = ".tiff"
+		case "video/mpeg":
+			ext = ".mpeg"
+		case "application/zip":
+			ext = ".zip"
+		case "text/plain":
+			ext = ".txt"
+		}
+		return "attachment" + ext
+	}
+
+	// Fallback: derive from the subtype directly
+	// e.g. "video/mp4" → ".mp4", "application/pdf" → ".pdf"
+	parts := strings.SplitN(mimeType, "/", 2)
+	if len(parts) == 2 && parts[1] != "" {
+		sub := strings.Split(parts[1], ";")[0] // strip parameters
+		sub = strings.TrimPrefix(sub, "x-")    // strip x- prefix
+		return "attachment." + sub
+	}
+
+	return "attachment.bin"
+}
+
+// min512 returns the smaller of 512 or len(data) for DetectContentType
+func min512(data []byte) int {
+	if len(data) < 512 {
+		return len(data)
+	}
+	return 512
+}
+
+// Simpler standalone version used in walkPart
+func decodeCTE(cte string, r io.Reader) io.Reader {
+	switch strings.ToLower(strings.TrimSpace(cte)) {
+	case "base64":
+		return base64.NewDecoder(base64.StdEncoding, r)
+	case "quoted-printable":
+		return quotedprintable.NewReader(r)
+	default:
+		return r
+	}
+}
+
+func parseAddressList(s string) []string {
+	if s == "" {
+		return nil
+	}
+	addrs, err := mail.ParseAddressList(s)
+	if err != nil {
+		return []string{s}
+	}
+	out := make([]string, len(addrs))
+	for i, a := range addrs {
+		out[i] = a.Address
+	}
+	return out
 }
 
 func (s *Session) Reset()        { s.to = nil }

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/smtpattach"
 	"github.com/patrickhener/goshs/utils"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -101,6 +102,10 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 }
 
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
+	if _, ok := req.URL.Query()["smtp"]; ok {
+		fs.handleSMTPAttachment(w, req)
+		return true
+	}
 	if _, ok := req.URL.Query()["goshs-info"]; ok {
 		fs.handleInfo(w)
 		return true
@@ -369,6 +374,23 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		})
 	}
 
+	var embeddedFiles []FileItem
+	for _, item := range embeddedItems {
+		qrcode := GenerateQRCode(relpath + item.Name)
+		embeddedFiles = append(embeddedFiles, FileItem{
+			RelPath:    relpath,
+			Name:       item.Name,
+			IsDir:      item.IsDir,
+			Size:       item.DisplaySize,
+			SizeRaw:    item.SortSize,
+			LastMod:    item.DisplayLastModified,
+			LastModRaw: item.SortLastModified,
+			Extension:  item.Ext,
+			QRCode:     qrcode,
+			Auth:       fileS.Pass != "" || fileS.CACert != "",
+		})
+	}
+
 	var clipEntries []ClipEntry
 	entries, _ := fileS.Clipboard.GetEntries()
 	for _, entry := range entries {
@@ -408,6 +430,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		CLI:             fileS.CLI,
 		Embedded:        fileS.Embedded,
 		Items:           fileItems,
+		EmbeddedItems:   embeddedFiles,
 		Clipboard:       clipEntries,
 		SharedLinks:     fileS.SharedLinks,
 	}
@@ -861,4 +884,25 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fs.handleInvisible(w)
+}
+
+func (fs *FileServer) handleSMTPAttachment(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		fs.emitCollabEvent(r, http.StatusNotFound)
+		logger.LogRequest(r, http.StatusNotFound, fs.Verbose, fs.Webhook)
+		http.NotFound(w, r)
+		return
+	}
+
+	a, ok := smtpattach.Get(id)
+	if !ok {
+		http.Error(w, "attachment not found or expired", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", a.ContentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, a.Filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", a.Size))
+	w.Write(a.Data)
 }
