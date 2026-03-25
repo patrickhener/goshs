@@ -139,12 +139,13 @@ Collaboration options:
   -smtp-port, --smtp-port  SMTP server port                    (default: 2525)
 
 Webhook options:
-  -W,  --webhook            Enable webhook support                                       (default: false)
+  -W,  --webhook            Enable webhook support                      (default: false)
   -Wu, --webhook-url        URL to send webhook requests to
   -We, --webhook-events     Comma separated list of events to notify
-                            [all, upload, delete, download, view, webdav, sftp, verbose] (default: all)
+                            [all, upload, delete, download, view, webdav,
+                            sftp, dns, smtp, verbose] 	  		(default: all)
   -Wp, --webhook-provider   Webhook provider
-                            [Discord, Mattermost, Slack]                                 (default: Discord)
+                            [Discord, Mattermost, Slack]                (default: Discord)
 
 Misc options:
   -C  --config        Provide config file path                (default: false)

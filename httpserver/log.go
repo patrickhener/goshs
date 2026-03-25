@@ -7,8 +7,8 @@ import (
 )
 
 func (fs *FileServer) logOnly(w http.ResponseWriter, req *http.Request) {
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
-	fs.emitCollabEvent(req, http.StatusOK)
+	body := fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 	if fs.Invisible {
 		// In invisible mode, do not respond
 		fs.handleInvisible(w)

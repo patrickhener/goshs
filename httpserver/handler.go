@@ -143,15 +143,15 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 	if _, ok := req.URL.Query()["embedded"]; ok {
 		if err := fs.embedded(w, req); err != nil {
 			if !fs.Invisible {
-				fs.emitCollabEvent(req, http.StatusNotFound)
-				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+				body := fs.emitCollabEvent(req, http.StatusNotFound)
+				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook, body)
 			} else {
 				fs.handleInvisible(w)
 			}
 			return true
 		}
-		fs.emitCollabEvent(req, http.StatusOK)
-		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
@@ -236,8 +236,8 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	// Log request
-	fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 
 	// Switch and check if dir
 	stat, _ := file.Stat()
@@ -664,8 +664,8 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// Send webhook message
 	logger.HandleWebhookSend(fmt.Sprintf("[WEB] File deleted: %s", deletePath), "delete", fs.Webhook)
 
-	fs.emitCollabEvent(req, http.StatusResetContent)
-	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, http.StatusResetContent)
+	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook, body)
 }
 
 func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request) {
@@ -676,8 +676,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 
 	// If Auth is not used there is no sharing
 	if fs.Pass == "" && fs.CACert == "" {
-		fs.emitCollabEvent(r, 403)
-		logger.LogRequest(r, 403, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(r, 403)
+		logger.LogRequest(r, 403, fs.Verbose, fs.Webhook, body)
 		http.Error(w, "Sharing disabled when auth is disabled", http.StatusForbidden)
 		return
 	}
@@ -695,8 +695,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	} else {
 		seconds, err := strconv.Atoi(r.URL.Query()["expires"][0])
 		if err != nil {
-			fs.emitCollabEvent(r, 400)
-			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			body := fs.emitCollabEvent(r, 400)
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook, body)
 			http.Error(w, "expires needs to be integer in seconds", http.StatusBadRequest)
 		}
 		expires = now.Add(time.Duration(seconds) * time.Second)
@@ -709,8 +709,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	} else {
 		limit, err := strconv.Atoi(r.URL.Query()["limit"][0])
 		if err != nil {
-			fs.emitCollabEvent(r, 400)
-			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			body := fs.emitCollabEvent(r, 400)
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook, body)
 			http.Error(w, "limit needs to be integer", http.StatusBadRequest)
 		}
 		downloadLimit = limit
@@ -775,8 +775,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	// Add to map
 	fs.SharedLinks[token] = sl
 
-	fs.emitCollabEvent(r, http.StatusOK)
-	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(r, http.StatusOK)
+	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook, body)
 	logger.Debugf("A file was shared: %s", shareURLs[0])
 
 	response := map[string][]string{
@@ -848,8 +848,8 @@ func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request)
 	token := r.URL.Query().Get("token")
 	delete(fs.SharedLinks, token)
 
-	fs.emitCollabEvent(r, http.StatusNoContent)
-	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(r, http.StatusNoContent)
+	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, body)
 
 	w.WriteHeader(204)
 	w.Write([]byte("shared link deleted successfully"))
@@ -870,13 +870,14 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 		// Create directory upath
 		err := os.MkdirAll(finalPath, 0755)
 		if err != nil {
-			logger.LogRequest(r, http.StatusInternalServerError, fs.Verbose, fs.Webhook)
+			body := fs.emitCollabEvent(r, http.StatusInternalServerError)
+			logger.LogRequest(r, http.StatusInternalServerError, fs.Verbose, fs.Webhook, body)
 			logger.Errorf("Error creating directory %s: %+v", finalPath, err)
 			return
 		}
 
-		fs.emitCollabEvent(r, http.StatusCreated)
-		logger.LogRequest(r, http.StatusCreated, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(r, http.StatusCreated)
+		logger.LogRequest(r, http.StatusCreated, fs.Verbose, fs.Webhook, body)
 		// Send success response
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("directory created successfully"))
@@ -889,8 +890,8 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 func (fs *FileServer) handleSMTPAttachment(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		fs.emitCollabEvent(r, http.StatusNotFound)
-		logger.LogRequest(r, http.StatusNotFound, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(r, http.StatusNotFound)
+		logger.LogRequest(r, http.StatusNotFound, fs.Verbose, fs.Webhook, body)
 		http.NotFound(w, r)
 		return
 	}

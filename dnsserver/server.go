@@ -41,7 +41,7 @@ func (d *DNSServer) handler(w dns.ResponseWriter, r *dns.Msg) {
 		d.Hub.Broadcast <- eventBytes
 
 		// If webhook is enabled, send the DNS query to the webhook endpoint
-		logger.HandleWebhookSend(string(eventBytes), "dns", *d.WebHook)
+		logger.HandleWebhookSend(fmt.Sprintf("[DNS] - Source: %s - Type: %s - Query: %s", event.Source, event.QType, event.Name), "dns", *d.WebHook)
 
 		// If ReplyIP is not set, use the same IP as the DNS server
 		if d.ReplyIP == "" {

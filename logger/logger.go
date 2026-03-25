@@ -36,7 +36,7 @@ func validateAndParseJSON(input []byte) (bool, interface{}) {
 }
 
 // LogRequest will log the request in a uniform way
-func LogRequest(req *http.Request, status int, verbose bool, wh webhook.Webhook) {
+func LogRequest(req *http.Request, status int, verbose bool, wh webhook.Webhook, body []byte) {
 	logger.Debug("We are about to log a request")
 	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized || status == http.StatusForbidden || status == http.StatusBadRequest {
 		logger.Errorf("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
@@ -54,11 +54,11 @@ func LogRequest(req *http.Request, status int, verbose bool, wh webhook.Webhook)
 	}
 	if verbose {
 		logger.Debug("We are using verbose logging")
-		logVerbose(req, wh)
+		logVerbose(req, wh, body)
 	}
 }
 
-func logVerbose(req *http.Request, wh webhook.Webhook) {
+func logVerbose(req *http.Request, wh webhook.Webhook, body []byte) {
 	// Headers
 	for k, v := range req.Header {
 		if k == "Authorization" {
@@ -119,17 +119,9 @@ func logVerbose(req *http.Request, wh webhook.Webhook) {
 	}
 
 	// Body
-	if req.Body != nil {
-		logger.Debug("Body is detected")
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			logger.Warnf("error reading body: %+v", err)
-			HandleWebhookSend(fmt.Sprintf("[VERBOSE] error reading body: %+v", err), "verbose", wh)
-		}
-		defer req.Body.Close()
-
+	if body != nil {
 		if len(body) > 0 {
-			logger.Debug("Body is actually not empty")
+			logger.Debug("Body is detected")
 			if req.Header.Get("Content-Type") == "application/json" {
 				var prettyJson bytes.Buffer
 				err := json.Indent(&prettyJson, body, "", "  ")

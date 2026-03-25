@@ -11,13 +11,13 @@ import (
 	"github.com/patrickhener/goshs/ws"
 )
 
-func (fs *FileServer) emitCollabEvent(r *http.Request, status int) {
-
+func (fs *FileServer) emitCollabEvent(r *http.Request, status int) []byte {
 	// Emit HTTP log event to webhook
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Errorf("Failed to read request body: %v", err)
 	}
+	defer r.Body.Close()
 
 	// Flatten headers into a simple map (join multi-value headers with ", ")
 	headers := make(map[string]string, len(r.Header))
@@ -40,8 +40,9 @@ func (fs *FileServer) emitCollabEvent(r *http.Request, status int) {
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		logger.Errorf("Error marshalling dns query event: %v", err)
-		return
+		return body
 	}
 
 	fs.Hub.Broadcast <- eventBytes
+	return body
 }

@@ -94,7 +94,22 @@ func (s *Session) Data(r io.Reader) error {
 
 	s.hub.Broadcast <- eventBytes
 
-	logger.HandleWebhookSend(string(eventBytes), "smtp", *s.webhook)
+	smtpWHMessage := fmt.Sprintf(`[SMTP] - Message received
+
+FROM: %s
+TO: %s
+CC: %s
+BCC: %s
+SUBJECT: %s
+Attachments: %d
+
+RawBody:
+%s
+
+HTMLBody:
+%s`, s.from, s.to, cc, bcc, msg.Header.Get("Subject"), len(attachments), plainBody, htmlBody)
+
+	logger.HandleWebhookSend(smtpWHMessage, "smtp", *s.webhook)
 
 	return nil
 }

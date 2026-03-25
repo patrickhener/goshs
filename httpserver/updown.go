@@ -64,8 +64,8 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+	_ = fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 }
 
 // upload handles the POST request to upload files
@@ -166,8 +166,8 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, target, http.StatusSeeOther)
@@ -268,7 +268,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	if err := resultZip.Close(); err != nil {
 		logger.Error(err)
 	} else {
-		fs.emitCollabEvent(req, http.StatusOK)
-		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 	}
 }

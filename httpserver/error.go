@@ -35,8 +35,8 @@ func (fs *FileServer) handleError(w http.ResponseWriter, req *http.Request, err 
 	var e httperror
 
 	// Log to console
-	fs.emitCollabEvent(req, status)
-	logger.LogRequest(req, status, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, status)
+	logger.LogRequest(req, status, fs.Verbose, fs.Webhook, body)
 
 	// Construct error for template filling
 	e.ErrorCode = status
