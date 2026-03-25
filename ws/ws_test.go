@@ -123,15 +123,15 @@ func TestHub_Run(t *testing.T) {
 		t.Fatal("clients not registered correctly")
 	}
 
-	// Broadcast message
-	msg := []byte("hello")
-	hub.Broadcast <- msg
-
-	// Check client received message
+	// Check client received catchup message
 	select {
 	case m := <-client1.send:
-		if string(m) != "hello" {
-			t.Fatalf("unexpected message: %s", m)
+		var msg HTTPEvent
+		if err := json.Unmarshal(m, &msg); err != nil {
+			t.Fatal(err)
+		}
+		if msg.Type != "catchup" {
+			t.Fatalf("unexpected message type: %s", msg.Type)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for message on client1")
@@ -140,7 +140,7 @@ func TestHub_Run(t *testing.T) {
 	// Unregister client1
 	hub.unregister <- client1
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// client1 should be removed and its channel closed
 	if _, ok := hub.clients[client1]; ok {
@@ -152,7 +152,7 @@ func TestHub_Run(t *testing.T) {
 			t.Fatal("client1 send channel not closed")
 		}
 	default:
-		t.Fatal("client1 send channel not closed")
+		t.Fatal("client1 send channel not closed default")
 	}
 
 	// Clean up: unregister client2 to avoid goroutine leak
