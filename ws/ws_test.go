@@ -14,8 +14,7 @@ import (
 )
 
 func TestDispatchReadPump_NewEntry(t *testing.T) {
-	var mockClipboard *clipboard.Clipboard
-	mockClipboard = &clipboard.Clipboard{}
+	mockClipboard := &clipboard.Clipboard{}
 
 	hub := &Hub{cb: mockClipboard, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
@@ -29,7 +28,10 @@ func TestDispatchReadPump_NewEntry(t *testing.T) {
 
 func TestDispatchReadPump_DelEntry(t *testing.T) {
 	cb := &clipboard.Clipboard{}
-	cb.AddEntry("test")
+	err := cb.AddEntry("test")
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
 	hub := &Hub{cb: cb, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 
@@ -41,7 +43,10 @@ func TestDispatchReadPump_DelEntry(t *testing.T) {
 
 func TestDispatchReadPump_DelEntryInvalidID(t *testing.T) {
 	cb := &clipboard.Clipboard{}
-	cb.AddEntry("test")
+	err := cb.AddEntry("test")
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
 	hub := &Hub{cb: cb, Broadcast: make(chan []byte, 1)}
 	client := &Client{hub: hub}
 

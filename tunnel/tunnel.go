@@ -170,7 +170,10 @@ func proxy(remote ssh.Channel, localIP string, localPort int) {
 		n, err := io.Copy(local, remote)
 		logger.Debugf("tunnel: remote→local done: %d bytes, err: %v", n, err)
 		if cw, ok := local.(closeWriter); ok {
-			cw.CloseWrite()
+			err := cw.CloseWrite()
+			if err != nil {
+				logger.Debugf("tunnel: close write failed: %v", err)
+			}
 		}
 		done <- struct{}{}
 	}()
@@ -179,7 +182,10 @@ func proxy(remote ssh.Channel, localIP string, localPort int) {
 		n, err := io.Copy(remote, local)
 		logger.Debugf("tunnel: local→remote done: %d bytes, err: %v", n, err)
 		if cw, ok := remote.(closeWriter); ok {
-			cw.CloseWrite()
+			err := cw.CloseWrite()
+			if err != nil {
+				logger.Debugf("tunnel: close write failed: %v", err)
+			}
 		}
 		done <- struct{}{}
 	}()

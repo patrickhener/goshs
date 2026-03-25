@@ -38,13 +38,14 @@ func validateAndParseJSON(input []byte) (bool, interface{}) {
 // LogRequest will log the request in a uniform way
 func LogRequest(req *http.Request, status int, verbose bool, wh webhook.Webhook, body []byte) {
 	logger.Debug("We are about to log a request")
-	if status == http.StatusInternalServerError || status == http.StatusNotFound || status == http.StatusUnauthorized || status == http.StatusForbidden || status == http.StatusBadRequest {
+	switch status {
+	case http.StatusInternalServerError, http.StatusNotFound, http.StatusUnauthorized, http.StatusForbidden, http.StatusBadRequest:
 		logger.Errorf("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
-	} else if status == http.StatusSeeOther || status == http.StatusMovedPermanently || status == http.StatusTemporaryRedirect || status == http.StatusPermanentRedirect {
+	case http.StatusSeeOther, http.StatusMovedPermanently, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
 		logger.Infof("%s - [\x1b[1;34m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
-	} else if status == http.StatusResetContent {
+	case http.StatusResetContent:
 		logger.Infof("%s - [\x1b[1;31m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
-	} else {
+	default:
 		logger.Infof("%s - [\x1b[1;32m%d\x1b[0m] - \"%s %s %s\"", req.RemoteAddr, status, req.Method, req.URL, req.Proto)
 	}
 	if req.URL.Query() != nil {
@@ -97,7 +98,10 @@ func logVerbose(req *http.Request, wh webhook.Webhook, body []byte) {
 		if isValid {
 			logger.Debug("JSON format detected")
 			dst := &bytes.Buffer{}
-			json.Indent(dst, []byte(v[0]), "", "  ")
+			err := json.Indent(dst, []byte(v[0]), "", "  ")
+			if err != nil {
+				logger.Error(err)
+			}
 			logger.Verbosef("Parameter %s is %s\n", writeMagenta(k), writeMagenta(dst.String()))
 			HandleWebhookSend(fmt.Sprintf("[VERBOSE] JSON detected, Parameter %s is \n```%s```", k, dst.String()), "verbose", wh)
 			continue
@@ -168,11 +172,20 @@ func HandleWebhookSend(message string, event string, wh webhook.Webhook) {
 	if wh.GetEnabled() {
 		// Only send if wh.Contains(event) or if the first event is "all" but wh.Contains("verbose") is false
 		if wh.Contains("all") && event != "verbose" {
-			wh.Send(message)
+			err := wh.Send(message)
+			if err != nil {
+				logger.Error(err)
+			}
 		} else if wh.Contains(event) {
-			wh.Send(message)
+			err := wh.Send(message)
+			if err != nil {
+				logger.Error(err)
+			}
 		} else if wh.Contains("verbose") && event == "verbose" {
-			wh.Send(message)
+			err := wh.Send(message)
+			if err != nil {
+				logger.Error(err)
+			}
 		}
 	}
 }

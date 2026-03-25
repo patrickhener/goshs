@@ -645,7 +645,10 @@ func main() {
 			Whitelist:   wl,
 		}
 
-		go s.Start()
+		err := s.Start()
+		if err != nil {
+			logger.Error(err)
+		}
 	}
 
 	// Start DNS Server

@@ -243,7 +243,7 @@ func testUploadPut(t *testing.T, basePath string, negative bool, upload_only boo
 	file, err := os.Open(filePath)
 	require.NoError(t, err)
 
-	// Contruct request
+	// Construct request
 	uploadUrl := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
 	req, err := http.NewRequest("PUT", uploadUrl, file)
 	require.NoError(t, err)

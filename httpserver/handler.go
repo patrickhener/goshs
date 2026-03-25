@@ -434,7 +434,10 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		SharedLinks:     fileS.SharedLinks,
 	}
 
-	renderIndex(w, uiData)
+	err := renderIndex(w, uiData)
+	if err != nil {
+		logger.Error(err)
+	}
 }
 
 func (fileS *FileServer) constructItems(fis []fs.FileInfo, relpath string, acl configFile, r *http.Request) []item {
@@ -841,7 +844,7 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 
 func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request) {
 	if _, token := r.URL.Query()["token"]; !token {
-		http.Error(w, "error in token delete handler", 400)
+		http.Error(w, "error in token delete handler", http.StatusBadRequest)
 	}
 
 	token := r.URL.Query().Get("token")
@@ -851,14 +854,17 @@ func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request)
 	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, body)
 
 	w.WriteHeader(204)
-	w.Write([]byte("shared link deleted successfully"))
+	_, err := w.Write([]byte("shared link deleted successfully"))
+	if err != nil {
+		logger.Error(err)
+	}
 }
 
 func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 	if !fs.Invisible {
 		// if not read only or upload only create directory from mkdir query param
 		if fs.ReadOnly || fs.UploadOnly {
-			http.Error(w, "read only or upload only mode", 403)
+			http.Error(w, "read only or upload only mode", http.StatusForbidden)
 			return
 		}
 
@@ -879,7 +885,10 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 		logger.LogRequest(r, http.StatusCreated, fs.Verbose, fs.Webhook, body)
 		// Send success response
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("directory created successfully"))
+		_, err = w.Write([]byte("directory created successfully"))
+		if err != nil {
+			logger.Error(err)
+		}
 		return
 	}
 
@@ -904,5 +913,8 @@ func (fs *FileServer) handleSMTPAttachment(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", a.ContentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, a.Filename))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", a.Size))
-	w.Write(a.Data)
+	_, err := w.Write(a.Data)
+	if err != nil {
+		logger.Error(err)
+	}
 }

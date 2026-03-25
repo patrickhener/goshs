@@ -37,8 +37,14 @@ func (s *SFTPServer) Start() error {
 		Addr: fmt.Sprintf("%s:%d", s.IP, s.Port),
 		Handler: func(s ssh.Session) {
 			// Deny default ssh connections
-			io.WriteString(s, "This server only supports SFTP.\n")
-			s.Exit(1)
+			_, err = io.WriteString(s, "This server only supports SFTP.\n")
+			if err != nil {
+				return
+			}
+			err = s.Exit(1)
+			if err != nil {
+				return
+			}
 		},
 	}
 

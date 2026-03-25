@@ -14,6 +14,9 @@ func (fs *FileServer) logOnly(w http.ResponseWriter, req *http.Request) {
 		fs.handleInvisible(w)
 	} else {
 		w.WriteHeader(200)
-		w.Write([]byte("ok\n"))
+		_, err := w.Write([]byte("ok\n"))
+		if err != nil {
+			logger.Error(err)
+		}
 	}
 }

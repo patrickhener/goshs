@@ -124,19 +124,25 @@ func TestParseAndSumInvalid(t *testing.T) {
 	// Invalid PEM with wrong base64 → pem.Decode fails
 	tmp1, _ := os.CreateTemp("", "bad1*.pem")
 	defer os.Remove(tmp1.Name())
-	tmp1.Write([]byte("not a pem cert"))
+	_, err := tmp1.Write([]byte("not a pem cert"))
+	if err != nil {
+		t.Fatalf("failed to write bad cert to file: %v", err)
+	}
 	tmp1.Close()
 
-	_, _, err := ParseAndSum(tmp1.Name())
+	_, _, err = ParseAndSum(tmp1.Name())
 	require.Error(t, err)
 
 	// Valid PEM but invalid cert DER
 	tmp2, _ := os.CreateTemp("", "bad2*.pem")
 	defer os.Remove(tmp2.Name())
-	tmp2.Write([]byte(`-----BEGIN CERTIFICATE-----
+	_, err = tmp2.Write([]byte(`-----BEGIN CERTIFICATE-----
 MIIBfzCCASKgAwIBAgIRAJKPXxQlIkH3l6Cy1W9ndSUwCgYIKoZIzj0EAwIwEjEQ
 MA4GA1UEAwwHZXhhbXBsZQ==
 -----END CERTIFICATE-----`))
+	if err != nil {
+		t.Fatalf("failed to write bad cert to file: %v", err)
+	}
 	tmp2.Close()
 
 	_, _, err = ParseAndSum(tmp2.Name())
