@@ -58,6 +58,7 @@ type Config struct {
 	DNSIP               string   `json:"dns_ip"`
 	SMTPServer          bool     `json:"smtp_server"`
 	SMTPPort            int      `json:"smtp_port"`
+	SMTPDomain          string   `json:"smtp_domain"`
 }
 
 func Load(configpath string) (Config, error) {
@@ -124,6 +125,7 @@ func PrintExample() (string, error) {
 		DNSIP:               "127.0.0.1",
 		SMTPServer:          false,
 		SMTPPort:            0,
+		SMTPDomain:          "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

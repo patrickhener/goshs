@@ -44,8 +44,9 @@
   "trusted_proxies": "",
   "tunnel": false,
   "dns_server": false,
-  "dns_port": 5353
+  "dns_port": 8053
   "dns_ip": "127.0.0.1",
   "smtp_server": false,
-  "smtp_port": 2525
+  "smtp_port": 2525,
+  "smtp_domain": ""
 }

@@ -72,10 +72,11 @@ var (
 	invisible           = false
 	tunnel              = false
 	dns                 = false
-	dnsPort             = 5353
+	dnsPort             = 8053
 	dnsIP               = "127.0.0.1"
 	smtp                = false
 	smtpPort            = 2525
+	smtpDomain          = ""
 )
 
 // Man page
@@ -132,11 +133,13 @@ Connection restriction:
   -tpw, --trusted-proxy-whitelist  Comma separated list of trusted proxies
 
 Collaboration options:
-  -dns, --dns-server       Enable DNS server                   (default: false)
-  -dns-port, --dns-port    DNS server port                     (default: 5353)
-  -dns-ip, --dns-ip        DNS server Reply IP                 (default: 127.0.0.1)
-  -smtp, --smtp-server     Enable SMTP server                  (default: false)
-  -smtp-port, --smtp-port  SMTP server port                    (default: 2525)
+  -dns, --dns-server           Enable DNS server                   (default: false)
+  -dns-port, --dns-port        DNS server port                     (default: 8053)
+  -dns-ip, --dns-ip            DNS server Reply IP                 (default: 127.0.0.1)
+  -smtp, --smtp-server         Enable SMTP server                  (default: false)
+  -smtp-port, --smtp-port      SMTP server port                    (default: 2525)
+  -smtp-domain, --smtp-domain  SMTP server domain                  (default: open relay)
+
 
 Webhook options:
   -W,  --webhook            Enable webhook support                      (default: false)
@@ -268,6 +271,7 @@ func flags() (*bool, *bool, *bool, *bool, *bool, *bool) {
 	flag.BoolVar(&smtp, "smtp", smtp, "Enable SMTP server")
 	flag.BoolVar(&smtp, "smtp-server", smtp, "Enable SMTP server")
 	flag.IntVar(&smtpPort, "smtp-port", smtpPort, "SMTP server port")
+	flag.StringVar(&smtpDomain, "smtp-domain", smtpDomain, "SMTP server domain")
 
 	updateGoshs := flag.Bool("update", false, "update")
 	hash := flag.Bool("H", false, "hash")
@@ -446,6 +450,7 @@ func init() {
 		dnsIP = cfg.DNSIP
 		smtp = cfg.SMTPServer
 		smtpPort = cfg.SMTPPort
+		smtpDomain = cfg.SMTPDomain
 
 		// Abspath for webroot
 		// Trim trailing / for linux/mac and \ for windows
@@ -671,6 +676,7 @@ func main() {
 			Port:    smtpPort,
 			Hub:     hub,
 			WebHook: webhook,
+			Domain:  smtpDomain,
 		}
 
 		go s.Start()
