@@ -5,6 +5,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -15,6 +16,16 @@ type SMTPServer struct {
 	Hub     *ws.Hub
 	WebHook *webhook.Webhook
 	Domain  string
+}
+
+func NewSMTP(opts *options.Options, hub *ws.Hub, wh *webhook.Webhook) *SMTPServer {
+	return &SMTPServer{
+		IP:      opts.IP,
+		Port:    opts.SMTPPort,
+		Domain:  opts.SMTPDomain,
+		Hub:     hub,
+		WebHook: wh,
+	}
 }
 
 func (srv *SMTPServer) Start() {

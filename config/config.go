@@ -2,12 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 )
 
 type Config struct {
@@ -61,19 +60,76 @@ type Config struct {
 	SMTPDomain          string   `json:"smtp_domain"`
 }
 
-func Load(configpath string) (Config, error) {
+func LoadConfig(opts *options.Options) (*options.Options, error) {
 	var cfg Config
 
-	cfile, err := os.ReadFile(configpath)
+	absPath, err := filepath.Abs(opts.ConfigFile)
 	if err != nil {
-		return Config{}, err
+		logger.Fatalf("Failed to get absolute path of config file: %+v", err)
+		return opts, err
+	}
+	logger.Infof("Using config file %s", absPath)
+	opts.ConfigPath = absPath
+
+	cfile, err := os.ReadFile(absPath)
+	if err != nil {
+		return opts, err
 	}
 
 	if err = json.Unmarshal(cfile, &cfg); err != nil {
-		return Config{}, err
+		return opts, err
 	}
 
-	return cfg, nil
+	// Set the config values
+	opts.IP = cfg.Interface
+	opts.Port = cfg.Port
+	opts.Webroot = cfg.Directory
+	opts.UploadFolder = cfg.UploadFolder
+	opts.SSL = cfg.SSL
+	opts.SelfSigned = cfg.SelfSigned
+	opts.MyKey = cfg.PrivateKey
+	opts.MyCert = cfg.Certificate
+	opts.MyP12 = cfg.P12
+	opts.P12NoPass = cfg.P12NoPass
+	opts.LetsEncrypt = cfg.LetsEncrypt
+	opts.LEDomains = cfg.LetsEncryptDomain
+	opts.LEEmail = cfg.LetsEncryptEmail
+	opts.LEHTTPPort = cfg.LetsEncryptHTTPPort
+	opts.LETLSPort = cfg.LetsEncryptTLSPort
+	opts.BasicAuth = cfg.AuthUsername + ":" + cfg.AuthPassword
+	opts.CertAuth = cfg.CertificateAuth
+	opts.WebDav = cfg.Webdav
+	opts.WebDavPort = cfg.WebdavPort
+	opts.UploadOnly = cfg.UploadOnly
+	opts.ReadOnly = cfg.ReadOnly
+	opts.NoClipboard = cfg.NoClipboard
+	opts.NoDelete = cfg.NoDelete
+	opts.Verbose = cfg.Verbose
+	opts.Silent = cfg.Silent
+	opts.DropUser = cfg.RunningUser
+	opts.CLI = cfg.CLI
+	opts.Embedded = cfg.Embedded
+	opts.Output = cfg.Output
+	opts.WebhookEnabled = cfg.WebhookEnabled
+	opts.WebhookURL = cfg.WebhookURL
+	opts.WebhookProvider = cfg.WebhookProvider
+	opts.WebhookEventsParsed = cfg.WebhookEvents
+	opts.SFTP = cfg.SFTP
+	opts.SFTPPort = cfg.SFTPPort
+	opts.SFTPKeyFile = cfg.SFTPKeyFile
+	opts.SFTPHostKeyFile = cfg.SFTPHostKeyFile
+	opts.Whitelist = cfg.Whitelist
+	opts.TrustedProxies = cfg.TrustedProxies
+	opts.Invisible = cfg.Invisible
+	opts.Tunnel = cfg.Tunnel
+	opts.DNS = cfg.DNSServer
+	opts.DNSPort = cfg.DNSPort
+	opts.DNSIP = cfg.DNSIP
+	opts.SMTP = cfg.SMTPServer
+	opts.SMTPPort = cfg.SMTPPort
+	opts.SMTPDomain = cfg.SMTPDomain
+
+	return opts, nil
 }
 
 func PrintExample() (string, error) {
@@ -133,23 +189,4 @@ func PrintExample() (string, error) {
 		return "", err
 	}
 	return string(b), nil
-}
-
-func SanityChecks(webroot string, configpath string, AuthPassword string) error {
-	if webroot == filepath.Dir(configpath) {
-		logger.Warn("You are hosting your config file in the webroot of goshs. This is not recommended.")
-		// Check if the process user can write the config file
-		file, err := os.OpenFile(configpath, os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			return err
-		}
-		file.Close()
-		return fmt.Errorf("%s", "The config file is accessible via goshs and is writeable by the user running goshs. This is a security issue. Read the docs at https://goshs.de/en/usage/config/index.html")
-	}
-
-	if !strings.HasPrefix(AuthPassword, "$2a$") {
-		logger.Warn("The password in the config file is not hashed. This is not recommended. Use goshs -H to hash the password.")
-	}
-
-	return nil
 }

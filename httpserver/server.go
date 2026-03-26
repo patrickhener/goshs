@@ -14,11 +14,56 @@ import (
 
 	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
+	"github.com/patrickhener/goshs/clipboard"
+	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/tunnel"
+	"github.com/patrickhener/goshs/webhook"
+	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
+
+func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard, wl *Whitelist, wh webhook.Webhook) *FileServer {
+	fs := &FileServer{
+		IP:           opts.IP,
+		Port:         opts.Port,
+		CLI:          opts.CLI,
+		Webroot:      opts.Webroot,
+		Clipboard:    clip,
+		Hub:          hub,
+		UploadFolder: opts.UploadFolder,
+		SSL:          opts.SSL,
+		SelfSigned:   opts.SelfSigned,
+		LetsEncrypt:  opts.LetsEncrypt,
+		MyCert:       opts.MyCert,
+		MyKey:        opts.MyKey,
+		MyP12:        opts.MyP12,
+		P12NoPass:    opts.P12NoPass,
+		User:         opts.Username,
+		Pass:         opts.Password,
+		CACert:       opts.CertAuth,
+		DropUser:     opts.DropUser,
+		UploadOnly:   opts.UploadOnly,
+		ReadOnly:     opts.ReadOnly,
+		NoClipboard:  opts.NoClipboard,
+		NoDelete:     opts.NoDelete,
+		Silent:       opts.Silent,
+		Invisible:    opts.Invisible,
+		Embedded:     opts.Embedded,
+		Verbose:      opts.Verbose,
+		Tunnel:       opts.Tunnel,
+		Version:      goshsversion.GoshsVersion,
+	}
+
+	fs.Hub = hub
+	fs.Clipboard = clip
+	fs.Webhook = wh
+	fs.Whitelist = wl
+
+	return fs
+}
 
 func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 	var addr string

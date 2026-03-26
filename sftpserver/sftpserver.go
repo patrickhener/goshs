@@ -8,6 +8,7 @@ import (
 	"github.com/gliderlabs/ssh"
 	"github.com/patrickhener/goshs/httpserver"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/pkg/sftp"
 	gossh "golang.org/x/crypto/ssh"
@@ -26,6 +27,22 @@ type SFTPServer struct {
 	HostKeyFile string
 	Webhook     webhook.Webhook
 	Whitelist   *httpserver.Whitelist
+}
+
+func NewSFTPServer(opts *options.Options, wl *httpserver.Whitelist, webhook webhook.Webhook) *SFTPServer {
+	return &SFTPServer{
+		IP:          opts.IP,
+		Port:        opts.Port,
+		KeyFile:     opts.SFTPKeyFile,
+		Username:    opts.Username,
+		Password:    opts.Password,
+		Root:        opts.Webroot,
+		ReadOnly:    opts.ReadOnly,
+		UploadOnly:  opts.UploadOnly,
+		HostKeyFile: opts.SFTPHostKeyFile,
+		Webhook:     webhook,
+		Whitelist:   wl,
+	}
 }
 
 // Start initializes and starts the SFTP server

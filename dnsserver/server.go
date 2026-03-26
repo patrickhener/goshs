@@ -7,6 +7,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -18,6 +19,18 @@ type DNSServer struct {
 	Hub     *ws.Hub
 	Silent  bool
 	WebHook *webhook.Webhook
+}
+
+func NewDNSServer(opts *options.Options, hub *ws.Hub, wh *webhook.Webhook) *DNSServer {
+	return &DNSServer{
+		IP:      "0.0.0.0",
+		ReplyIP: opts.DNSIP,
+		Port:    opts.DNSPort,
+		Hub:     hub,
+		Silent:  opts.Silent,
+		WebHook: wh,
+	}
+
 }
 
 func (d *DNSServer) handler(w dns.ResponseWriter, r *dns.Msg) {
