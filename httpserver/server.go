@@ -93,6 +93,9 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 		// Define routes
 		mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/upload") {
+				if denyForTokenAccess(w, r) {
+					return
+				}
 				fs.upload(w, r)
 				runtime.GC()
 			} else {
@@ -100,6 +103,9 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			}
 		})
 		mux.HandleFunc("PUT /", func(w http.ResponseWriter, r *http.Request) {
+			if denyForTokenAccess(w, r) {
+				return
+			}
 			fs.put(w, r)
 		})
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

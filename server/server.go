@@ -28,8 +28,9 @@ func StartAll(opts *options.Options) {
 
 	// webdav
 	if opts.WebDav {
-		httpSrv.Port = opts.WebDavPort
-		go httpSrv.Start("webdav")
+		webdavSrv := httpserver.NewHttpServer(opts, hub, clip, wl, *wh)
+		webdavSrv.WebdavPort = opts.WebDavPort
+		go webdavSrv.Start("webdav")
 	}
 
 	if opts.SFTP {

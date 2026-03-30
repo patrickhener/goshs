@@ -103,28 +103,46 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
 	if _, ok := req.URL.Query()["smtp"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		fs.handleSMTPAttachment(w, req)
 		return true
 	}
 	if _, ok := req.URL.Query()["goshs-info"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		fs.handleInfo(w)
 		return true
 	}
 	if _, ok := req.URL.Query()["mkdir"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		fs.handleMkdir(w, req)
 		return true
 	}
 	if _, ok := req.URL.Query()["ws"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		fs.socket(w, req)
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.NoClipboard && !fs.Invisible {
 			fs.cbDown(w, req)
 			return true
 		}
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.bulkDownload(w, req)
 		} else {
@@ -133,6 +151,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.static(w, req)
 		} else {
@@ -141,6 +162,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if err := fs.embedded(w, req); err != nil {
 			if !fs.Invisible {
 				body := fs.emitCollabEvent(req, http.StatusNotFound)
@@ -155,6 +179,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.ReadOnly && !fs.UploadOnly && !fs.NoDelete {
 			fs.deleteFile(w, req)
 			return true
@@ -164,6 +191,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		}
 	}
 	if _, ok := req.URL.Query()["share"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.CreateShareHandler(w, req)
 		} else {
@@ -836,9 +866,11 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 	entry.Downloaded++
 
 	fs.SharedLinks[token] = entry
-	if fs.SharedLinks[token].Downloaded >= fs.SharedLinks[token].DownloadLimit {
-		// Remove the share link from map to keep it clean
-		delete(fs.SharedLinks, token)
+	if fs.SharedLinks[token].DownloadLimit != -1 {
+		if fs.SharedLinks[token].Downloaded >= fs.SharedLinks[token].DownloadLimit {
+			// Remove the share link from map to keep it clean
+			delete(fs.SharedLinks, token)
+		}
 	}
 }
 

@@ -77,3 +77,11 @@ func GenerateQRCode(uri string) string {
 
 	return fmt.Sprintf("data:image/png;base64,%s", encoded)
 }
+
+func denyForTokenAccess(w http.ResponseWriter, r *http.Request) bool {
+	if r.URL.Query().Get("token") != "" {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return true
+	}
+	return false
+}
