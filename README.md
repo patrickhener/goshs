@@ -145,6 +145,7 @@ These are the awesome code contributors of `goshs`:
 These are the awesome contributors that made `goshs` even more secure :heart:
 
 - [Guilhem7](https://github.com/Guilhem7)
+- [Marduc812](https://github.com/marduc812)
 
 # Community
 
