@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,18 +21,11 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
-
-	filename := strings.Split(upath, "/")
-	outName := filename[len(filename)-1]
-
-	// construct target path
-	targetpath := strings.Split(upath, "/")
-	targetpath = targetpath[:len(targetpath)-1]
-	target := strings.Join(targetpath, "/")
-
-	savepath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, outName)
+	savepath, err := sanitizePath(fs.UploadFolder, req.URL.Path)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -74,13 +65,13 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
-
-	// construct target path
-	targetpath := strings.Split(upath, "/")
-	targetpath = targetpath[:len(targetpath)-1]
-	target := strings.Join(targetpath, "/")
+	// Derive and sanitize the target directory (strip trailing "/upload" from URL).
+	upathDir := strings.TrimSuffix(req.URL.Path, "/upload")
+	targetDir, err := sanitizePath(fs.UploadFolder, upathDir)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
 
 	reader, err := req.MultipartReader()
 	if err != nil {
@@ -106,7 +97,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		filenameClean := filenameSlice[len(filenameSlice)-1]
 
 		// Prepare destination file paths
-		finalPath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, filenameClean)
+		finalPath := filepath.Join(targetDir, filenameClean)
 		tempPath := finalPath + "~"
 
 		// Create temp file
@@ -170,7 +161,7 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 
 	// Redirect back from where we came from
-	http.Redirect(w, req, target, http.StatusSeeOther)
+	http.Redirect(w, req, upathDir, http.StatusSeeOther)
 }
 
 // bulkDownload will provide zip archived download bundle of multiple selected files
@@ -188,16 +179,13 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
 	}
 
-	// Clean file paths and fill slice
-	// Also sanitize path (No path traversal)
-	// If .. in single string just skip file
+	// Validate each path and collect absolute paths; skip any traversal attempts
 	for _, file := range files {
-		fileCleaned, _ := url.QueryUnescape(file)
-		if strings.Contains(fileCleaned, "..") {
-			// Just skip this file
+		absPath, err := sanitizePath(fs.Webroot, file)
+		if err != nil {
 			continue
 		}
-		filesCleaned = append(filesCleaned, fileCleaned)
+		filesCleaned = append(filesCleaned, absPath)
 	}
 
 	// Construct filename to download
@@ -256,9 +244,9 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		return nil
 	}
 
-	// Loop over files and add to zip
+	// Loop over files and add to zip (filesCleaned contains validated absolute paths)
 	for _, file := range filesCleaned {
-		err := filepath.Walk(path.Join(fs.Webroot, file), walker)
+		err := filepath.Walk(file, walker)
 		if err != nil {
 			logger.Errorf("creating zip file: %+v", err)
 		}

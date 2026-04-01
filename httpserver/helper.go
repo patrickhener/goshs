@@ -8,12 +8,32 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/patrickhener/goshs/logger"
 	"github.com/skip2/go-qrcode"
 )
+
+// sanitizePath validates that requestPath stays within root after decoding and
+// cleaning. It returns the absolute path on success, or an error if the path
+// would escape root (path traversal).
+func sanitizePath(root, requestPath string) (string, error) {
+	decoded, err := url.QueryUnescape(requestPath)
+	if err != nil {
+		// Malformed percent-encoding — use raw value; filepath.Clean will handle it.
+		decoded = requestPath
+	}
+	clean := filepath.Clean("/" + strings.TrimLeft(decoded, "/"))
+	abs := filepath.Join(root, clean)
+	rootClean := filepath.Clean(root)
+	if abs != rootClean && !strings.HasPrefix(abs, rootClean+string(filepath.Separator)) {
+		return "", fmt.Errorf("path escapes root: %q", requestPath)
+	}
+	return abs, nil
+}
 
 func removeItem(sSlice []item, item string) []item {
 	index := 0

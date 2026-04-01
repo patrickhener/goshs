@@ -231,18 +231,21 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 		json = true
 	}
 
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
-
 	// Ignore default browser call to /favicon.ico
-	if upath == "/favicon.ico" {
+	if req.URL.Path == "/favicon.ico" {
 		return
 	}
 
-	upath = filepath.FromSlash(filepath.Clean("/" + strings.Trim(upath, "/")))
-
-	// Define absolute path
-	open := fs.Webroot + upath
+	open, err := sanitizePath(fs.Webroot, req.URL.Path)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
+	// Relative path used by templates
+	upath := strings.TrimPrefix(open, filepath.Clean(fs.Webroot))
+	if upath == "" {
+		upath = "/"
+	}
 
 	// Check if you are in a dir
 	// disable G304 (CWE-22): Potential file inclusion via variable
@@ -674,21 +677,15 @@ func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
 
 // deleteFile will delete a file
 func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
-	// Get path
-	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(req.URL.Path, "/")))
-
-	fileCleaned, _ := url.QueryUnescape(upath)
-	if strings.Contains(fileCleaned, "..") {
-		w.WriteHeader(500)
-		_, err := w.Write([]byte("Cannot delete file"))
-		if err != nil {
-			logger.Errorf("error writing answer to client: %+v", err)
-		}
+	deletePath, err := sanitizePath(fs.Webroot, req.URL.Path)
+	if err != nil {
+		http.Error(w, "Cannot delete file", http.StatusBadRequest)
+		body := fs.emitCollabEvent(req, http.StatusBadRequest)
+		logger.LogRequest(req, http.StatusBadRequest, fs.Verbose, fs.Webhook, body)
+		return
 	}
 
-	deletePath := filepath.Join(fs.Webroot, fileCleaned)
-
-	err := os.RemoveAll(deletePath)
+	err = os.RemoveAll(deletePath)
 	if err != nil {
 		logger.Warnf("error removing %+v", deletePath)
 	}
@@ -714,7 +711,17 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(r.URL.Path, "/")))
+	fpath, err := sanitizePath(fs.Webroot, r.URL.Path)
+	if err != nil {
+		body := fs.emitCollabEvent(r, http.StatusBadRequest)
+		logger.LogRequest(r, http.StatusBadRequest, fs.Verbose, fs.Webhook, body)
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	upath := strings.TrimPrefix(fpath, filepath.Clean(fs.Webroot))
+	if upath == "" {
+		upath = "/"
+	}
 
 	var expires time.Time
 	var downloadLimit int
@@ -749,7 +756,6 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get stat for file
-	fpath := filepath.Join(fs.Webroot, upath)
 	stat, err = os.Stat(fpath)
 	if err != nil {
 		logger.Errorf("cannot get stat information for file: %s", fpath)
@@ -900,12 +906,15 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Get path
-		upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(r.URL.Path, "/")))
-		finalPath := filepath.Join(fs.Webroot, upath)
+		// Get and sanitize path
+		finalPath, err := sanitizePath(fs.Webroot, r.URL.Path)
+		if err != nil {
+			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
 
-		// Create directory upath
-		err := os.MkdirAll(finalPath, 0755)
+		// Create directory
+		err = os.MkdirAll(finalPath, 0755)
 		if err != nil {
 			body := fs.emitCollabEvent(r, http.StatusInternalServerError)
 			logger.LogRequest(r, http.StatusInternalServerError, fs.Verbose, fs.Webhook, body)
