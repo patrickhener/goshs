@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v2.0.0-beta.2-green)
+![Version](https://img.shields.io/badge/Version-v2.0.0-beta.3-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -145,6 +145,7 @@ These are the awesome code contributors of `goshs`:
 These are the awesome contributors that made `goshs` even more secure :heart:
 
 [![](https://github.com/marduc812.png?size=50)](https://github.com/marduc812)
+[![](https://github.com/autobot23920.png?size=50)](https://github.com/autobot23920)
 
 - [Guilhem7](https://github.com/Guilhem7)
 
