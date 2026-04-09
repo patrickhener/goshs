@@ -201,6 +201,13 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		}
 		return true
 	}
+	if _, ok := req.URL.Query()["redirect"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		fs.handleRedirect(w, req)
+		return true
+	}
 	if _, ok := req.URL.Query()["token"]; ok {
 		if !fs.Invisible {
 			switch req.Method {
@@ -711,6 +718,46 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 
 	body := fs.emitCollabEvent(req, http.StatusResetContent)
 	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook, body)
+}
+
+// handleRedirect issues an HTTP redirect to the URL given in the ?url= query
+// parameter. An optional ?status= selects the response code (must be 3xx,
+// defaults to 302). Zero or more ?header= values in "Name: Value" format are
+// written to the response before the redirect is sent.
+func (fs *FileServer) handleRedirect(w http.ResponseWriter, req *http.Request) {
+	q := req.URL.Query()
+
+	target := q.Get("url")
+	if target == "" {
+		fs.handleError(w, req, fmt.Errorf("redirect: missing required 'url' parameter"), http.StatusBadRequest)
+		return
+	}
+
+	// Parse and validate status code
+	status := http.StatusFound // 302 default
+	if s := q.Get("status"); s != "" {
+		code, err := strconv.Atoi(s)
+		if err != nil || code < 300 || code > 399 {
+			fs.handleError(w, req, fmt.Errorf("redirect: 'status' must be a 3xx code, got %q", s), http.StatusBadRequest)
+			return
+		}
+		status = code
+	}
+
+	// Set any caller-supplied headers ("Name: Value")
+	for _, h := range q["header"] {
+		parts := strings.SplitN(h, ": ", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
+			fs.handleError(w, req, fmt.Errorf("redirect: malformed header %q — expected 'Name: Value'", h), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set(strings.TrimSpace(parts[0]), parts[1])
+	}
+
+	http.Redirect(w, req, target, status)
+
+	body := fs.emitCollabEvent(req, status)
+	logger.LogRequest(req, status, fs.Verbose, fs.Webhook, body)
 }
 
 func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request) {
