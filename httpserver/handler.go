@@ -83,8 +83,8 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 		}
 	}
 
-	// Check if the dir has a .goshs ACL file
-	config, err := fs.findSpecialFile(file.Name())
+	// Check for effective .goshs ACL (walks up to webroot so parent configs apply recursively)
+	config, err := fs.findEffectiveACL(file.Name())
 	if err != nil {
 		logger.Errorf("error reading file based access config: %+v", err)
 	}
@@ -92,9 +92,9 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 }
 
 func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Request) {
-	// If it is a file we need to check for .goshs one directory up
+	// Walk up from the file's directory to find the effective .goshs ACL
 	parent := filepath.Dir(file.Name())
-	config, err := fs.findSpecialFile(parent)
+	config, err := fs.findEffectiveACL(parent)
 	if err != nil {
 		logger.Errorf("error reading file based access config: %+v", err)
 	}
@@ -685,6 +685,22 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Block deletion of the .goshs ACL file itself
+	if filepath.Base(deletePath) == ".goshs" {
+		fs.handleError(w, req, fmt.Errorf("cannot delete ACL file"), http.StatusForbidden)
+		return
+	}
+
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	aclDir := filepath.Dir(deletePath)
+	acl, aclErr := fs.findEffectiveACL(aclDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
+
 	err = os.RemoveAll(deletePath)
 	if err != nil {
 		logger.Warnf("error removing %+v", deletePath)
@@ -910,6 +926,16 @@ func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
 		finalPath, err := sanitizePath(fs.Webroot, r.URL.Path)
 		if err != nil {
 			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
+
+		// Enforce .goshs ACL (recursive: walks up to webroot)
+		parentDir := filepath.Dir(finalPath)
+		acl, aclErr := fs.findEffectiveACL(parentDir)
+		if aclErr != nil {
+			logger.Errorf("error reading file based access config: %+v", aclErr)
+		}
+		if ok := fs.applyCustomAuth(w, r, acl); !ok {
 			return
 		}
 

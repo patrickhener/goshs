@@ -27,6 +27,22 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Block overwriting the .goshs ACL file
+	if filepath.Base(savepath) == ".goshs" {
+		fs.handleError(w, req, fmt.Errorf("cannot overwrite ACL file"), http.StatusForbidden)
+		return
+	}
+
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	targetDir := filepath.Dir(savepath)
+	acl, aclErr := fs.findEffectiveACL(targetDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		logger.Errorf("unable to read PUT request body: %+v", err)
@@ -73,6 +89,15 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	acl, aclErr := fs.findEffectiveACL(targetDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
+
 	reader, err := req.MultipartReader()
 	if err != nil {
 		logger.Errorf("reading multipart request: %+v", err)
@@ -95,6 +120,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		// sanitize filename (No path traversal)
 		filenameSlice := strings.Split(part.FileName(), "/")
 		filenameClean := filenameSlice[len(filenameSlice)-1]
+
+		// Block overwriting the .goshs ACL file
+		if filenameClean == ".goshs" {
+			logger.Warnf("blocked attempt to upload file named .goshs")
+			continue
+		}
 
 		// Prepare destination file paths
 		finalPath := filepath.Join(targetDir, filenameClean)

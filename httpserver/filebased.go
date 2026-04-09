@@ -48,3 +48,34 @@ func (fs *FileServer) findSpecialFile(folder string) (configFile, error) {
 
 	return config, nil
 }
+
+// findEffectiveACL walks up the directory tree from dir toward the webroot,
+// returning the nearest configFile found. This allows a .goshs placed in a
+// parent directory to apply recursively to all subdirectories without
+// leaking upward past the webroot.
+func (fs *FileServer) findEffectiveACL(dir string) (configFile, error) {
+	webroot := filepath.Clean(fs.Webroot)
+	current := filepath.Clean(dir)
+
+	for {
+		config, err := fs.findSpecialFile(current)
+		if err != nil {
+			return configFile{}, err
+		}
+		if config.Auth != "" || len(config.Block) > 0 {
+			return config, nil
+		}
+		// Stop once we have checked the webroot itself
+		if current == webroot {
+			break
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			// Reached filesystem root – guard against infinite loop
+			break
+		}
+		current = parent
+	}
+
+	return configFile{}, nil
+}
