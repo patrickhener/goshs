@@ -32,7 +32,7 @@ type SFTPServer struct {
 func NewSFTPServer(opts *options.Options, wl *httpserver.Whitelist, webhook webhook.Webhook) *SFTPServer {
 	return &SFTPServer{
 		IP:          opts.IP,
-		Port:        opts.Port,
+		Port:        opts.SFTPPort,
 		KeyFile:     opts.SFTPKeyFile,
 		Username:    opts.Username,
 		Password:    opts.Password,

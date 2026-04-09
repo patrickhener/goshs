@@ -212,7 +212,13 @@ func cmdFile(root string, r *sftp.Request, ip string, sftpServer *SFTPServer) er
 		}
 
 	case "Rename":
-		err := os.Rename(fullPath, r.Target)
+		targetPath, err := sanitizePath(r.Target, root)
+		if err != nil {
+			logger.LogSFTPRequestBlocked(r, ip, err)
+			sftpServer.HandleWebhookSend("sftp", r, ip, true)
+			return err
+		}
+		err = os.Rename(fullPath, targetPath)
 		if err != nil {
 			logger.LogSFTPRequestBlocked(r, ip, err)
 			sftpServer.HandleWebhookSend("sftp", r, ip, true)
