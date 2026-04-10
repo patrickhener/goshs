@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/patrickhener/goshs/logger"
@@ -1256,13 +1255,6 @@ func buildMxAcContext(maxAccess uint32) []byte {
 	return ctx
 }
 
-// inodeNumber extracts the inode number from an os.FileInfo on Linux.
-func inodeNumber(fi os.FileInfo) uint64 {
-	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
-		return stat.Ino
-	}
-	return 0
-}
 
 // buildQFidContext builds a SMB2_CREATE_QUERY_ON_DISK_ID_RESPONSE create context.
 // Layout (56 bytes): 16-byte header | "QFid" (4) | pad (4) | DiskFileId (16) | VolumeId (16)
