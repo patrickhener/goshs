@@ -83,6 +83,9 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * You can provide files via the SMB protocol
   * Supports restriction modes (read-only, upload-only, no-delete)
   * Catches the Hash (CTF Context)
+    * Cracks them against a static list
+    * Cracks them against variations of username and domain
+    * You can provide a wordlist that is used to try and crack the hash
   * Supports Windows 10 + 11 and Linux
     * See [smbserver/TEST_SHEET.md](smbserver/TEST_SHEET.md) for overview and limitations
 * Redirect endpoint

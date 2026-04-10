@@ -62,6 +62,7 @@ type Config struct {
 	SMBPort             int      `json:"smb_port"`
 	SMBDomain           string   `json:"smb_domain"`
 	SMBShare            string   `json:"smb_share"`
+	SMBWordlist         string   `json:"smb_wordlist"`
 }
 
 func LoadConfig(opts *options.Options) (*options.Options, error) {
@@ -136,6 +137,7 @@ func LoadConfig(opts *options.Options) (*options.Options, error) {
 	opts.SMBPort = cfg.SMBPort
 	opts.SMBDomain = cfg.SMBDomain
 	opts.SMBShare = cfg.SMBShare
+	opts.SMBWordlist = cfg.SMBWordlist
 
 	return opts, nil
 }
@@ -194,6 +196,7 @@ func PrintExample() (string, error) {
 		SMBPort:             445,
 		SMBDomain:           "",
 		SMBShare:            "",
+		SMBWordlist:         "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

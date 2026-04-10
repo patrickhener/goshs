@@ -52,5 +52,6 @@
   "smb_server": false,
   "smb_port": 445,
   "smb_domain": "",
-  "smb_share": ""
+  "smb_share": "",
+  "smb_wordlist": ""
 }
