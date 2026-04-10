@@ -22,8 +22,8 @@ func isBase64(s string) bool {
 	return err == nil
 }
 
-func validateAndParseJSON(input []byte) (bool, interface{}) {
-	var data interface{}
+func validateAndParseJSON(input []byte) (bool, any) {
+	var data any
 
 	// Attempt to unmarshal the input
 	err := json.Unmarshal(input, &data)
@@ -272,71 +272,71 @@ func MissingEnv(envName string) {
 }
 
 // Debug Log
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	logger.Debugln(args...)
 }
 
 // Debugf Log
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	logger.Debugf(format, args...)
 }
 
 // Info Log
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	logger.Infoln(args...)
 }
 
 // Infof Log
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	logger.Infof(format, args...)
 }
 
 // Warn Log
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	logger.Warnln(args...)
 }
 
 // Warnf Log
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	logger.Warnf(format, args...)
 }
 
 // Panic Log
-func Panic(args ...interface{}) {
+func Panic(args ...any) {
 	logger.Panicln(args...)
 }
 
 // Panicf Log
-func Panicf(format string, args ...interface{}) {
+func Panicf(format string, args ...any) {
 	logger.Panicf(format, args...)
 }
 
 // Error Log
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	logger.Errorln(args...)
 }
 
 // Errorf Log
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	logger.Errorf(format, args...)
 }
 
 // Fatal Log
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	logger.Fatalln(args...)
 }
 
 // Fatalf Log
-func Fatalf(format string, args ...interface{}) {
+func Fatalf(format string, args ...any) {
 	logger.Fatalf(format, args...)
 }
 
 // Verbose Log
-func (l *StandardLogger) Verbose(args ...interface{}) {
+func (l *StandardLogger) Verbose(args ...any) {
 	l.WithField("verbose", true).Infoln(args...)
 }
 
 // Verbosef Log
-func (l *StandardLogger) Verbosef(format string, args ...interface{}) {
+func (l *StandardLogger) Verbosef(format string, args ...any) {
 	l.WithField("verbose", true).Infof(format, args...)
 }

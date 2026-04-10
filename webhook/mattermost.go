@@ -1,5 +1,7 @@
 package webhook
 
+import "slices"
+
 type MattermostWebhook struct {
 	Enabled  bool
 	Events   []string
@@ -9,7 +11,7 @@ type MattermostWebhook struct {
 }
 
 func (m *MattermostWebhook) Send(message string) error {
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"text":     message,
 		"username": m.Username,
 	}
@@ -30,10 +32,5 @@ func (m *MattermostWebhook) GetEvents() []string {
 }
 
 func (m *MattermostWebhook) Contains(event string) bool {
-	for _, a := range m.Events {
-		if a == event {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.Events, event)
 }

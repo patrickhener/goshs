@@ -91,7 +91,7 @@ func TestMattermostWebhook_Send(t *testing.T) {
 		require.NoError(t, err)
 		defer r.Body.Close()
 
-		var payload map[string]interface{}
+		var payload map[string]any
 		err = json.Unmarshal(body, &payload)
 		require.NoError(t, err)
 

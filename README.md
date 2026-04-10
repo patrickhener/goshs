@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-v2.0.0-beta.4-green)
+![Version](https://img.shields.io/badge/Version-v2.0.0-beta.5-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
@@ -11,8 +11,8 @@ goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and 
 
 ![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif)
 
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot-light"></kbd>
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-dark.png" alt="goshs-screenshot-dark"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2.png" alt="goshs-screenshot-light"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2-dark.png" alt="goshs-screenshot-dark"></kbd>
 
 
 # Documentation
@@ -76,6 +76,17 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
   * Use Time Limit
 * Tunnel connection via localhost.run
   * Expose your local goshs to the internet via localhost.run
+* Collaborator features (CTF Context)
+  * Receive SMTP requests (E-Mail)
+  * Receive DNS lookups
+* SMB server
+  * You can provide files via the SMB protocol
+  * Supports restriction modes (read-only, upload-only, no-delete)
+  * Catches the Hash (CTF Context)
+  * Supports Windows 10 + 11 and Linux
+    * See [smbserver/TEST_SHEET.md](smbserver/TEST_SHEET.md) for overview and limitations
+* Redirect endpoint
+  * Redirect to any page with 3XX Status code and custom headers (CTF context)
 
 # Installation
 

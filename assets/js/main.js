@@ -3,6 +3,7 @@ const ST = {
   sortAsc: true,
   dnsEvents: [],
   smtpEvents: [],
+  smbEvents: [],
   httpEvents: [],
   dnsCnt: { total: 0, A: 0, MX: 0, TXT: 0, other: 0 },
   httpCnt: 0,
@@ -146,6 +147,7 @@ function connectWS() {
     if (msg.type === "dns") onDNS(msg);
     else if (msg.type === "smtp") onSMTP(msg);
     else if (msg.type === "http") onHTTP(msg);
+    else if (msg.type === "smb") onSMB(msg);
     else if (msg.type === "refreshClipboard") onClipboardUpdate(msg);
     else if (msg.type === "reload") location.reload();
     else if (msg.type === "catchup") onCatchup(msg);
@@ -194,8 +196,20 @@ function onCatchup(msg) {
     document.getElementById("smtp-badge").textContent = ST.smtpEvents.length;
   }
 
+  const smb = msg.smb || [];
+  if (smb.length) {
+    for (let i = smb.length - 1; i >= 0; i--) {
+      ST.smbEvents.push(smb[i]);
+    }
+    document.getElementById("smb-badge").textContent = ST.smbEvents.length;
+  }
+
   // ── Update the combined collab badge ──
-  const total = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  const total =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   if (total > 0) {
     const badge = document.getElementById("collab-badge");
     badge.classList.add("show");
@@ -206,6 +220,7 @@ function onCatchup(msg) {
   if (http.length) renderHTTP();
   if (dns.length) renderDNS();
   if (smtp.length) renderSMTP();
+  if (smb.length) renderSMB();
 }
 
 // ══ HTTP LOG ══
@@ -215,7 +230,11 @@ function onHTTP(e) {
   document.getElementById("http-badge").textContent = ST.httpCnt;
   const badge = document.getElementById("collab-badge");
   badge.classList.add("show");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   renderHTTP();
 }
 
@@ -654,7 +673,11 @@ function clearHTTP() {
   document.getElementById("http-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearHTTP" }));
   const badge = document.getElementById("collab-badge");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderHTTP();
 }
@@ -675,7 +698,11 @@ function onDNS(e) {
   document.getElementById("dns-cnt-other").textContent = ST.dnsCnt.other;
   const badge = document.getElementById("collab-badge");
   badge.classList.add("show");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   renderDNS();
 }
 function qtypeClass(t) {
@@ -734,9 +761,148 @@ function clearDNS() {
   document.getElementById("dns-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearDNS" }));
   const badge = document.getElementById("collab-badge");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderDNS();
+}
+
+// == SMB Log ==
+function onSMB(e) {
+  console.log(e);
+  ST.smbEvents.unshift(e);
+  document.getElementById("smb-badge").textContent = ST.smbEvents.length;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  renderSMB();
+}
+
+function renderSMB() {
+  const filter = (
+    document.getElementById("smb-search").value || ""
+  ).toLowerCase();
+
+  const inbox = document.getElementById("smb-inbox");
+  const empty = document.getElementById("smb-empty");
+
+  const vis = ST.smbEvents.filter(
+    (e) =>
+      !filter ||
+      (e.username || "").toLowerCase().includes(filter) ||
+      (e.domain || "").toLowerCase().includes(filter) ||
+      (e.source || "").toLowerCase().includes(filter) ||
+      (e.hash || "").toLowerCase().includes(filter),
+  );
+
+  empty.style.display = vis.length ? "none" : "flex";
+  inbox.querySelectorAll(".smb-card").forEach((c) => c.remove());
+
+  vis.slice(0, 500).forEach((e, i) => {
+    const card = document.createElement("div");
+    const isNew = i === 0 && !filter;
+    card.className = "smb-card" + (isNew ? " new-card" : "");
+
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+    const userSummary =
+      [e.username, e.domain].filter(Boolean).join("@") || "unknown";
+    const hashId = "smb-hash-" + Math.random().toString(36).slice(2);
+
+    // ── Header (always visible, clickable) ──
+    const header = document.createElement("div");
+    header.className = "smb-card-header";
+    header.innerHTML = `
+       <span class="smb-badge-type">${esc(e.hashType || "—")}</span>
+       <div class="smb-header-meta">
+         <span class="smb-user-summary">${esc(userSummary)}</span>
+         <span class="smb-source">${esc(e.source || "—")}</span>
+       </div>
+       <span class="smb-time">${esc(ts)}</span>
+       <span class="smb-chevron">▾</span>
+     `;
+
+    // ── Body (collapsible) ──
+    const body = document.createElement("div");
+    body.className = "smb-card-body";
+    body.innerHTML = `
+       <div class="smb-meta-grid">
+         <span class="smb-label">User</span>
+         <span class="smb-val">${esc(e.username || "—")}</span>
+         <span class="smb-label">Domain</span>
+         <span class="smb-val">${esc(e.domain || "—")}</span>
+         <span class="smb-label">Workstation</span>
+         <span class="smb-val">${esc(e.workstation || "—")}</span>
+         <span class="smb-label">Source</span>
+         <span class="smb-val smb-mono">${esc(e.source || "—")}</span>
+         <span class="smb-label">Hash Type</span>
+         <span class="smb-val">${esc(e.hashType || "—")}</span>
+         <span class="smb-label">Hashcat Mode</span>
+         <span class="smb-val">hashcat -m ${esc(e.hashcatMode || "—")}</span>
+       </div>
+       ${
+         e.hash
+           ? `
+       <div class="smb-hash-wrap">
+         <div class="smb-hash-label">Hashcat line</div>
+         <div class="smb-hash-box">
+           <code id="${hashId}">${esc(e.hash)}</code>
+           <button class="btn btn-sm smb-copy-btn" title="Copy hash">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+             </svg>
+           </button>
+         </div>
+       </div>`
+           : ""
+       }
+     `;
+
+    // Wire up copy button after innerHTML is set
+    const copyBtn = body.querySelector(".smb-copy-btn");
+    if (copyBtn) {
+      copyBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        const text = document.getElementById(hashId)?.textContent || "";
+        navigator.clipboard
+          .writeText(text)
+          .then(() => toast("Hash copied!", "ok"));
+      };
+    }
+
+    // Toggle on header click
+    header.onclick = () => card.classList.toggle("open");
+
+    card.appendChild(header);
+    card.appendChild(body);
+    inbox.appendChild(card);
+  });
+}
+
+function copyText(elementId) {
+  const text = document.getElementById(elementId)?.textContent || "";
+  navigator.clipboard.writeText(text).then(() => toast("Copied!", "ok"));
+}
+
+function clearSMB() {
+  ST.smbEvents = [];
+  document.getElementById("smb-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearSMB" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderSMB();
 }
 
 // ══ SMTP ══
@@ -745,7 +911,11 @@ function onSMTP(e) {
   document.getElementById("smtp-badge").textContent = ST.smtpEvents.length;
   const badge = document.getElementById("collab-badge");
   badge.classList.add("show");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   renderSMTP();
 }
 function attachIcon(contentType) {
@@ -1028,7 +1198,11 @@ function clearSMTP() {
   document.getElementById("smtp-badge").textContent = "0";
   ST.ws.send(JSON.stringify({ type: "clearSMTP" }));
   const badge = document.getElementById("collab-badge");
-  badge.textContent = ST.httpCnt + ST.dnsEvents.length + ST.smtpEvents.length;
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderSMTP();
 }

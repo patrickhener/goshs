@@ -807,6 +807,26 @@
                                 <span class="cbadge" id="smtp-badge">0</span>
                             </div>
                             <div
+                                class="ctab"
+                                onclick="switchCollab('smb', this)"
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M3 7h5l2 3h11v9a2 2 0 0 1-2 2H3z"
+                                    />
+                                    <path d="M3 7V5a2 2 0 0 1 2-2h3l2 3" />
+                                </svg>
+                                SMB log
+                                <span class="cbadge" id="smb-badge">0</span>
+                            </div>
+                            <div
                                 style="
                                     margin-left: auto;
                                     display: flex;
@@ -1074,6 +1094,55 @@
                                         <polyline points="22,6 12,13 2,6" />
                                     </svg>
                                     <p>No emails received yet.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SMB cpanel -->
+                        <div class="cpanel" id="cpanel-smb">
+                            <div class="http-toolbar">
+                                <div class="search-wrap">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="M21 21l-4.35-4.35" />
+                                    </svg>
+                                    <input
+                                        class="search-input"
+                                        id="smb-search"
+                                        type="text"
+                                        placeholder="filter…"
+                                        oninput="renderSMB()"
+                                    />
+                                </div>
+                                <div style="margin-left: auto">
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        onclick="clearSMB()"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="smb-scroll" id="smb-inbox">
+                                <div class="empty-state" id="smb-empty">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <path
+                                            d="M3 7h5l2 3h11v9a2 2 0 0 1-2 2H3z"
+                                        />
+                                        <path d="M3 7V5a2 2 0 0 1 2-2h3l2 3" />
+                                        <line x1="8" y1="14" x2="16" y2="14" />
+                                    </svg>
+                                    <p>No SMB logs found.</p>
                                 </div>
                             </div>
                         </div>

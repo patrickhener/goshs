@@ -36,6 +36,7 @@ type Hub struct {
 	HTTPLog *RingBuffer
 	DNSLog  *RingBuffer
 	SMTPLog *RingBuffer
+	SMBLog  *RingBuffer
 }
 
 // NewHub will create a new hub
@@ -50,6 +51,7 @@ func NewHub(cb *clipboard.Clipboard, cliEnabled bool) *Hub {
 		HTTPLog:    NewRingBuffer(1000),
 		DNSLog:     NewRingBuffer(1000),
 		SMTPLog:    NewRingBuffer(1000),
+		SMBLog:     NewRingBuffer(1000),
 	}
 }
 
@@ -106,6 +108,8 @@ func (h *Hub) classifyAndStore(msg []byte) {
 		h.DNSLog.Add(msg)
 	case "smtp":
 		h.SMTPLog.Add(msg)
+	case "smb":
+		h.SMBLog.Add(msg)
 	}
 }
 
@@ -115,6 +119,7 @@ func (h *Hub) sendCatchup(client *Client) {
 	httpEntries := h.HTTPLog.Last(200)
 	dnsEntries := h.DNSLog.Last(200)
 	smtpEntries := h.SMTPLog.Last(200)
+	smbEntries := h.SMBLog.Last(200)
 
 	// Marshal each slice of raw JSON messages into a JSON array
 	marshal := func(entries [][]byte) json.RawMessage {
@@ -133,11 +138,12 @@ func (h *Hub) sendCatchup(client *Client) {
 		return buf.Bytes()
 	}
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"type": "catchup",
 		"http": marshal(httpEntries),
 		"dns":  marshal(dnsEntries),
 		"smtp": marshal(smtpEntries),
+		"smb":  marshal(smbEntries),
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {

@@ -67,6 +67,10 @@ type Options struct {
 	SMTP                bool     // false
 	SMTPPort            int      // 2525
 	SMTPDomain          string   // ""
+	SMB                 bool     // false
+	SMBPort             int      // 445
+	SMBDomain           string   // ""
+	SMBShare            string   // ""
 }
 
 func Parse() (*Options, bool) {
@@ -165,6 +169,11 @@ func Parse() (*Options, bool) {
 	flag.BoolVar(&opts.SMTP, "smtp-server", false, "Enable SMTP server")
 	flag.IntVar(&opts.SMTPPort, "smtp-port", 2525, "SMTP server port")
 	flag.StringVar(&opts.SMTPDomain, "smtp-domain", "", "SMTP server domain")
+	flag.BoolVar(&opts.SMB, "smb", false, "Enable SMB server")
+	flag.BoolVar(&opts.SMB, "smb-server", false, "Enable SMB server")
+	flag.IntVar(&opts.SMBPort, "smb-port", 445, "SMB server port")
+	flag.StringVar(&opts.SMBDomain, "smb-domain", "GOSHS", "SMB server domain")
+	flag.StringVar(&opts.SMBShare, "smb-share", "goshs", "SMB server share")
 
 	// One-shot flags
 	upd := flag.Bool("update", false, "update")
@@ -242,6 +251,12 @@ SFTP server options:
   -sp,    --sftp-port          The port SFTP listens on          (default: 2022)
   -skf,   --sftp-keyfile       Authorized_keys file for pubkey auth
   -shk,   --sftp-host-keyfile  SSH Host key file for identification
+
+SMB server options:
+  -smb                        Activate SMB server capabilities         (default: false)
+  -smp,        --smb-port     The port SMB listens on                  (default: 445)
+  -smb-domain, --smb-domain   The domain to use for SMB authentication (default: WORKGROUP)
+  -smb-share,  --smb-share    The share to use for SMB authentication  (default: goshs)
 
 Authentication options:
   -b,  --basic-auth     Use basic authentication (user:pass - user can be empty)

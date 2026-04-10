@@ -110,7 +110,7 @@ func TestValidateAndParseJSON(t *testing.T) {
 }
 
 // helper function to get type as string
-func typeOf(v interface{}) string {
+func typeOf(v any) string {
 	if v == nil {
 		return "<nil>"
 	}

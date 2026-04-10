@@ -122,6 +122,8 @@ func (c *Client) dispatchReadPump(packet Packet) {
 		c.hub.DNSLog.Clear()
 	case "clearSMTP":
 		c.hub.SMTPLog.Clear()
+	case "clearSMB":
+		c.hub.SMBLog.Clear()
 
 	default:
 		logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)

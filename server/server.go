@@ -7,6 +7,7 @@ import (
 	"github.com/patrickhener/goshs/logger"
 	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/sftpserver"
+	"github.com/patrickhener/goshs/smbserver"
 	"github.com/patrickhener/goshs/smtpserver"
 	"github.com/patrickhener/goshs/utils"
 	"github.com/patrickhener/goshs/webhook"
@@ -46,6 +47,11 @@ func StartAll(opts *options.Options) {
 	if opts.SMTP {
 		smtpServer := smtpserver.NewSMTP(opts, hub, wh)
 		go smtpServer.Start()
+	}
+
+	if opts.SMB {
+		smbServer := smbserver.NewSMBServer(opts, hub, wh)
+		go smbServer.Start()
 	}
 
 	// Zeroconf mDNS

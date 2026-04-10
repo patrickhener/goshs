@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -76,11 +77,9 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 	// Get foldername
 	_, foldername := filepath.Split(file.Name())
 
-	for _, name := range parentConfig.Block {
-		if name == fmt.Sprintf("%s/", foldername) {
-			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
-			return
-		}
+	if slices.Contains(parentConfig.Block, fmt.Sprintf("%s/", foldername)) {
+		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+		return
 	}
 
 	// Check for effective .goshs ACL (walks up to webroot so parent configs apply recursively)
@@ -631,11 +630,9 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 	}
 
 	// Check if file is in block list and discard
-	for _, name := range acl.Block {
-		if name == filename {
-			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
-			return
-		}
+	if slices.Contains(acl.Block, filename) {
+		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+		return
 	}
 
 	// Extract download parameter

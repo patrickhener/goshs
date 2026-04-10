@@ -48,5 +48,9 @@
   "dns_ip": "127.0.0.1",
   "smtp_server": false,
   "smtp_port": 2525,
-  "smtp_domain": ""
+  "smtp_domain": "",
+  "smb_server": false,
+  "smb_port": 445,
+  "smb_domain": "",
+  "smb_share": ""
 }

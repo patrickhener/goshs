@@ -58,6 +58,10 @@ type Config struct {
 	SMTPServer          bool     `json:"smtp_server"`
 	SMTPPort            int      `json:"smtp_port"`
 	SMTPDomain          string   `json:"smtp_domain"`
+	SMBServer           bool     `json:"smb_server"`
+	SMBPort             int      `json:"smb_port"`
+	SMBDomain           string   `json:"smb_domain"`
+	SMBShare            string   `json:"smb_share"`
 }
 
 func LoadConfig(opts *options.Options) (*options.Options, error) {
@@ -128,6 +132,10 @@ func LoadConfig(opts *options.Options) (*options.Options, error) {
 	opts.SMTP = cfg.SMTPServer
 	opts.SMTPPort = cfg.SMTPPort
 	opts.SMTPDomain = cfg.SMTPDomain
+	opts.SMB = cfg.SMBServer
+	opts.SMBPort = cfg.SMBPort
+	opts.SMBDomain = cfg.SMBDomain
+	opts.SMBShare = cfg.SMBShare
 
 	return opts, nil
 }
@@ -177,11 +185,15 @@ func PrintExample() (string, error) {
 		TrustedProxies:      "",
 		Tunnel:              false,
 		DNSServer:           false,
-		DNSPort:             0,
+		DNSPort:             8053,
 		DNSIP:               "127.0.0.1",
 		SMTPServer:          false,
-		SMTPPort:            0,
+		SMTPPort:            25,
 		SMTPDomain:          "",
+		SMBServer:           false,
+		SMBPort:             445,
+		SMBDomain:           "",
+		SMBShare:            "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")
