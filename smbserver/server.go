@@ -33,6 +33,7 @@ type SMBServer struct {
 	ReadOnly   bool
 	UploadOnly bool
 	NoDelete   bool
+	Wordlist   string // optional wordlist path for quick hash cracking
 	Hub        *ws.Hub
 	WebHook    *webhook.Webhook
 
@@ -73,6 +74,7 @@ func NewSMBServer(opts *options.Options, hub *ws.Hub, webHook *webhook.Webhook) 
 		ReadOnly:   opts.ReadOnly,
 		UploadOnly: opts.UploadOnly,
 		NoDelete:   opts.NoDelete,
+		Wordlist:   opts.SMBWordlist,
 		Hub:        hub,
 		WebHook:    webHook,
 	}
@@ -606,7 +608,7 @@ func (s *SMBServer) handleSessionSetup(cs *connState, h *smb2Hdr, buf []byte, re
 			sess.Username = "anonymous"
 			sess.mu.Unlock()
 			logger.Debugf("SMB: null session accepted from %s", remoteAddr)
-			s.broadcastNTLMEvent(captured, remoteAddr)
+			s.broadcastNTLMEvent(captured, remoteAddr, "")
 			resp := s.buildSessionSetupResp(h, h.SessionID, STATUS_SUCCESS, FinalToken(), SMB2_SESSION_FLAG_IS_GUEST)
 			// Win11 (24H2+) requires the SESSION_SETUP response to be signed even
 			// for null/anonymous sessions. For null NTLM, both client and server
@@ -719,10 +721,29 @@ func (s *SMBServer) handleSessionSetup(cs *connState, h *smb2Hdr, buf []byte, re
 
 		spnegoFinal := FinalToken()
 
-		s.broadcastNTLMEvent(captured, remoteAddr)
+		// Built-in list is ~100 candidates — always safe to run inline.
+		crackedPassword, _ := TryCrackDefault(captured)
+
+		s.broadcastNTLMEvent(captured, remoteAddr, crackedPassword)
 		logger.Infof("SMB: captured %s hash from %s\\%s at %s",
 			captured.Protocol, captured.Domain, captured.Username, remoteAddr)
 		logger.Infof("SMB: hashcat (-m %s): %s", captured.HashcatMode, captured.HashcatLine)
+		if crackedPassword != "" {
+			logger.Infof("SMB: cracked %s\\%s — plaintext: %s", captured.Domain, captured.Username, crackedPassword)
+		}
+
+		// File wordlist can be millions of entries — run in the background so the
+		// SESSION_SETUP response goes out immediately. If a match is found later
+		// it is logged and broadcast as a follow-up event.
+		if crackedPassword == "" && s.Wordlist != "" {
+			snap := *captured // copy; captured may be mutated after this goroutine starts
+			go func() {
+				if pw, ok := TryCrackFile(&snap, s.Wordlist); ok {
+					logger.Infof("SMB: cracked %s\\%s — plaintext: %s (wordlist)", snap.Domain, snap.Username, pw)
+					s.broadcastNTLMEvent(&snap, remoteAddr, pw)
+				}
+			}()
+		}
 
 		// In anonymous/capture mode (no password set) we cannot derive the SMB2
 		// session signing key. Mark the session as GUEST so the client sets
@@ -2461,7 +2482,7 @@ func diskSpaceFull(path string) (total, free, callerFree uint64) {
 
 // ── WebSocket broadcast ────────────────────────────────────────────────────
 
-func (s *SMBServer) broadcastNTLMEvent(c *CapturedHash, source string) {
+func (s *SMBServer) broadcastNTLMEvent(c *CapturedHash, source, crackedPassword string) {
 	if s.Hub == nil {
 		return
 	}
@@ -2474,16 +2495,17 @@ func (s *SMBServer) broadcastNTLMEvent(c *CapturedHash, source string) {
 		hashcatMode = "5600"
 	}
 	event := ws.NTLMEvent{
-		Type:        "smb",
-		Username:    c.Username,
-		Domain:      c.Domain,
-		Workstation: c.Workstation,
-		Challenge:   fmt.Sprintf("%X", c.ServerChallenge),
-		Hash:        c.HashcatLine,
-		HashType:    hashType,
-		HashcatMode: hashcatMode,
-		Source:      source,
-		Timestamp:   time.Now(),
+		Type:            "smb",
+		Username:        c.Username,
+		Domain:          c.Domain,
+		Workstation:     c.Workstation,
+		Challenge:       fmt.Sprintf("%X", c.ServerChallenge),
+		Hash:            c.HashcatLine,
+		HashType:        hashType,
+		HashcatMode:     hashcatMode,
+		CrackedPassword: crackedPassword,
+		Source:          source,
+		Timestamp:       time.Now(),
 	}
 	b, err := json.Marshal(event)
 	if err != nil {

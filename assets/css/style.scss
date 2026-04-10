@@ -1840,6 +1840,32 @@ textarea {
     margin-top: 1px;
 }
 
+/* cracked password highlight */
+.smb-card.cracked-card {
+    border-left-color: #5cb85c;
+}
+
+.smb-badge-cracked {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: #5cb85c;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.smb-label-cracked {
+    color: #5cb85c;
+    font-weight: 700;
+}
+
+.smb-val-cracked {
+    color: #5cb85c;
+    font-weight: 700;
+}
+
 /* ── lightbox ── */
 .lightbox {
     display: none;

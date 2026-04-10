@@ -71,6 +71,7 @@ type Options struct {
 	SMBPort             int      // 445
 	SMBDomain           string   // ""
 	SMBShare            string   // ""
+	SMBWordlist         string   // ""
 }
 
 func Parse() (*Options, bool) {
@@ -174,6 +175,7 @@ func Parse() (*Options, bool) {
 	flag.IntVar(&opts.SMBPort, "smb-port", 445, "SMB server port")
 	flag.StringVar(&opts.SMBDomain, "smb-domain", "GOSHS", "SMB server domain")
 	flag.StringVar(&opts.SMBShare, "smb-share", "goshs", "SMB server share")
+	flag.StringVar(&opts.SMBWordlist, "smb-wordlist", "", "Wordlist file for SMB hash cracking")
 
 	// One-shot flags
 	upd := flag.Bool("update", false, "update")
@@ -254,9 +256,10 @@ SFTP server options:
 
 SMB server options:
   -smb                        Activate SMB server capabilities         (default: false)
-  -smp,        --smb-port     The port SMB listens on                  (default: 445)
+  -smb-port,   --smb-port     The port SMB listens on                  (default: 445)
   -smb-domain, --smb-domain   The domain to use for SMB authentication (default: WORKGROUP)
   -smb-share,  --smb-share    The share to use for SMB authentication  (default: goshs)
+  -smb-wordlist               Wordlist file for quick hash cracking    (default: none)
 
 Authentication options:
   -b,  --basic-auth     Use basic authentication (user:pass - user can be empty)

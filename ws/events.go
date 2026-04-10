@@ -45,14 +45,15 @@ type HTTPEvent struct {
 }
 
 type NTLMEvent struct {
-	Type        string    `json:"type"`        // "ntlm"
-	Username    string    `json:"username"`    // username
-	Domain      string    `json:"domain"`      // domain
-	Workstation string    `json:"workstation"` // workstation
-	Challenge   string    `json:"challenge"`   // challenge
-	Hash        string    `json:"hash"`        // hashcat line
-	HashType    string    `json:"hashType"`    // Distinguishing between NetNTLMv1/2, SSP, LM, etc.
-	HashcatMode string    `json:"hashcatMode"` // hashcat mode (v2 5600, v1 5500, 3000 LM, 1000 NTLM)
-	Source      string    `json:"source"`      // source
-	Timestamp   time.Time `json:"timestamp"`
+	Type            string    `json:"type"`            // "ntlm"
+	Username        string    `json:"username"`        // username
+	Domain          string    `json:"domain"`          // domain
+	Workstation     string    `json:"workstation"`     // workstation
+	Challenge       string    `json:"challenge"`       // challenge
+	Hash            string    `json:"hash"`            // hashcat line
+	HashType        string    `json:"hashType"`        // Distinguishing between NetNTLMv1/2, SSP, LM, etc.
+	HashcatMode     string    `json:"hashcatMode"`     // hashcat mode (v2 5600, v1 5500, 3000 LM, 1000 NTLM)
+	CrackedPassword string    `json:"crackedPassword"` // plaintext password if cracked, empty otherwise
+	Source          string    `json:"source"`          // source
+	Timestamp       time.Time `json:"timestamp"`
 }

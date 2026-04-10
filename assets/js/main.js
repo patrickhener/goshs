@@ -808,7 +808,7 @@ function renderSMB() {
   vis.slice(0, 500).forEach((e, i) => {
     const card = document.createElement("div");
     const isNew = i === 0 && !filter;
-    card.className = "smb-card" + (isNew ? " new-card" : "");
+    card.className = "smb-card" + (isNew ? " new-card" : "") + (e.crackedPassword ? " cracked-card" : "");
 
     const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
     const userSummary =
@@ -820,6 +820,7 @@ function renderSMB() {
     header.className = "smb-card-header";
     header.innerHTML = `
        <span class="smb-badge-type">${esc(e.hashType || "—")}</span>
+       ${e.crackedPassword ? `<span class="smb-badge-cracked">cracked</span>` : ""}
        <div class="smb-header-meta">
          <span class="smb-user-summary">${esc(userSummary)}</span>
          <span class="smb-source">${esc(e.source || "—")}</span>
@@ -845,6 +846,9 @@ function renderSMB() {
          <span class="smb-val">${esc(e.hashType || "—")}</span>
          <span class="smb-label">Hashcat Mode</span>
          <span class="smb-val">hashcat -m ${esc(e.hashcatMode || "—")}</span>
+         ${e.crackedPassword ? `
+         <span class="smb-label smb-label-cracked">Cracked</span>
+         <span class="smb-val smb-val-cracked smb-mono">${esc(e.crackedPassword)}</span>` : ""}
        </div>
        ${
          e.hash
