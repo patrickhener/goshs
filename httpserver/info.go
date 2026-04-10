@@ -40,6 +40,16 @@ func (fs *FileServer) handleInfo(w http.ResponseWriter) {
 			"verbose":        fmt.Sprintf("%t", fs.Verbose),
 			"webroot":        fs.Webroot,
 			"shared-links":   fmt.Sprintf("%d", len(fs.SharedLinks)),
+			"dns":            fmt.Sprintf("%t", fs.Options.DNS),
+			"dns-port":       fmt.Sprintf("%d", fs.Options.DNSPort),
+			"dns-ip":         fs.Options.DNSIP,
+			"smtp":           fmt.Sprintf("%t", fs.Options.SMTP),
+			"smtp-port":      fmt.Sprintf("%d", fs.Options.SMTPPort),
+			"smtp-domain":    fs.Options.SMTPDomain,
+			"smb":            fmt.Sprintf("%t", fs.Options.SMB),
+			"smb-port":       fmt.Sprintf("%d", fs.Options.SMBPort),
+			"smb-domain":     fs.Options.SMBDomain,
+			"smb-share":      fs.Options.SMBShare,
 		}
 
 		err := json.NewEncoder(w).Encode(info)

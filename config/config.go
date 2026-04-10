@@ -188,7 +188,7 @@ func PrintExample() (string, error) {
 		DNSPort:             8053,
 		DNSIP:               "127.0.0.1",
 		SMTPServer:          false,
-		SMTPPort:            25,
+		SMTPPort:            2525,
 		SMTPDomain:          "",
 		SMBServer:           false,
 		SMBPort:             445,
