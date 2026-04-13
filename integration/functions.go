@@ -434,7 +434,12 @@ func testWebdavListFiles(t *testing.T, path string) {
 
 	files, err := c.ReadDir("/")
 	require.NoError(t, err)
-	require.Equal(t, files[0].Name(), "upload_POST_test_data.txt")
+
+	var names []string
+	for _, f := range files {
+		names = append(names, f.Name())
+	}
+	require.Contains(t, names, "upload_POST_test_data.txt")
 }
 
 func testWebdavCreateDir(t *testing.T, path string) {
