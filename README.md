@@ -4,92 +4,49 @@
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
 ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/patrickhener/goshs)](https://goreportcard.com/report/github.com/patrickhener/goshs)
+[![GitHub stars](https://img.shields.io/github/stars/patrickhener/goshs?style=social)](https://github.com/patrickhener/goshs/stargazers)
 
-<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png" alt="goshs-logo" height="100">
+<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png?raw=true" alt="goshs-logo" height="100">
 
-goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
+goshs is a replacement for Python's `SimpleHTTPServer`. It is a feature-rich file server supporting HTTP/S, WebDAV, SFTP, and SMB — with built-in authentication, share links, webhooks, and collaboration features for penetration testing and CTF challenges.
 
-![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif)
+![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif?raw=true)
 
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2.png" alt="goshs-screenshot-light"></kbd>
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2-dark.png" alt="goshs-screenshot-dark"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2.png?raw=true" alt="goshs-screenshot-light"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2-dark.png?raw=true" alt="goshs-screenshot-dark"></kbd>
 
+# Quick Start
+
+```bash
+# Serve the current directory on port 8000
+goshs
+
+# Serve with HTTPS (self-signed) and basic auth
+goshs -s -ss -b user:password
+
+# Capture SMB hashes
+goshs -smb -smb-domain CORP
+
+# Catch DNS callbacks and receive emails
+goshs -dns -dns-ip 1.2.3.4 -smtp -smtp-domain your-domain.com
+```
 
 # Documentation
 
 For a detailed documentation go to [goshs.de](https://goshs.de)
 
 # Features
-* Download or view files
-  * Bulk download as .zip file
-  * QRCode
-* Upload files
-  * POST request
-  * PUT request
-  * Drag & Drop in web interface
-* Delete files
-  * Individually
-  * Bulk delete
-* Authentication
-  * Basic Authentication
-  * Certificate Based Authentication via Client Certificate
-* Transport Layer Security (HTTPS)
-  * self-signed
-  * let's encrypt
-  * provide own certificate
-* Non persistent clipboard
-  * Download clipboard entries as .json file
-* WebDAV support
-* Read-Only and Upload-Only mode
-* SFTP support
-  * Read-Only
-  * Upload-Only
-  * Key Auth
-  * Password Auth
-* Silent mode (no webserver output)
-* Invisible mode (no output whatsoever)
-* Retrieve json on cli
-* Drop user privileges before execution (Unix only)
-  * Example: Run on port 80, but process is "www-data"
-* Themes
-  * Dark Mode
-  * Light Mode
-* Command Line
-  * Run Commands on the system hosting `goshs`
-* File Based ACLs
-  * You can place a `.goshs` in any folder to apply custom ACLs
-  * You can apply custom basic auth per folder
-  * You can restrict access to specific files completely
-* Embed files on compile time
-* Self updating binary
-* Write output to a log file
-* Control via config file
-* Send notifications via webhook
-  * HTTP Server
-  * Webdav
-  * SFTP
-* Access control via IP Whitelist
-  * Proxy Aware
-* Share Links
-  * Share files without authentication
-  * Use Download Limit
-  * Use Time Limit
-* Tunnel connection via localhost.run
-  * Expose your local goshs to the internet via localhost.run
-* Collaborator features (CTF Context)
-  * Receive SMTP requests (E-Mail)
-  * Receive DNS lookups
-* SMB server
-  * You can provide files via the SMB protocol
-  * Supports restriction modes (read-only, upload-only, no-delete)
-  * Catches the Hash (CTF Context)
-    * Cracks them against a static list
-    * Cracks them against variations of username and domain
-    * You can provide a wordlist that is used to try and crack the hash
-  * Supports Windows 10 + 11 and Linux
-    * See [smbserver/TEST_SHEET.md](smbserver/TEST_SHEET.md) for overview and limitations
-* Redirect endpoint
-  * Redirect to any page with 3XX Status code and custom headers (CTF context)
+
+| | |
+|---|---|
+| 📁 **File Operations** | Download, upload (drag & drop, POST/PUT), delete, bulk ZIP, QR codes |
+| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB |
+| 🔒 **Auth & Security** | Basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert), IP whitelist, file-based ACLs |
+| ⚙️ **Server Modes** | Read-only, upload-only, no-delete, silent, invisible, CLI command execution |
+| 🔗 **Share Links** | Token-based sharing, download limit, time limit |
+| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, redirect endpoint |
+| 🔔 **Integration** | Webhooks, tunnel via localhost.run, config file, JSON API, mDNS |
+| 🛠️ **Misc** | Dark/light themes, clipboard, self-update, log output, embed files, drop privileges |
 
 # Installation
 
@@ -99,13 +56,12 @@ You can download the executable from the [release section](https://github.com/pa
 ## Go
 
 ```bash
-go get -u github.com/patrickhener/goshs
 go install github.com/patrickhener/goshs@latest
 ```
 
 ## Build yourself
 
-Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing this packages you can easily just:
+Building requirements are [uglify-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing these packages you can easily just:
 
 ```bash
 git clone https://github.com/patrickhener/goshs.git
@@ -115,7 +71,7 @@ make build-all
 
 ## Kali repositories
 
-When using kali you can easily just install it via cli, if it is not already installed:
+When using Kali you can easily just install it via CLI, if it is not already installed:
 
 ```
 sudo apt install goshs
@@ -152,7 +108,7 @@ These are the awesome code contributors of `goshs`:
 [![](https://github.com/abgordon.png?size=50)](https://github.com/abgordon)
 
 - [parzel](https://github.com/parzel)
-- [ty3gx](https://github.com/ty3gx) 
+- [ty3gx](https://github.com/ty3gx)
 
 # Security issues shout out
 

