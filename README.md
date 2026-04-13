@@ -50,18 +50,19 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 
 # Installation
 
-## Release
-You can download the executable from the [release section](https://github.com/patrickhener/goshs/releases)
+| Method | |
+|---|---|
+| 🦫 **Go** | `go install github.com/patrickhener/goshs@latest` |
+| 🐉 **Kali** | `sudo apt install goshs` |
+| 🍺 **Homebrew** | `brew install goshs` |
+| 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
+| 🐳 **Docker** | `docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd` |
+| 📦 **Release** | [Download from GitHub Releases](https://github.com/patrickhener/goshs/releases) |
 
-## Go
+<details>
+<summary>🔧 Build yourself</summary>
 
-```bash
-go install github.com/patrickhener/goshs@latest
-```
-
-## Build yourself
-
-Building requirements are [uglify-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing these packages you can easily just:
+Building requirements are [uglify-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing these packages run:
 
 ```bash
 git clone https://github.com/patrickhener/goshs.git
@@ -69,57 +70,23 @@ cd goshs
 make build-all
 ```
 
-## Kali repositories
-
-When using Kali you can easily just install it via CLI, if it is not already installed:
-
-```
-sudo apt install goshs
-```
-
-## Windows scoop package
-
-If you are using the [scoop package manager](https://scoop.sh/) under Windows, you can install goshs this way:
-
-```
-scoop bucket add extras
-scoop install extras/goshs
-```
-
-## macOS homebrew
-
-```
-brew install goshs
-```
-
-## Run with docker
-
-```
-docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd
-```
+</details>
 
 # Code Contributors
 
-These are the awesome code contributors of `goshs`:
+[![Contributors](https://contrib.rocks/image?repo=patrickhener/goshs)](https://github.com/patrickhener/goshs/graphs/contributors)
 
-[![](https://github.com/aWZHY0yQH81uOYvH.png?size=50)](https://github.com/aWZHY0yQH81uOYvH)
-[![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
-[![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
-[![](https://github.com/abgordon.png?size=50)](https://github.com/abgordon)
-
-- [parzel](https://github.com/parzel)
-- [ty3gx](https://github.com/ty3gx)
-
-# Security issues shout out
+# Security Contributors
 
 These are the awesome contributors that made `goshs` even more secure :heart:
 
-[![](https://github.com/marduc812.png?size=50)](https://github.com/marduc812)
-[![](https://github.com/autobot23920.png?size=50)](https://github.com/autobot23920)
-[![](https://github.com/R1ZZG0D.png?size=50)](https://github.com/R1ZZG0D)
-[![](https://github.com/jaisurya-me.png?size=50)](https://github.com/jaisurya-me)
-
-- [Guilhem7](https://github.com/Guilhem7)
+<table><tr>
+  <td align="center"><a href="https://github.com/marduc812"><img src="https://github.com/marduc812.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/autobot23920"><img src="https://github.com/autobot23920.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/R1ZZG0D"><img src="https://github.com/R1ZZG0D.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/jaisurya-me"><img src="https://github.com/jaisurya-me.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/Guilhem7">Guilhem7</a></td>
+</tr></table>
 
 # Community
 
