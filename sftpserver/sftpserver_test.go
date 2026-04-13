@@ -81,122 +81,139 @@ func TestErrors(t *testing.T) {
 
 func TestSanitizePath(t *testing.T) {
 	root := "/home/user"
-	path := "/home/user/../test"
-	_, err := sanitizePath(path, root)
-	require.Error(t, err)
 
-	root = "/home/user"
-	path = "/home/user/foo/bar/baz"
-	_, err = sanitizePath(path, root)
+	// After the security fix, traversal sequences are safely contained within
+	// root rather than rejected — the client path is treated as relative to root.
+	path := "/home/user/../test"
+	result, err := sanitizePath(path, root)
 	require.NoError(t, err)
+	require.Contains(t, result, root)
+
+	// Legitimate sub-paths resolve without error.
+	path = "/home/user/foo/bar/baz"
+	result, err = sanitizePath(path, root)
+	require.NoError(t, err)
+	require.Contains(t, result, root)
+
+	// Absolute escape attempts (e.g. /etc/passwd) are also contained.
+	path = "/etc/passwd"
+	result, err = sanitizePath(path, root)
+	require.NoError(t, err)
+	require.Contains(t, result, root)
 }
 
 func TestReadFile(t *testing.T) {
+	root := os.Getenv("PWD")
+	// After the security fix, SFTP paths are client-relative (relative to root).
 	req := &sftp.Request{
 		Method:   "Readfile",
-		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Filepath: "/authorized_keys",
 	}
-	file, err := readFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	file, err := readFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
-	require.Equal(t, file.Name(), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
+	require.Equal(t, file.Name(), filepath.Join(root, "authorized_keys"))
 }
 
 func TestListFile(t *testing.T) {
+	root := os.Getenv("PWD")
 	req := &sftp.Request{
 		Method:   "Stat",
-		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Filepath: "/authorized_keys",
 	}
-	files, err := listFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	files, err := listFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	file := files.files[0]
-	require.Equal(t, filepath.Join(os.Getenv("PWD"), file.Name()), filepath.Join(os.Getenv("PWD"), "authorized_keys"))
+	require.Equal(t, filepath.Join(root, file.Name()), filepath.Join(root, "authorized_keys"))
 
 	req = &sftp.Request{
 		Method:   "Listfiles",
-		Filepath: os.Getenv("PWD"),
+		Filepath: "/",
 	}
 
-	files, err = listFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	files, err = listFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	require.Greater(t, len(files.files), 4)
 }
 
 func TestWriteFile(t *testing.T) {
+	root := os.Getenv("PWD")
 	req := &sftp.Request{
 		Method:   "Writefile",
-		Filepath: filepath.Join(os.Getenv("PWD"), "test.txt"),
+		Filepath: "/test.txt",
 	}
-	file, err := writeFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	file, err := writeFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 	_, err = file.Write([]byte("test content"))
 	require.NoError(t, err)
 }
 
 func TestCmd(t *testing.T) {
+	root := os.Getenv("PWD")
+
 	req := &sftp.Request{
 		Method:   "Stat",
-		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Filepath: "/authorized_keys",
 	}
 
-	err := cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err := cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "Lstat",
-		Filepath: filepath.Join(os.Getenv("PWD"), "authorized_keys"),
+		Filepath: "/authorized_keys",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "Mkdir",
-		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
+		Filepath: "/testdir",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "Rename",
-		Filepath: filepath.Join(os.Getenv("PWD"), "test.txt"),
-		Target:   filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
+		Filepath: "/test.txt",
+		Target:   "/testdir/test.txt",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "Setstat",
-		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
+		Filepath: "/testdir/test.txt",
 		Attrs:    []byte(`{"mode": 0644}`), // Invalid
 	}
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	// TODO: Add test for Setstat with valid attributes
 
 	req = &sftp.Request{
 		Method:   "Remove",
-		Filepath: filepath.Join(os.Getenv("PWD"), "testdir", "test.txt"),
+		Filepath: "/testdir/test.txt",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "Rmdir",
-		Filepath: filepath.Join(os.Getenv("PWD"), "testdir"),
+		Filepath: "/testdir",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.NoError(t, err)
 
 	req = &sftp.Request{
 		Method:   "INVALID",
-		Filepath: os.Getenv("PWD"),
+		Filepath: "/",
 	}
 
-	err = cmdFile(os.Getenv("PWD"), req, "127.0.0.1", sftpserver)
+	err = cmdFile(root, req, "127.0.0.1", sftpserver)
 	require.Error(t, err)
 }
