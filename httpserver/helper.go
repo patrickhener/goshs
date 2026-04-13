@@ -35,16 +35,13 @@ func sanitizePath(root, requestPath string) (string, error) {
 	return abs, nil
 }
 
-func removeItem(sSlice []item, item string) []item {
-	index := 0
-
+func removeItem(sSlice []item, name string) []item {
 	for idx, sliceItem := range sSlice {
-		if item == sliceItem.Name {
-			index = idx
+		if name == sliceItem.Name {
+			return append(sSlice[:idx], sSlice[idx+1:]...)
 		}
 	}
-
-	return append(sSlice[:index], sSlice[index+1:]...)
+	return sSlice
 }
 
 func (files *FileServer) PrintEmbeddedFiles() {

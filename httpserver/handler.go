@@ -294,12 +294,21 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// #nosec G307
 	defer file.Close()
 
-	// Log request
-	body := fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
-
 	// Switch and check if dir
 	stat, _ := file.Stat()
+
+	// Skip collaborator logging for paths protected by a .goshs ACL to avoid
+	// broadcasting credentials (Authorization header) to the public collab feed.
+	targetDir := open
+	if !stat.IsDir() {
+		targetDir = filepath.Dir(open)
+	}
+	acl, _ := fs.findEffectiveACL(targetDir)
+	if acl.Auth == "" {
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
+	}
+
 	if stat.IsDir() {
 		fs.doDir(file, w, req, upath, json)
 	} else {
