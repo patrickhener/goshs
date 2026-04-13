@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -158,6 +159,18 @@ func testConnection(t *testing.T, path string) {
 	require.Equal(t, resp.Status, "200 OK")
 }
 
+func getCSRFToken(t *testing.T, basePath string) string {
+	resp, err := http.Get(basePath)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	re := regexp.MustCompile(`<meta\s+name="csrf-token"\s+content="([^"]+)"`)
+	matches := re.FindStringSubmatch(string(body))
+	require.Len(t, matches, 2, "csrf token not found in page")
+	return matches[1]
+}
+
 func testView(t *testing.T, path string, negative bool) {
 	resp, err := http.Get(path)
 	require.NoError(t, err)
@@ -186,7 +199,7 @@ func testDownload(t *testing.T, path string, negative bool) {
 	}
 }
 
-func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bool) {
+func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
 	// Read input file
 	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_POST_test_data.txt")
 	file, err := os.Open(filePath)
@@ -213,6 +226,9 @@ func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bo
 	req, err := http.NewRequest("POST", uploadUrl, &requestBody)
 	require.NoError(t, err)
 	req.Header.Add("Content-Type", writer.FormDataContentType())
+	if csrfToken != "" {
+		req.Header.Add("X-CSRF-Token", csrfToken)
+	}
 
 	// Do request
 	client := &http.Client{}
@@ -237,7 +253,7 @@ func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bo
 	}
 }
 
-func testUploadPut(t *testing.T, basePath string, negative bool, upload_only bool) {
+func testUploadPut(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
 	// Read input file
 	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_PUT_test_data.txt")
 	file, err := os.Open(filePath)
@@ -247,6 +263,9 @@ func testUploadPut(t *testing.T, basePath string, negative bool, upload_only boo
 	uploadUrl := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
 	req, err := http.NewRequest("PUT", uploadUrl, file)
 	require.NoError(t, err)
+	if csrfToken != "" {
+		req.Header.Add("X-CSRF-Token", csrfToken)
+	}
 
 	// Do request
 	client := &http.Client{}
@@ -254,7 +273,7 @@ func testUploadPut(t *testing.T, basePath string, negative bool, upload_only boo
 	require.NoError(t, err)
 
 	if !negative {
-		require.Equal(t, resp.StatusCode, 500)
+		require.Equal(t, resp.StatusCode, 200)
 		if !upload_only {
 			// Check if file was uploaded
 			path := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
@@ -282,8 +301,14 @@ func testBulkDownload(t *testing.T, path string, negative bool) {
 	}
 }
 
-func testRemoval(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
+func testRemoval(t *testing.T, path string, negative bool, csrfToken string) {
+	req, err := http.NewRequest("GET", path, nil)
+	require.NoError(t, err)
+	if csrfToken != "" {
+		req.Header.Add("X-CSRF-Token", csrfToken)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	require.NoError(t, err)
 	if !negative {
 		require.Equal(t, resp.StatusCode, 200)

@@ -139,6 +139,11 @@ func LoadConfig(opts *options.Options) (*options.Options, error) {
 	opts.SMBShare = cfg.SMBShare
 	opts.SMBWordlist = cfg.SMBWordlist
 
+	// Default upload folder to webroot if not set in config
+	if opts.UploadFolder == "" {
+		opts.UploadFolder = opts.Webroot
+	}
+
 	return opts, nil
 }
 
