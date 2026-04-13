@@ -4,7 +4,6 @@
 generate:
 	@echo "[*] Minifying js and compiling scss"
 	@uglifyjs -o httpserver/static/js/main.min.js assets/js/main.js
-	@uglifyjs -o httpserver/static/js/color-modes.min.js assets/js/color-modes.js
 	@sass --no-source-map -s compressed assets/css/style.scss httpserver/static/css/style.css
 	@echo "[OK] Done minifying and compiling things"
 	@echo "[*] Copying embedded files to target location"
@@ -116,8 +115,14 @@ run-unit: clean-tests
 	@go test ./cli -count=1
 	@go test ./clipboard -count=1
 	@go test ./config -count=1
+	@go test ./dnsserver -count=1
+	@go test ./httpserver -count=1
 	@go test ./logger -count=1
+	@go test ./sanity -count=1
 	@go test ./sftpserver -count=1
+	@go test ./smbserver -count=1
+	@go test ./smtpattach -count=1
+	@go test ./smtpserver -count=1
 	@go test ./update -count=1
 	@go test ./utils -count=1
 	@go test ./webhook -count=1
@@ -128,8 +133,14 @@ run-unit-no-network:
 	@go test -short ./cli -count=1
 	@go test -short ./clipboard -count=1
 	@go test -short ./config -count=1
+	@go test -short ./dnsserver -count=1
+	@go test -short ./httpserver -count=1
 	@go test -short ./logger -count=1
+	@go test -short ./sanity -count=1
 	@go test -short ./sftpserver -count=1
+	@go test -short ./smbserver -count=1
+	@go test -short ./smtpattach -count=1
+	@go test -short ./smtpserver -count=1
 	@go test -short ./update -count=1
 	@go test -short ./utils -count=1
 	@go test -short ./webhook -count=1
@@ -170,4 +181,3 @@ install:
 clean:
 	@rm -rf ./dist
 	@echo "[OK] Cleaned up!"
-

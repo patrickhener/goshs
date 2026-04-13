@@ -1,334 +1,1789 @@
-// Setup of Datatable
-$(document).ready(function () {
-  $('#tableData').DataTable({
-    paging: false,
-    language: {
-      info: '_TOTAL_ items',
-    },
-    order: [[2, 'asc']],
-    columnDefs: [
-      {
-        targets: [0, 1, 5],
-        orderable: false,
-      },
-    ],
-  });
+const ST = {
+  sortCol: "name",
+  sortAsc: true,
+  dnsEvents: [],
+  smtpEvents: [],
+  smbEvents: [],
+  httpEvents: [],
+  dnsCnt: { total: 0, A: 0, MX: 0, TXT: 0, other: 0 },
+  httpCnt: 0,
+  pendingUploads: [],
+  shareTarget: "",
+  ws: null,
+  theme: localStorage.getItem("goshs-theme") || "dark",
+};
 
-  var url = '';
-  location.protocol !== 'https:'
-    ? (url = 'http://' + window.location.host)
-    : (url = 'https://' + window.location.host);
-
-  // Generate QR code on canvas
-  var qr = new QRious({
-    value: url,
-    size: 150,
-  });
-
-  const baseqr = document.getElementById('baseqr');
-  baseqr.setAttribute('data-qrcode', qr.toDataURL());
+// ── init ──
+document.addEventListener("DOMContentLoaded", () => {
+  const activeTab = sessionStorage.getItem("activeTab");
+  if (activeTab) {
+    sessionStorage.removeItem("activeTab");
+    const btn = document.getElementById(activeTab);
+    if (btn) btn.click();
+  }
+  applyTheme(ST.theme);
+  initDrop();
+  initCliHistory();
+  connectWS();
+  initContextMenu();
+  initSharedLinks();
 });
 
-// Checkbox handling
-var checkboxes = document.querySelectorAll('.downloadBulkCheckbox');
-
-Array.prototype.forEach.call(checkboxes, function (cb) {
-  cb.addEventListener('change', function () {
-    checkedBoxes = document.querySelectorAll(
-      'input[type=checkbox]:checked'
-    ).length;
-    if (checkedBoxes >= 1) {
-      document.getElementById('downloadBulkButton').style.display = 'block';
-      document.getElementById('bulkDelete').style.display = 'block';
+// ══ THEME ══
+function toggleTheme() {
+  ST.theme = ST.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("goshs-theme", ST.theme);
+  applyTheme(ST.theme);
+}
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  const logo = document.getElementById("goshs-logo");
+  if (logo) {
+    if (t === "light") {
+      logo.src = "/images/logo-light.png?static";
     } else {
-      document.getElementById('downloadBulkButton').style.display = 'none';
-      document.getElementById('bulkDelete').style.display = 'none';
+      logo.src = "/images/logo-dark.png?static";
     }
-  });
-});
-
-function selectAll() {
-  Array.prototype.forEach.call(checkboxes, function (cb) {
-    cb.checked = true;
-  });
-  document.getElementById('downloadBulkButton').style.display = 'block';
-  document.getElementById('bulkDelete').style.display = 'block';
-}
-
-function selectNone() {
-  Array.prototype.forEach.call(checkboxes, function (cb) {
-    cb.checked = false;
-  });
-  document.getElementById('downloadBulkButton').style.display = 'none';
-  document.getElementById('bulkDelete').style.display = 'none';
-}
-
-var wsURL = '';
-location.protocol !== 'https:'
-  ? (wsURL = 'ws://' + window.location.host + '/?ws')
-  : (wsURL = 'wss://' + window.location.host + '/?ws');
-var connection = new WebSocket(wsURL);
-
-connection.onopen = function () {
-  console.log('Connected via WebSockets');
-};
-
-connection.onclose = function () {
-  console.log('Connection has been closed by WebSocket Server');
-};
-
-connection.onerror = function (e) {
-  console.log('Websocket error: ', e);
-};
-
-connection.onmessage = function (m) {
-  try {
-    var message = JSON.parse(m.data);
-    if (message['type'] == 'refreshClipboard') {
-      location.reload();
-    } else if (message['type'] == 'updateCLI') {
-      output = document.getElementById('cliOutput');
-      output.innerHTML = message['content'];
-      input = document.getElementById('cliCommand');
-      input.value = '';
-    }
-  } catch (e) {
-    console.log('Error reading message: ', e);
   }
-};
+}
 
-function sendEntry(e) {
-  e.preventDefault();
-  entryfield = document.getElementById('cbEntry');
-  var text = entryfield.value;
-  var msg = {
-    type: 'newEntry',
-    content: text,
+// ══ EMBEDDED FILES ══
+function filterEmbedded() {
+  const q = document.getElementById("emb-search").value.toLowerCase();
+  document.querySelectorAll("#emb-tbody tr[data-name]").forEach((tr) => {
+    const name = (tr.dataset.name || "").toLowerCase();
+    tr.style.display = !q || name.includes(q) ? "" : "none";
+  });
+}
+
+const embSortDir = { name: true, size: true, mtime: true };
+function sortEmbedded(col) {
+  const asc = (embSortDir[col] = !embSortDir[col]);
+  const tbody = document.getElementById("emb-tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+
+  rows.sort((a, b) => {
+    let va = a.dataset[col] || "",
+      vb = b.dataset[col] || "";
+    if (col === "size" || col === "mtime") {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return asc ? va - vb : vb - va;
+    }
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  rows.forEach((r) => tbody.appendChild(r));
+
+  // Update sort indicators
+  document.querySelectorAll("#emb-table th[id]").forEach((th) => {
+    th.classList.remove("sorted");
+    th.querySelector(".sort-arrow").textContent = "↕";
+  });
+  const th = document.getElementById("emb-th-" + col);
+  if (th) {
+    th.classList.add("sorted");
+    th.querySelector(".sort-arrow").textContent = asc ? "↑" : "↓";
+  }
+}
+
+function copyEmbLink(name) {
+  const url =
+    location.origin +
+    encodeURIComponent(name).replace("%2F", "/") +
+    "?embedded";
+  navigator.clipboard
+    .writeText(url)
+    .then(() => toast("Link copied!", "success"))
+    .catch(() => toast("Copy failed", "error"));
+}
+
+// ══ PANEL / TAB SWITCHING ══
+function switchPanel(name, el) {
+  document
+    .querySelectorAll(".snav")
+    .forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll(".panel")
+    .forEach((p) => p.classList.remove("active"));
+  el.classList.add("active");
+  const p = document.getElementById("panel-" + name);
+  if (p) p.classList.add("active");
+}
+function switchCollab(name, el) {
+  document
+    .querySelectorAll(".ctab")
+    .forEach((t) => t.classList.remove("active"));
+  document
+    .querySelectorAll(".cpanel")
+    .forEach((p) => p.classList.remove("active"));
+  el.classList.add("active");
+  const p = document.getElementById("cpanel-" + name);
+  if (p) p.classList.add("active");
+}
+
+// ══ WEBSOCKET ══
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ST.ws = new WebSocket(`${proto}://${window.location.host}/?ws`);
+  ST.ws.onopen = () => {
+    document.getElementById("ws-status").style.color = "var(--accent)";
+    document.getElementById("collab-status").textContent = "connected";
+    console.log("Websocket connected");
   };
-  connection.send(JSON.stringify(msg));
-  entryfield.value = '';
+  ST.ws.onclose = () => {
+    document.getElementById("ws-status").style.color = "var(--danger)";
+    document.getElementById("collab-status").textContent = "reconnecting…";
+    setTimeout(connectWS, 2500);
+    console.log("WebSocket closed");
+  };
+  ST.ws.onmessage = (e) => {
+    let msg;
+    try {
+      msg = JSON.parse(e.data);
+    } catch {
+      return;
+    }
+    if (msg.type === "dns") onDNS(msg);
+    else if (msg.type === "smtp") onSMTP(msg);
+    else if (msg.type === "http") onHTTP(msg);
+    else if (msg.type === "smb") onSMB(msg);
+    else if (msg.type === "refreshClipboard") onClipboardUpdate(msg);
+    else if (msg.type === "reload") location.reload();
+    else if (msg.type === "catchup") onCatchup(msg);
+    else if (msg.type === "updateCLI") cliOutput(msg);
+  };
 }
 
-function clearClipboard(e) {
-  e.preventDefault;
-  result = confirm('Are you sure you want to clear the clipboard?');
-  if (result) {
-    var msg = {
-      type: 'clearClipboard',
-      content: '',
-    };
-    connection.send(JSON.stringify(msg));
+function onCatchup(msg) {
+  // ── HTTP ──
+  const http = msg.http || [];
+  if (http.length) {
+    // unshift in reverse so newest ends up at index 0
+    for (let i = http.length - 1; i >= 0; i--) {
+      ST.httpEvents.push(http[i]);
+    }
+    ST.httpCnt = ST.httpEvents.length;
+    document.getElementById("http-badge").textContent = ST.httpCnt;
+  }
+
+  // ── DNS ──
+  const dns = msg.dns || [];
+  if (dns.length) {
+    for (let i = dns.length - 1; i >= 0; i--) {
+      const e = dns[i];
+      ST.dnsEvents.push(e);
+      ST.dnsCnt.total++;
+      if (e.qtype === "A") ST.dnsCnt.A++;
+      else if (e.qtype === "MX") ST.dnsCnt.MX++;
+      else if (e.qtype === "TXT") ST.dnsCnt.TXT++;
+      else ST.dnsCnt.other++;
+    }
+    document.getElementById("dns-badge").textContent = ST.dnsEvents.length;
+    document.getElementById("dns-cnt-total").textContent = ST.dnsCnt.total;
+    document.getElementById("dns-cnt-a").textContent = ST.dnsCnt.A;
+    document.getElementById("dns-cnt-mx").textContent = ST.dnsCnt.MX;
+    document.getElementById("dns-cnt-txt").textContent = ST.dnsCnt.TXT;
+    document.getElementById("dns-cnt-other").textContent = ST.dnsCnt.other;
+  }
+
+  // ── SMTP ──
+  const smtp = msg.smtp || [];
+  if (smtp.length) {
+    for (let i = smtp.length - 1; i >= 0; i--) {
+      ST.smtpEvents.push(smtp[i]);
+    }
+    document.getElementById("smtp-badge").textContent = ST.smtpEvents.length;
+  }
+
+  const smb = msg.smb || [];
+  if (smb.length) {
+    for (let i = smb.length - 1; i >= 0; i--) {
+      ST.smbEvents.push(smb[i]);
+    }
+    document.getElementById("smb-badge").textContent = ST.smbEvents.length;
+  }
+
+  // ── Update the combined collab badge ──
+  const total =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (total > 0) {
+    const badge = document.getElementById("collab-badge");
+    badge.classList.add("show");
+    badge.textContent = total;
+  }
+
+  // ── Render everything once ──
+  if (http.length) renderHTTP();
+  if (dns.length) renderDNS();
+  if (smtp.length) renderSMTP();
+  if (smb.length) renderSMB();
+}
+
+// ══ HTTP LOG ══
+function onHTTP(e) {
+  ST.httpEvents.unshift(e);
+  ST.httpCnt++;
+  document.getElementById("http-badge").textContent = ST.httpCnt;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  renderHTTP();
+}
+
+function methodClass(m) {
+  const map = {
+    GET: "m-get",
+    POST: "m-post",
+    PUT: "m-put",
+    DELETE: "m-delete",
+  };
+  return map[(m || "").toUpperCase()] || "m-other";
+}
+function statusClass(s) {
+  if (s >= 200 && s < 300) return "s2xx";
+  if (s >= 300 && s < 400) return "s3xx";
+  if (s >= 400 && s < 500) return "s4xx";
+  if (s >= 500) return "s5xx";
+  return "";
+}
+
+function renderHTTP() {
+  const filter = (
+    document.getElementById("http-search").value || ""
+  ).toLowerCase();
+  const tbody = document.getElementById("http-tbody");
+  const empty = document.getElementById("http-empty-row");
+
+  const vis = ST.httpEvents.filter(
+    (e) =>
+      !filter ||
+      (e.url || "").toLowerCase().includes(filter) ||
+      (e.method || "").toLowerCase().includes(filter) ||
+      (e.source || "").toLowerCase().includes(filter) ||
+      (e.useragent || "").toLowerCase().includes(filter) ||
+      String(e.status || "").includes(filter),
+  );
+
+  empty.style.display = vis.length ? "none" : "";
+  tbody
+    .querySelectorAll("tr.data-row, tr.http-detail-row")
+    .forEach((r) => r.remove());
+
+  vis.slice(0, 500).forEach((e, i) => {
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+    const hasBody = e.body && e.body.trim().length > 0;
+    const hasParams = e.parameters && e.parameters.trim().length > 0;
+    const detailId = "http-detail-" + i;
+    //
+    // detect & decode params
+    const paramDisplay = hasParams
+      ? (() => {
+          const decoded = decodeParams(e.parameters);
+          // check if any decoding happened
+          const hasDecoded = e.parameters !== decoded;
+          return { text: decoded, decoded: hasDecoded };
+        })()
+      : null;
+
+    // detect & decode body
+    const bodyDisplay = hasBody ? smartDecode(e.body) : null;
+
+    // ── main row ──
+    const tr = document.createElement("tr");
+    tr.className = "data-row" + (i === 0 && !filter ? " new-row" : "");
+    tr.innerHTML = `
+      <td class="http-ts">${esc(ts)}</td>
+      <td><span class="http-method ${methodClass(e.method)}">${esc(e.method || "?")}</span></td>
+      <td><span class="status-code ${statusClass(e.status)}">${esc(String(e.status || "?"))}</span></td>
+      <td class="http-path" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.url || "")}">${esc(e.url || "")}</td>
+      <td class="http-ip">${esc(e.source || "")}</td>
+      <td><button class="http-expand-btn" onclick="toggleHTTPDetail(this, '${detailId}')" title="Details">▾</button></td>`;
+
+    tbody.insertBefore(tr, empty.nextSibling || null);
+    tbody.appendChild(tr);
+
+    // ── detail row (hidden by default) ──
+    const dr = document.createElement("tr");
+    dr.className = "http-detail-row";
+    dr.id = detailId;
+    dr.style.display = "none";
+    dr.innerHTML = `<td colspan="6">
+      <div class="http-detail-inner">
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Full URL</span>
+          <div class="http-detail-value">${esc(e.url || "—")}</div>
+        </div>
+        ${
+          paramDisplay
+            ? `
+        <div class="http-detail-field full">
+          <span class="http-detail-label">
+            Query parameters
+            ${paramDisplay.decoded ? '<span class="decode-tag">decoded</span>' : ""}
+          </span>
+          <div class="http-detail-value">${esc(paramDisplay.text)}</div>
+        </div>`
+            : ""
+        }
+        <div class="http-detail-field">
+          <span class="http-detail-label">Source IP</span>
+          <div class="http-detail-value">${esc(e.source || "—")}</div>
+        </div>
+        <div class="http-detail-field">
+          <span class="http-detail-label">Status</span>
+          <div class="http-detail-value">${esc(String(e.status || "—"))}</div>
+        </div>
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Headers</span>
+          <div class="http-detail-value">${esc(fmtHeaders(e.headers))}</div>
+        </div>
+        ${
+          bodyDisplay
+            ? `
+        <div class="http-detail-field full">
+          <span class="http-detail-label">
+            Request body
+            ${bodyDisplay.tag ? `<span class="decode-tag">${esc(bodyDisplay.tag)}</span>` : ""}
+          </span>
+          <div class="http-detail-value">${esc(bodyDisplay.text)}</div>
+        </div>`
+            : ""
+        }
+        <div class="http-detail-field full">
+          <span class="http-detail-label">Timestamp</span>
+          <div class="http-detail-value">${esc(e.timestamp ? new Date(e.timestamp).toLocaleString() : "—")}</div>
+        </div>
+      </div>
+    </td>`;
+    tbody.appendChild(dr);
+  });
+}
+
+function toggleHTTPDetail(btn, id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  const open = row.style.display !== "none";
+  row.style.display = open ? "none" : "";
+  btn.textContent = open ? "▾" : "▴";
+  btn.closest("tr").classList.toggle("expanded", !open);
+}
+
+// ══ SMART CONTENT DETECTION ══
+function tryJSON(s) {
+  if (!/^[\[{]/.test(s.trim())) return null;
+  try {
+    const parsed = JSON.parse(s);
+    const walked = walkJSON(parsed);
+    return JSON.stringify(walked, null, 2);
+  } catch {
+    return null;
   }
 }
 
-function delClipboard(id) {
+// Recursively walk a parsed JSON value and attempt to decode any string leaves
+function walkJSON(node) {
+  if (Array.isArray(node)) {
+    return node.map(walkJSON);
+  }
+  if (node !== null && typeof node === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      out[k] = walkJSON(v);
+    }
+    return out;
+  }
+  if (typeof node === "string") {
+    return decodeStringLeaf(node);
+  }
+  return node;
+}
+
+// Try to decode a single string value — returns either the original string
+// or an object like { __decoded: "base64", __value: <decoded> } so the
+// caller can see both the tag and the result in the pretty-printed output
+function decodeStringLeaf(s) {
+  if (!s || s.length < 8) return s;
+
+  // JWT first
+  const jwt = tryJWT(s);
+  if (jwt) {
+    try {
+      return { __decoded: "JWT", __value: JSON.parse(jwt) };
+    } catch {
+      return { __decoded: "JWT", __value: jwt };
+    }
+  }
+
+  // Base64
+  const b64 = tryBase64(s);
+  if (b64) {
+    // Decoded value might itself be JSON
+    const nested = (() => {
+      try {
+        if (!/^[\[{]/.test(b64.trim())) return null;
+        return JSON.parse(b64);
+      } catch {
+        return null;
+      }
+    })();
+    if (nested) return { __decoded: "base64→JSON", __value: walkJSON(nested) };
+    return { __decoded: "base64", __value: b64 };
+  }
+
+  return s;
+}
+
+function tryBase64(s) {
+  if (!s || s.length < 8) return null;
+  // Strip any whitespace/newlines that might wrap multiline base64
+  const clean = s.replace(/[\r\n\s]/g, "");
+  // Two separate checks — standard (+/) and URL-safe (-_)
+  const isStd = /^[A-Za-z0-9+/]+=*$/.test(clean);
+  const isUrlSafe = /^[A-Za-z0-9\-_]+=*$/.test(clean);
+  if (!isStd && !isUrlSafe) return null;
+  // Normalize URL-safe to standard then fix padding
+  const norm = clean.replace(/-/g, "+").replace(/_/g, "/");
+  const rem = norm.length % 4;
+  const padded = rem === 0 ? norm : norm + "=".repeat(4 - rem);
+  try {
+    const decoded = atob(padded);
+    // Reject binary blobs — more than 10% non-printable = not useful text
+    let bad = 0;
+    for (let i = 0; i < decoded.length; i++) {
+      const c = decoded.charCodeAt(i);
+      if (c < 9 || (c > 13 && c < 32) || c === 127) bad++;
+    }
+    if (decoded.length > 0 && bad / decoded.length > 0.1) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function tryDecodeValue(raw) {
+  // JSON first — walkJSON handles nested b64/JWT inside
+  const json = tryJSON(raw);
+  if (json) return { text: json, tag: "JSON" };
+
+  // JWT before generic base64
+  const jwt = tryJWT(raw);
+  if (jwt) return { text: jwt, tag: "JWT" };
+
+  // Generic base64
+  const b64 = tryBase64(raw);
+  if (b64) {
+    const nested = tryJSON(b64); // tryJSON will also walk any nested b64
+    if (nested) return { text: nested, tag: "base64 → JSON" };
+    return { text: b64, tag: "base64" };
+  }
+  return null;
+}
+
+function smartDecode(raw) {
+  if (!raw || !raw.trim()) return { text: raw, tag: null };
+  const trimmed = raw.trim();
+
+  // Try decoding the whole value first
+  const direct = tryDecodeValue(trimmed);
+  if (direct) return direct;
+
+  // Try form-encoded: key=value&key=value
+  // Each value is decoded independently
+  if (
+    trimmed.includes("=") &&
+    !trimmed.startsWith("{") &&
+    !trimmed.startsWith("[")
+  ) {
+    const lines = trimmed.split("&").map((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return decodeURIComponent(pair);
+      const k = decodeURIComponent(pair.slice(0, eq));
+      const v = decodeURIComponent(pair.slice(eq + 1));
+      const dec = tryDecodeValue(v);
+      if (dec)
+        return `${k} [${dec.tag}] = ${
+          dec.text.includes("\n")
+            ? "\n" +
+              dec.text
+                .split("\n")
+                .map((l) => "  " + l)
+                .join("\n")
+            : dec.text
+        }`;
+      return `${k} = ${v}`;
+    });
+    const result = lines.join("\n\n");
+    // Only label as decoded if at least one value was transformed
+    const anyDecoded = trimmed.split("&").some((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return false;
+      return tryDecodeValue(decodeURIComponent(pair.slice(eq + 1))) !== null;
+    });
+    return { text: result, tag: anyDecoded ? "form-decoded" : null };
+  }
+
+  return { text: raw, tag: null };
+}
+
+function decodeParams(paramStr) {
+  if (!paramStr) return "";
+  try {
+    return paramStr
+      .split("&")
+      .map((p) => {
+        const eq = p.indexOf("=");
+        if (eq === -1) return decodeURIComponent(p);
+        const k = decodeURIComponent(p.slice(0, eq));
+        const raw = decodeURIComponent(p.slice(eq + 1));
+        const dec = tryDecodeValue(raw);
+        if (!dec) return `${k} = ${raw}`;
+        const tagStr = ` [${dec.tag}]`;
+        const valStr = dec.text.includes("\n")
+          ? "\n" +
+            dec.text
+              .split("\n")
+              .map((l) => "  " + l)
+              .join("\n")
+          : dec.text;
+        return `${k}${tagStr} = ${valStr}`;
+      })
+      .join("\n\n");
+  } catch {
+    return paramStr;
+  }
+}
+
+function tryJWT(s) {
+  const parts = s.replace(/^Bearer\s+/i, "").split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(
+      atob(parts[0].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return JSON.stringify({ header, payload, signature: parts[2] }, null, 2);
+  } catch {
+    return null;
+  }
+}
+
+function decodeAuthHeader(value) {
+  const v = (value || "").trim();
+
+  // JWT / Bearer
+  if (/^Bearer\s+/i.test(v)) {
+    const jwt = tryJWT(v);
+    if (jwt) return { text: jwt, tag: "JWT" };
+    // Bearer but not JWT — decode the token part as plain base64
+    const token = v.replace(/^Bearer\s+/i, "");
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: "Bearer → base64" };
+    return { text: v, tag: null };
+  }
+
+  // Basic auth — "Basic <base64(user:pass)>"
+  if (/^Basic\s+/i.test(v)) {
+    const token = v.replace(/^Basic\s+/i, "");
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: "Basic auth" };
+    return { text: v, tag: null };
+  }
+
+  // Digest, NTLM, Negotiate, AWS4-HMAC-SHA256 etc — label the scheme at minimum
+  const schemeMatch = v.match(/^([A-Za-z0-9\-]+)\s+(.+)$/);
+  if (schemeMatch) {
+    const scheme = schemeMatch[1];
+    const token = schemeMatch[2];
+    const b64 = tryBase64(token);
+    if (b64) return { text: b64, tag: `${scheme} → base64` };
+    // Try treating it as comma-separated key=value (Digest/AWS style)
+    if (token.includes(",")) {
+      const pretty = token
+        .split(",")
+        .map((p) => "  " + p.trim())
+        .join("\n");
+      return { text: pretty, tag: scheme };
+    }
+    return { text: v, tag: null };
+  }
+
+  // Plain value with no scheme — try generic base64
+  const b64 = tryBase64(v);
+  if (b64) return { text: b64, tag: "base64" };
+
+  return { text: v, tag: null };
+}
+
+function fmtHeaders(headers) {
+  if (!headers || typeof headers !== "object") return "(none)";
+  return Object.entries(headers)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => {
+      // Authorization gets the full scheme-aware decoder
+      if (k.toLowerCase() === "authorization") {
+        const dec = decodeAuthHeader(v);
+        if (dec.tag) {
+          const indented = dec.text.includes("\n")
+            ? "\n" +
+              dec.text
+                .split("\n")
+                .map((l) => "    " + l)
+                .join("\n")
+            : dec.text;
+          return `${k} [${dec.tag}]: ${indented}`;
+        }
+        return `${k}: ${v}`;
+      }
+
+      // Every other header — try generic decode
+      const dec = tryDecodeValue(v);
+      if (dec) {
+        const indented = dec.text.includes("\n")
+          ? "\n" +
+            dec.text
+              .split("\n")
+              .map((l) => "    " + l)
+              .join("\n")
+          : dec.text;
+        return `${k} [${dec.tag}]: ${indented}`;
+      }
+
+      return `${k}: ${v}`;
+    })
+    .join("\n");
+}
+
+function filterHTTP() {
+  renderHTTP();
+}
+
+function clearHTTP() {
+  ST.httpEvents = [];
+  ST.httpCnt = 0;
+  document.getElementById("http-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearHTTP" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderHTTP();
+}
+
+// ══ DNS LOG ══
+function onDNS(e) {
+  ST.dnsEvents.unshift(e);
+  ST.dnsCnt.total++;
+  if (e.qtype === "A") ST.dnsCnt.A++;
+  else if (e.qtype === "MX") ST.dnsCnt.MX++;
+  else if (e.qtype === "TXT") ST.dnsCnt.TXT++;
+  else ST.dnsCnt.other++;
+  document.getElementById("dns-badge").textContent = ST.dnsEvents.length;
+  document.getElementById("dns-cnt-total").textContent = ST.dnsCnt.total;
+  document.getElementById("dns-cnt-a").textContent = ST.dnsCnt.A;
+  document.getElementById("dns-cnt-mx").textContent = ST.dnsCnt.MX;
+  document.getElementById("dns-cnt-txt").textContent = ST.dnsCnt.TXT;
+  document.getElementById("dns-cnt-other").textContent = ST.dnsCnt.other;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  renderDNS();
+}
+function qtypeClass(t) {
+  const map = {
+    A: "qt-A",
+    AAAA: "qt-AAAA",
+    MX: "qt-MX",
+    TXT: "qt-TXT",
+    NS: "qt-NS",
+    CNAME: "qt-CNAME",
+  };
+  return map[t] || "qt-other";
+}
+function fmtQName(name) {
+  const clean = (name || "").replace(/\.$/, "");
+  const parts = clean.split(".");
+  if (parts.length <= 2) return `<span class="qname">${esc(clean)}</span>`;
+  const host = esc(parts.slice(0, -2).join("."));
+  const tld = esc(parts.slice(-2).join("."));
+  return `<span class="qname">${host}.<span class="qname-tld">${tld}</span></span>`;
+}
+function renderDNS() {
+  const filter = (
+    document.getElementById("dns-search").value || ""
+  ).toLowerCase();
+  const tbody = document.getElementById("dns-tbody");
+  const empty = document.getElementById("dns-empty-row");
+  const vis = ST.dnsEvents.filter(
+    (e) =>
+      !filter ||
+      (e.name || "").toLowerCase().includes(filter) ||
+      (e.qtype || "").toLowerCase().includes(filter) ||
+      (e.source || "").toLowerCase().includes(filter),
+  );
+  empty.style.display = vis.length ? "none" : "";
+  tbody.querySelectorAll("tr.data-row").forEach((r) => r.remove());
+  vis.slice(0, 500).forEach((e, i) => {
+    const tr = document.createElement("tr");
+    tr.className = "data-row" + (i === 0 && !filter ? " new-row" : "");
+    tr.innerHTML = `
+<td class="dns-ts">${esc(e.time || "")}</td>
+<td><span class="qtype-tag ${qtypeClass(e.qtype || "")}">${esc(e.qtype || "?")}</span></td>
+<td>${fmtQName(e.name)}</td>
+<td class="dns-source">${esc(e.source || "")}</td>`;
+    tbody.insertBefore(tr, empty.nextSibling || null);
+    tbody.appendChild(tr);
+  });
+}
+function clearDNS() {
+  ST.dnsEvents = [];
+  ST.dnsCnt = { total: 0, A: 0, MX: 0, TXT: 0, other: 0 };
+  ["total", "a", "mx", "txt", "other"].forEach((k) => {
+    const el = document.getElementById("dns-cnt-" + k);
+    if (el) el.textContent = "0";
+  });
+  document.getElementById("dns-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearDNS" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderDNS();
+}
+
+// == SMB Log ==
+function onSMB(e) {
+  console.log(e);
+  ST.smbEvents.unshift(e);
+  document.getElementById("smb-badge").textContent = ST.smbEvents.length;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  renderSMB();
+}
+
+function renderSMB() {
+  const filter = (
+    document.getElementById("smb-search").value || ""
+  ).toLowerCase();
+
+  const inbox = document.getElementById("smb-inbox");
+  const empty = document.getElementById("smb-empty");
+
+  const vis = ST.smbEvents.filter(
+    (e) =>
+      !filter ||
+      (e.username || "").toLowerCase().includes(filter) ||
+      (e.domain || "").toLowerCase().includes(filter) ||
+      (e.source || "").toLowerCase().includes(filter) ||
+      (e.hash || "").toLowerCase().includes(filter),
+  );
+
+  empty.style.display = vis.length ? "none" : "flex";
+  inbox.querySelectorAll(".smb-card").forEach((c) => c.remove());
+
+  vis.slice(0, 500).forEach((e, i) => {
+    const card = document.createElement("div");
+    const isNew = i === 0 && !filter;
+    card.className = "smb-card" + (isNew ? " new-card" : "") + (e.crackedPassword ? " cracked-card" : "");
+
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+    const userSummary =
+      [e.username, e.domain].filter(Boolean).join("@") || "unknown";
+    const hashId = "smb-hash-" + Math.random().toString(36).slice(2);
+
+    // ── Header (always visible, clickable) ──
+    const header = document.createElement("div");
+    header.className = "smb-card-header";
+    header.innerHTML = `
+       <span class="smb-badge-type">${esc(e.hashType || "—")}</span>
+       ${e.crackedPassword ? `<span class="smb-badge-cracked">cracked</span>` : ""}
+       <div class="smb-header-meta">
+         <span class="smb-user-summary">${esc(userSummary)}</span>
+         <span class="smb-source">${esc(e.source || "—")}</span>
+       </div>
+       <span class="smb-time">${esc(ts)}</span>
+       <span class="smb-chevron">▾</span>
+     `;
+
+    // ── Body (collapsible) ──
+    const body = document.createElement("div");
+    body.className = "smb-card-body";
+    body.innerHTML = `
+       <div class="smb-meta-grid">
+         <span class="smb-label">User</span>
+         <span class="smb-val">${esc(e.username || "—")}</span>
+         <span class="smb-label">Domain</span>
+         <span class="smb-val">${esc(e.domain || "—")}</span>
+         <span class="smb-label">Workstation</span>
+         <span class="smb-val">${esc(e.workstation || "—")}</span>
+         <span class="smb-label">Source</span>
+         <span class="smb-val smb-mono">${esc(e.source || "—")}</span>
+         <span class="smb-label">Hash Type</span>
+         <span class="smb-val">${esc(e.hashType || "—")}</span>
+         <span class="smb-label">Hashcat Mode</span>
+         <span class="smb-val">hashcat -m ${esc(e.hashcatMode || "—")}</span>
+         ${e.crackedPassword ? `
+         <span class="smb-label smb-label-cracked">Cracked</span>
+         <span class="smb-val smb-val-cracked smb-mono">${esc(e.crackedPassword)}</span>` : ""}
+       </div>
+       ${
+         e.hash
+           ? `
+       <div class="smb-hash-wrap">
+         <div class="smb-hash-label">Hashcat line</div>
+         <div class="smb-hash-box">
+           <code id="${hashId}">${esc(e.hash)}</code>
+           <button class="btn btn-sm smb-copy-btn" title="Copy hash">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+             </svg>
+           </button>
+         </div>
+       </div>`
+           : ""
+       }
+     `;
+
+    // Wire up copy button after innerHTML is set
+    const copyBtn = body.querySelector(".smb-copy-btn");
+    if (copyBtn) {
+      copyBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        const text = document.getElementById(hashId)?.textContent || "";
+        navigator.clipboard
+          .writeText(text)
+          .then(() => toast("Hash copied!", "ok"));
+      };
+    }
+
+    // Toggle on header click
+    header.onclick = () => card.classList.toggle("open");
+
+    card.appendChild(header);
+    card.appendChild(body);
+    inbox.appendChild(card);
+  });
+}
+
+function copyText(elementId) {
+  const text = document.getElementById(elementId)?.textContent || "";
+  navigator.clipboard.writeText(text).then(() => toast("Copied!", "ok"));
+}
+
+function clearSMB() {
+  ST.smbEvents = [];
+  document.getElementById("smb-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearSMB" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderSMB();
+}
+
+// ══ SMTP ══
+function onSMTP(e) {
+  ST.smtpEvents.unshift(e);
+  document.getElementById("smtp-badge").textContent = ST.smtpEvents.length;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  renderSMTP();
+}
+function attachIcon(contentType) {
+  if (!contentType) return "";
+  if (contentType.startsWith("image/"))
+    return `<svg class="attach-icon img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+  if (contentType === "text/html")
+    return `<svg class="attach-icon html" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+  if (contentType === "application/pdf")
+    return `<svg class="attach-icon pdf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+  if (
+    contentType.includes("zip") ||
+    contentType.includes("tar") ||
+    contentType.includes("gz")
+  )
+    return `<svg class="attach-icon arch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`;
+  return `<svg class="attach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+}
+function buildMailCard(e, isNew) {
+  const card = document.createElement("div");
+  card.className = "mail-card" + (isNew ? " new-card" : "");
+
+  const toStr = (e.to || []).join(", ") || "—";
+  const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+  const init = (e.from || "?")[0].toUpperCase();
+  const subj = e.subject || "(no subject)";
+  const hasHTML = e.htmlBody && e.htmlBody.trim().length > 0;
+  const hasText = e.body && e.body.trim().length > 0;
+  const atts = e.attachments || [];
+  const imgAtts = atts.filter(
+    (a) => a.contentType && a.contentType.startsWith("image/"),
+  );
+  const hasImgs = imgAtts.length > 0;
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "mail-header";
+  header.innerHTML = `
+        <div class="mail-avatar">${esc(init)}</div>
+        <div class="mail-meta">
+          <div class="mail-from">${esc(e.from || "")}</div>
+          <div class="mail-to">→ ${esc(toStr)}</div>
+        </div>
+        <div class="mail-time">${esc(ts)}</div>`;
+
+  // Subject row
+  const subjRow = document.createElement("div");
+  subjRow.className = "mail-subject-row";
+  subjRow.innerHTML = `
+        <span>${esc(subj)}</span>
+        ${atts.length ? `<span style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-left:8px">📎 ${atts.length}</span>` : ""}
+        <span class="mail-chevron">▾</span>`;
+
+  // Body tabs (only if both exist)
+  let bodyTabsEl = null;
+  if (hasHTML && hasText) {
+    bodyTabsEl = document.createElement("div");
+    bodyTabsEl.className = "mail-body-tabs";
+    bodyTabsEl.style.display = "none";
+    bodyTabsEl.innerHTML = `
+            <div class="mail-body-tab active" data-tab="plain">Plain text</div>
+            <div class="mail-body-tab" data-tab="html">HTML</div>
+            ${hasImgs ? `<div class="mail-body-tab" data-tab="preview">Preview</div>` : ""}`;
+  }
+
+  // Plain body
+  const plainSection = document.createElement("div");
+  plainSection.className = "mail-body-section";
+  plainSection.style.display = "none";
+  plainSection.dataset.pane = "plain";
+  plainSection.innerHTML = `<pre>${esc(e.body || "(empty)")}</pre>`;
+
+  // HTML render pane (sandboxed iframe)
+  const htmlSection = document.createElement("div");
+  htmlSection.className = "html-frame-wrap";
+  htmlSection.style.display = "none";
+  htmlSection.dataset.pane = "html";
+  if (hasHTML) {
+    const iframe = document.createElement("iframe");
+    iframe.className = "html-frame";
+    iframe.sandbox = "allow-same-origin"; // no scripts
+    iframe.srcdoc = e.htmlBody;
+    htmlSection.appendChild(iframe);
+  }
+
+  // Image preview pane
+  const previewSection = document.createElement("div");
+  previewSection.className = "attach-preview";
+  previewSection.style.display = "none";
+  previewSection.dataset.pane = "preview";
+  imgAtts.forEach((a) => {
+    const img = document.createElement("img");
+    img.className = "preview-img";
+    img.src = `/?smtp&id=${a.id}`;
+    img.alt = a.filename;
+    img.title = a.filename;
+    img.onclick = () => openLightbox(img.src);
+    previewSection.appendChild(img);
+  });
+
+  // Attachment list
+  const attSection = document.createElement("div");
+  attSection.className = "mail-attachments";
+  attSection.style.display = "none";
+  if (atts.length) {
+    attSection.innerHTML = `<div class="mail-attachments-label">Attachments (${atts.length})</div>`;
+    const list = document.createElement("div");
+    list.className = "attach-list";
+    atts.forEach((a) => {
+      const item = document.createElement("div");
+      item.className = "attach-item";
+      item.innerHTML = `
+                ${attachIcon(a.contentType)}
+                <span class="attach-name" title="${esc(a.filename)}">${esc(a.filename)}</span>
+                <span class="attach-size">${fmtBytes(a.size)}</span>
+                <div class="attach-actions">
+                  <a class="btn btn-sm" href="/?smtp&id=${a.id}" download="${esc(a.filename)}" title="Download">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </a>
+                  ${
+                    a.contentType && a.contentType.startsWith("image/")
+                      ? `
+                  <button class="btn btn-sm" onclick="openLightbox('/?smtp&id=${a.id}')" title="Preview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </button>`
+                      : ""
+                  }
+                  ${
+                    a.contentType === "text/html"
+                      ? `
+                  <button class="btn btn-sm" onclick="openHTMLPreview('/?smtp&id=${a.id}')" title="Render HTML">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  </button>`
+                      : ""
+                  }
+                </div>`;
+      list.appendChild(item);
+    });
+    attSection.appendChild(list);
+  }
+
+  // Raw headers
+  const rawSection = document.createElement("div");
+  rawSection.className = "mail-raw-section";
+  rawSection.style.display = "none";
+  rawSection.innerHTML = `<pre>${esc(e.rawHeader || "")}</pre>`;
+
+  // Footer
+  const footer = document.createElement("div");
+  footer.className = "mail-footer";
+  footer.innerHTML = `<button class="btn btn-ghost btn-sm" data-action="raw">Raw headers</button>`;
+
+  // Toggle open/close
+  function setOpen(open) {
+    card.classList.toggle("open", open);
+    const chevron = subjRow.querySelector(".mail-chevron");
+    if (chevron) chevron.style.transform = open ? "rotate(180deg)" : "";
+
+    // Show the right default pane
+    const activeTab =
+      (bodyTabsEl ? bodyTabsEl.querySelector(".mail-body-tab.active") : null)
+        ?.dataset.tab || (hasHTML ? "html" : "plain");
+
+    if (bodyTabsEl) bodyTabsEl.style.display = open ? "flex" : "none";
+    plainSection.style.display =
+      open && activeTab === "plain" ? "block" : "none";
+    htmlSection.style.display = open && activeTab === "html" ? "block" : "none";
+    previewSection.style.display =
+      open && activeTab === "preview" ? "flex" : "none";
+    if (!bodyTabsEl) {
+      // Only one body type — show it directly
+      if (hasHTML) htmlSection.style.display = open ? "block" : "none";
+      else plainSection.style.display = open ? "block" : "none";
+    }
+    if (atts.length) attSection.style.display = open ? "block" : "none";
+    footer.style.display = open ? "flex" : "none";
+  }
+
+  header.onclick = () => setOpen(!card.classList.contains("open"));
+  subjRow.onclick = () => setOpen(!card.classList.contains("open"));
+
+  // Tab switching
+  if (bodyTabsEl) {
+    bodyTabsEl.addEventListener("click", (e) => {
+      const tab = e.target.closest(".mail-body-tab");
+      if (!tab) return;
+      bodyTabsEl
+        .querySelectorAll(".mail-body-tab")
+        .forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const which = tab.dataset.tab;
+      plainSection.style.display = which === "plain" ? "block" : "none";
+      htmlSection.style.display = which === "html" ? "block" : "none";
+      previewSection.style.display = which === "preview" ? "flex" : "none";
+    });
+  }
+
+  // Footer actions
+  footer.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-action]");
+    if (!btn) return;
+    if (btn.dataset.action === "raw") {
+      const showing = rawSection.style.display === "block";
+      rawSection.style.display = showing ? "none" : "block";
+      btn.textContent = showing ? "Raw headers" : "Hide raw";
+    }
+  });
+
+  // Assemble
+  card.appendChild(header);
+  card.appendChild(subjRow);
+  if (bodyTabsEl) card.appendChild(bodyTabsEl);
+  card.appendChild(plainSection);
+  card.appendChild(htmlSection);
+  if (hasImgs) card.appendChild(previewSection);
+  if (atts.length) card.appendChild(attSection);
+  card.appendChild(rawSection);
+  card.appendChild(footer);
+
+  // Init footer hidden
+  footer.style.display = "none";
+
+  return card;
+}
+function renderSMTP() {
+  const filter = (
+    document.getElementById("smtp-search").value || ""
+  ).toLowerCase();
+  const inbox = document.getElementById("smtp-inbox");
+  const empty = document.getElementById("smtp-empty");
+
+  const vis = ST.smtpEvents.filter(
+    (e) =>
+      !filter ||
+      (e.from || "").toLowerCase().includes(filter) ||
+      (e.to || []).join(" ").toLowerCase().includes(filter) ||
+      (e.subject || "").toLowerCase().includes(filter) ||
+      (e.body || "").toLowerCase().includes(filter),
+  );
+
+  empty.style.display = vis.length ? "none" : "flex";
+  inbox.querySelectorAll(".mail-card").forEach((c) => c.remove());
+
+  vis.forEach((e, i) => {
+    inbox.appendChild(buildMailCard(e, i === 0 && !filter));
+  });
+}
+
+// ── lightbox ──
+function openLightbox(src) {
+  let lb = document.getElementById("goshs-lightbox");
+  if (!lb) {
+    lb = document.createElement("div");
+    lb.id = "goshs-lightbox";
+    lb.className = "lightbox";
+    lb.innerHTML = '<img id="goshs-lb-img">';
+    lb.onclick = () => lb.classList.remove("open");
+    document.body.appendChild(lb);
+  }
+  document.getElementById("goshs-lb-img").src = src;
+  lb.classList.add("open");
+}
+
+// ── HTML attachment preview (opens in new tab safely) ──
+function openHTMLPreview(url) {
+  fetch(url)
+    .then((r) => r.text())
+    .then((html) => {
+      const win = window.open("", "_blank");
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                <meta http-equiv="Content-Security-Policy" content="script-src 'none'">
+                </head><body>${html}</body></html>`);
+      win.document.close();
+    })
+    .catch(() => toast("Failed to load HTML attachment", "error"));
+}
+
+function clearSMTP() {
+  ST.smtpEvents = [];
+  document.getElementById("smtp-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearSMTP" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderSMTP();
+}
+
+// ══ CLIPBOARD ══
+function onClipboardUpdate(msg) {
+  // Reload side and activate clipboard tab
+  sessionStorage.setItem("activeTab", "nav-clip");
+  location.reload();
+}
+function sendClip() {
+  const txt = document.getElementById("clip-input").value.trim();
+  if (!txt) return;
   var msg = {
-    type: 'delEntry',
+    type: "newEntry",
+    content: txt,
+  };
+  ST.ws.send(JSON.stringify(msg));
+  document.getElementById("clip-input").value = "";
+}
+function copyClip(id) {
+  const body = document.querySelector("#clip-" + id + " .clip-card-body");
+  if (body) {
+    navigator.clipboard
+      .writeText(body.textContent)
+      .then(() => toast("Copied!", "success"));
+  }
+}
+function deleteClip(id) {
+  var msg = {
+    type: "delEntry",
     content: id,
   };
-  connection.send(JSON.stringify(msg));
+  ST.ws.send(JSON.stringify(msg));
 }
-
-function sendCommand(e) {
-  e.preventDefault();
-  command = document.getElementById('cliCommand');
-  var text = command.value;
-  var msg = {
-    type: 'command',
-    content: text,
-  };
-  connection.send(JSON.stringify(msg));
-  command.value == '';
-  command.focus();
+function downloadClipboard() {
+  window.open("/?cbDown", "_blank");
 }
-
-$('#cliCommand').on('keydown', function (e) {
-  if (e.which == 13) {
-    sendCommand(e);
+function clearClipboard() {
+  result = confirm("Are you sure you want to clear the clipboard?");
+  if (result) {
+    var msg = {
+      type: "clearClipboard",
+      content: "",
+    };
+    ST.ws.send(JSON.stringify(msg)).then(() => toast("Cleared!", "success"));
   }
-});
-
-function copyToClipboard(id) {
-  let textSelected = document
-    .getElementById('card-body-' + id)
-    .getElementsByTagName('pre')[0].innerText;
-
-  navigator.clipboard.writeText(textSelected);
 }
 
+// ══ FILE OPERATIONS ══
+function navigateTo(path) {
+  window.location.href = path;
+}
+
+function filterFiles() {
+  const q = document.getElementById("file-search").value.toLowerCase();
+  document.querySelectorAll("#file-tbody tr").forEach((tr) => {
+    const name = (tr.dataset.name || "").toLowerCase();
+    tr.style.display = !q || name.includes(q) ? "" : "none";
+  });
+}
+
+let sortDir = { name: true, size: true, mtime: true };
+function sortTable(col) {
+  const asc = (sortDir[col] = !sortDir[col]);
+  const tbody = document.getElementById("file-tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr[data-name]"));
+  rows.sort((a, b) => {
+    let va = a.dataset[col] || "",
+      vb = b.dataset[col] || "";
+    if (col === "size" || col === "mtime") {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return asc ? va - vb : vb - va;
+    }
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach((r) => tbody.appendChild(r));
+  document.querySelectorAll(".file-table th[id]").forEach((th) => {
+    th.classList.remove("sorted");
+    th.querySelector(".sort-arrow").textContent = "↕";
+  });
+  const th = document.getElementById("th-" + col);
+  if (th) {
+    th.classList.add("sorted");
+    th.querySelector(".sort-arrow").textContent = asc ? "↑" : "↓";
+  }
+}
+
+function toggleAllChecks(el) {
+  document
+    .querySelectorAll(".row-check-item")
+    .forEach((c) => (c.checked = el.checked));
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll(".row-check-item:checked").length;
+  const bar = document.getElementById("bulk-bar");
+  bar.classList.toggle("show", checked > 0);
+  document.getElementById("bulk-count").textContent = checked + " selected";
+}
+function clearSelection() {
+  document
+    .querySelectorAll(".row-check-item")
+    .forEach((c) => (c.checked = false));
+  const all = document.getElementById("chk-all");
+  if (all) all.checked = false;
+  updateBulkBar();
+}
+function getSelectedNames() {
+  return Array.from(document.querySelectorAll(".row-check-item:checked"))
+    .map((c) => c.closest("tr").dataset.name)
+    .filter(Boolean);
+}
+function getSelectedValues() {
+  return Array.from(document.querySelectorAll(".row-check-item:checked"))
+    .map((c) => c.closest("tr").dataset.value)
+    .filter(Boolean);
+}
+function downloadSelected() {
+  // This one takes all the selected and forms the right zip download
+  const url = new URL(window.location.href);
+  getSelectedValues().forEach((val) => {
+    url.searchParams.append("file", val);
+  });
+  url.searchParams.append("bulk", "true");
+  window.open(url.href, "_blank");
+  clearSelection();
+}
+function downloadBulk() {
+  // This one selects everything in the current view and forms the right zip download
+  document.querySelectorAll("#file-tbody tr[data-name]").forEach((tr) => {
+    if (tr.style.display !== "none") {
+      const cb = tr.querySelector(".row-check-item");
+      if (cb) cb.checked = true;
+    }
+  });
+  updateBulkBar();
+  downloadSelected();
+}
+function deleteSelected() {
+  const vals = getSelectedValues();
+  if (!vals.length) return;
+  if (!confirm(`Delete ${vals.length} item(s)?`)) return;
+  Promise.all(vals.map((val) => deleteFile(val, true)))
+    .then(() => location.reload())
+    .catch(() => toast("Delete failed", "error"));
+}
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : "";
+}
 function deleteFile(path, bulk) {
   let ok;
   !bulk
-    ? (ok = confirm('Do you really want to delete the file or directory?'))
+    ? (ok = confirm("Do you really want to delete the file or directory?"))
     : (ok = true);
 
   if (ok) {
-    var url = '';
-    location.protocol !== 'https:'
-      ? (url = 'http://' + window.location.host + path + '?delete')
-      : (url = 'https://' + window.location.host + path + '?delete');
-    var xhttp = new XMLHttpRequest();
-    xhttp.open('GET', url, false);
-    xhttp.send();
-    location.reload();
+    var url = "";
+    location.protocol !== "https:"
+      ? (url = "http://" + window.location.host + path + "?delete")
+      : (url = "https://" + window.location.host + path + "?delete");
+    fetch(url, { headers: { "X-CSRF-Token": getCsrfToken() } })
+      .then(() => location.reload())
+      .catch(() => toast("Delete failed", "error"));
   }
 }
 
-function deleteSharedLink(token) {
+// ══ UPLOAD ══
+function openUpload() {
+  openModal("upload-modal");
+}
+function openMkdir() {
+  openModal("mkdir-modal");
+  setTimeout(() => document.getElementById("mkdir-input").focus(), 50);
+}
+
+function handleFileSelect(files) {
+  Array.from(files).forEach((f) => {
+    if (
+      !ST.pendingUploads.find((p) => p.name === f.name && p.size === f.size)
+    ) {
+      ST.pendingUploads.push(f);
+    }
+  });
+  renderUploadList();
+}
+function renderUploadList() {
+  const list = document.getElementById("upload-file-list");
+  list.innerHTML = "";
+  ST.pendingUploads.forEach((f, i) => {
+    const item = document.createElement("div");
+    item.className = "upload-file-item";
+    item.innerHTML = `<span class="fname">${esc(f.name)}</span><span class="fsize">${fmtBytes(f.size)}</span>
+<button class="fremove" onclick="removeUpload(${i})">✕</button>`;
+    list.appendChild(item);
+  });
+}
+function removeUpload(i) {
+  ST.pendingUploads.splice(i, 1);
+  renderUploadList();
+}
+function startUpload() {
+  if (!ST.pendingUploads.length) {
+    toast("No files selected", "warn");
+    return;
+  }
+  const fd = new FormData();
+  ST.pendingUploads.forEach((f) => fd.append("file", f));
+  const wrap = document.getElementById("upload-progress-wrap");
+  const bar = document.getElementById("upload-progress-bar");
+  wrap.style.display = "block";
+  bar.style.width = "0";
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", `${window.location.href}upload`);
+  xhr.setRequestHeader("X-CSRF-Token", getCsrfToken());
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) bar.style.width = (e.loaded / e.total) * 100 + "%";
+  };
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      toast("Upload complete!", "success");
+      closeModal("upload-modal");
+      ST.pendingUploads = [];
+      setTimeout(() => location.reload(), 600);
+    } else toast("Upload failed: " + xhr.statusText, "error");
+  };
+  xhr.onerror = () => toast("Upload failed", "error");
+  xhr.send(fd);
+}
+function createDir() {
+  const name = document.getElementById("mkdir-input").value.trim();
+  if (!name) return;
+
+  fetch(`${name}?mkdir`, { headers: { "X-CSRF-Token": getCsrfToken() } })
+    .then((r) => {
+      // if response http.Created
+      if (r.status === 201) {
+        toast("Created: " + name, "success");
+        closeModal("mkdir-modal");
+        setTimeout(() => location.reload(), 600);
+      } else toast("Failed", "error");
+    })
+    .catch(() => toast("Network error", "error"));
+}
+
+// ══ DRAG-DROP ══
+function initDrop() {
+  const overlay = document.getElementById("drop-overlay");
+  let dragCnt = 0;
+  document.addEventListener("dragenter", (e) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragCnt++;
+    overlay.classList.add("active");
+    e.preventDefault();
+  });
+  document.addEventListener("dragleave", () => {
+    if (--dragCnt <= 0) {
+      dragCnt = 0;
+      overlay.classList.remove("active");
+    }
+  });
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dragCnt = 0;
+    overlay.classList.remove("active");
+    const files = e.dataTransfer.files;
+    if (files.length) {
+      handleFileSelect(files);
+      openModal("upload-modal");
+    }
+  });
+  // modal drop area
+  const mda = document.getElementById("modal-drop-area");
+  if (mda) {
+    mda.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      mda.classList.add("hover");
+    });
+    mda.addEventListener("dragleave", () => mda.classList.remove("hover"));
+    mda.addEventListener("drop", (e) => {
+      e.preventDefault();
+      mda.classList.remove("hover");
+      handleFileSelect(e.dataTransfer.files);
+    });
+  }
+}
+
+// ══ SHARE / QR ══
+let _shareTarget = "";
+function shareFile(name) {
+  _shareTarget = name;
+  document.getElementById("share-result").style.display = "none";
+  document.getElementById("share-limit").value = "0";
+  document.getElementById("share-expire").value = "0";
+  openModal("share-modal");
+}
+function generateShareLink() {
+  const limit = document.getElementById("share-limit").value;
+  const expire = parseInt(document.getElementById("share-expire").value) || 60;
+  const expireSeconds = expire * 60;
+
+  var base = "";
+  location.protocol !== "https:"
+    ? (base = "http://" + window.location.host)
+    : (base = "https://" + window.location.host);
+
+  let url = `${base}${_shareTarget}?share&expires=${expireSeconds}`;
+  if (parseInt(limit) > 0) {
+    url += `&limit=${encodeURIComponent(limit)}`;
+  } else {
+    url += "&limit=-1";
+  }
+
+  fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  })
+    .then((r) => r.json())
+    .then((d) => {
+      const res = document.getElementById("share-result");
+      res.style.whiteSpace = "pre";
+      res.style.display = "block";
+      res.textContent = d.urls.join("\n");
+
+      const qr = document.getElementById("share-result-qr");
+      qr.style.display = "block";
+      new QRious({
+        element: document.getElementById("share-qr-canvas"),
+        value: d.urls[0],
+        size: 200,
+      });
+    })
+    .catch(() => toast("Share failed", "error"));
+}
+function showQR(path) {
+  var url = "";
+  location.protocol !== "https:"
+    ? (url = "http://" + window.location.host)
+    : (url = "https://" + window.location.host);
+
+  path = path.replaceAll("//", "/");
+  link = `${url}/${path}`.replaceAll("//", "/");
+
+  // Generate QR code on canvas
+  new QRious({
+    element: document.getElementById("qr-canvas"),
+    value: link,
+    size: 200,
+  });
+
+  document.getElementById("qr-url").textContent = link;
+  openModal("qr-modal");
+}
+
+// ══ SHARED LINKS PANEL ══
+function initSharedLinks() {
+  // Build URLs and relative times for each card
+  const base = location.protocol + "//" + window.location.host;
+  document.querySelectorAll(".share-card").forEach((card) => {
+    const id = card.id.replace("share-card-", "");
+    const urlEl = document.getElementById("share-url-" + id);
+    if (urlEl) {
+      const path = card.querySelector(".share-card-path").textContent.trim();
+      urlEl.textContent = `${base}${path}?token=${id}`;
+    }
+  });
+  updateShareExpiries();
+  setInterval(updateShareExpiries, 30000);
+}
+
+function updateShareExpiries() {
+  const now = Math.floor(Date.now() / 1000);
+  document.querySelectorAll(".share-expiry-rel").forEach((el) => {
+    const exp = parseInt(el.dataset.expires, 10);
+    const diff = exp - now;
+    if (diff <= 0) {
+      el.textContent = "expired";
+      el.style.color = "var(--danger)";
+    } else if (diff < 60) {
+      el.textContent = `in ${diff}s`;
+      el.style.color = "var(--warn)";
+    } else if (diff < 3600) {
+      el.textContent = `in ${Math.floor(diff / 60)}m`;
+      el.style.color = "var(--warn)";
+    } else if (diff < 86400) {
+      el.textContent = `in ${Math.floor(diff / 3600)}h`;
+      el.style.color = "var(--text1)";
+    } else {
+      el.textContent = `in ${Math.floor(diff / 86400)}d`;
+      el.style.color = "var(--text1)";
+    }
+  });
+}
+
+function showShareQR(token) {
+  const urlEl = document.getElementById("share-url-" + token);
+  if (!urlEl) return;
+  const url = urlEl.textContent.trim();
+  new QRious({
+    element: document.getElementById("qr-canvas"),
+    value: url,
+    size: 200,
+  });
+  document.getElementById("qr-url").textContent = url;
+  openModal("qr-modal");
+}
+
+function copyShareUrl(token) {
+  const urlEl = document.getElementById("share-url-" + token);
+  if (!urlEl) return;
+  navigator.clipboard
+    .writeText(urlEl.textContent.trim())
+    .then(() => toast("URL copied", "success"))
+    .catch(() => toast("Copy failed", "error"));
+}
+
+function deleteShareLink(token, path) {
+  // Adjust the endpoint path to match your handler if needed
   let ok;
-  ok = confirm('Do you really want to delete the shared link?');
+  ok = confirm("Do you really want to delete the shared link?");
 
   if (ok) {
-    var url = '';
-    location.protocol !== 'https:'
-      ? (url = 'http://' + window.location.host + '/' + '?token=' + token)
-      : (url = 'https://' + window.location.host + '/' + '?token=' + token);
-    var xhttp = new XMLHttpRequest();
-    xhttp.open('DELETE', url, false);
-    xhttp.send();
+    var url = "";
+    location.protocol !== "https:"
+      ? (url = "http://" + window.location.host + "/" + "?token=" + token)
+      : (url = "https://" + window.location.host + "/" + "?token=" + token);
+  }
+
+  fetch(url, { method: "DELETE" });
+  sessionStorage.setItem("activeTab", "nav-share");
+  location.reload();
+}
+
+// ══ CLI ══
+const cliHistory = [];
+let cliHistIdx = -1;
+function initCliHistory() {
+  const input = document.getElementById("cli-input");
+  if (!input) return;
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const cmd = input.value.trim();
+      if (!cmd) return;
+      cliHistory.unshift(cmd);
+      cliHistIdx = -1;
+      appendCLI(cmd, "cmd");
+      input.value = "";
+      ST.ws.send(JSON.stringify({ type: "command", content: cmd }));
+    } else if (e.key === "ArrowUp") {
+      cliHistIdx = Math.min(cliHistIdx + 1, cliHistory.length - 1);
+      input.value = cliHistory[cliHistIdx] || "";
+      e.preventDefault();
+    } else if (e.key === "ArrowDown") {
+      cliHistIdx = Math.max(cliHistIdx - 1, -1);
+      input.value = cliHistIdx >= 0 ? cliHistory[cliHistIdx] : "";
+      e.preventDefault();
+    }
+  });
+}
+function appendCLI(text, cls) {
+  const out = document.getElementById("cli-output");
+  if (!out) return;
+  const line = document.createElement("pre");
+  line.className = "cli-line" + (cls ? " " + cls : "");
+  line.textContent = text;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+function cliOutput(msg) {
+  if (msg.content) {
+    appendCLI(msg.content, "");
+  } else {
+    appendCLI("something went wrong", "err");
+  }
+}
+
+// ══ MODALS ══
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+  if (id === "share-modal") {
     location.reload();
   }
 }
-
-function bulkDelete() {
-  if (confirm('Do you really want to delete the file or directory?')) {
-    // collect all checked checkboxes and do delete the file for each occurance
-    $('.downloadBulkCheckbox:checkbox:checked').each(function () {
-      var sThisVal = this.checked ? $(this).val() : '';
-      deleteFile(decodeURIComponent(sThisVal), true);
-    });
-  }
-}
-
-document
-  .getElementById('qrModal')
-  .addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const qrCode = button.getAttribute('data-qrcode');
-
-    const img = document.getElementById('qrImage');
-    img.src = qrCode;
-
-    const title = button.getAttribute('data-filename');
-    const target = document.getElementById('qrModalLabel');
-    target.innerHTML = title;
-  });
-
-function toggleLimitInput() {
-  const checkbox = document.getElementById('enableLimit');
-  const input = document.getElementById('downloadLimit');
-  input.disabled = !checkbox.checked;
-}
-
-document
-  .getElementById('shareModal')
-  .addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const filepath = button.getAttribute('data-file');
-    document.getElementById('shareFilePath').value = filepath;
-
-    // Reset modal content on open
-    resetModal();
-  });
-
-document.addEventListener('DOMContentLoaded', function () {
-  const modal = document.getElementById('shareModal');
-  if (modal) {
-    modal.addEventListener('hidden.bs.modal', function () {
-      location.reload();
-    });
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("modal-backdrop")) closeModal(e.target.id);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document
+      .querySelectorAll(".modal-backdrop.open")
+      .forEach((m) => m.classList.remove("open"));
+    closeCtx();
   }
 });
 
-function resetModal() {
-  // Show form area, hide results
-  document.getElementById('shareFormArea').style.display = '';
-  document.getElementById('shareResultArea').style.display = 'none';
-  document.getElementById('shareModalFooter').style.display = '';
-  // Clear inputs
-  document.getElementById('expiry').value = 60;
-  document.getElementById('enableLimit').checked = false;
-  document.getElementById('downloadLimit').value = '';
-  document.getElementById('downloadLimit').disabled = true;
-
-  // Clear previous links
-  const container = document.getElementById('shareLinksContainer');
-  container.innerHTML = '';
+// ══ CONTEXT MENU ══
+function initContextMenu() {
+  const menu = document.getElementById("ctx-menu");
+  document.getElementById("file-tbody").addEventListener("contextmenu", (e) => {
+    const tr = e.target.closest("tr[data-name]");
+    if (!tr || !tr.dataset.name || tr.dataset.name === "..") return;
+    e.preventDefault();
+    const name = tr.dataset.name;
+    const isDir = tr.dataset.isdir === "true";
+    document.getElementById("ctx-download").style.display = isDir ? "none" : "";
+    document.getElementById("ctx-open").onclick = () => {
+      window.location.href = name + (isDir ? "/" : "");
+      closeCtx();
+    };
+    document.getElementById("ctx-download").onclick = () => {
+      const a = document.createElement("a");
+      a.href = name;
+      a.download = name;
+      a.click();
+      closeCtx();
+    };
+    document.getElementById("ctx-share").onclick = () => {
+      shareFile(name);
+      closeCtx();
+    };
+    document.getElementById("ctx-delete").onclick = () => {
+      deleteFile(name);
+      closeCtx();
+    };
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + "px";
+    menu.style.top = Math.min(e.clientY, window.innerHeight - 180) + "px";
+    menu.classList.add("open");
+  });
+  document.addEventListener("click", closeCtx);
+}
+function closeCtx() {
+  document.getElementById("ctx-menu").classList.remove("open");
 }
 
-async function submitShareForm() {
-  const filepath = document.getElementById('shareFilePath').value;
-  const expireMinutes = parseInt(document.getElementById('expiry').value) || 60;
-  const expireSeconds = expireMinutes * 60;
-  const limitEnabled = document.getElementById('enableLimit').checked;
-  const limitValue = document.getElementById('downloadLimit').value;
+// ══ TOASTS ══
+function toast(msg, type = "success") {
+  const icons = {
+    success:
+      '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:
+      '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    warn: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  };
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.innerHTML = (icons[type] || "") + esc(msg);
+  const container = document.getElementById("toast-container");
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transition = "opacity .3s";
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
 
-  // Build URL with query params
-  let url = `${filepath}?share&expires=${expireSeconds}`;
-  if (limitEnabled && limitValue) {
-    url += `&limit=${encodeURIComponent(limitValue)}`;
-  } else {
-    url += '&limit=-1';
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
-    });
-
-    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-    const data = await response.json();
-
-    if (!data.urls || data.urls.length === 0) {
-      alert('No share URLs returned');
-      return;
-    }
-
-    // Hide form, footer; show results
-    document.getElementById('shareFormArea').style.display = 'none';
-    document.getElementById('shareResultArea').style.display = '';
-    document.getElementById('shareModalFooter').style.display = 'none';
-
-    const container = document.getElementById('shareLinksContainer');
-    container.innerHTML = '';
-
-    // For each URL create a card with the link + QR code
-    data.urls.forEach((url) => {
-      const card = document.createElement('div');
-      card.className =
-        'card p-3 customcard d-flex flex-column align-items-start gap-2';
-
-      // Link text & clickable
-      const link = document.createElement('a');
-      link.className = 'hover-bold-link';
-      link.href = url;
-      link.target = '_blank';
-      link.textContent = url;
-      link.style.wordBreak = 'break-word';
-      link.style.fontSize = '0.9rem';
-
-      // Create canvas for QR
-      const canvas = document.createElement('canvas');
-      canvas.style.marginTop = '10px';
-      canvas.width = 150;
-      canvas.height = 150;
-
-      // Generate QR code on canvas
-      new QRious({
-        element: canvas,
-        value: url,
-        size: 150,
-      });
-
-      card.appendChild(link);
-      card.appendChild(canvas);
-      container.appendChild(card);
-    });
-  } catch (err) {
-    alert('Failed to generate share links: ' + err.message);
-  }
+// ══ UTILS ══
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function fmtBytes(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + " MB";
+  return (b / 1073741824).toFixed(2) + " GB";
 }

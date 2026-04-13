@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,18 +21,27 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
+	savepath, err := sanitizePath(fs.UploadFolder, req.URL.Path)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
 
-	filename := strings.Split(upath, "/")
-	outName := filename[len(filename)-1]
+	// Block overwriting the .goshs ACL file
+	if filepath.Base(savepath) == ".goshs" {
+		fs.handleError(w, req, fmt.Errorf("cannot overwrite ACL file"), http.StatusForbidden)
+		return
+	}
 
-	// construct target path
-	targetpath := strings.Split(upath, "/")
-	targetpath = targetpath[:len(targetpath)-1]
-	target := strings.Join(targetpath, "/")
-
-	savepath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, outName)
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	targetDir := filepath.Dir(savepath)
+	acl, aclErr := fs.findEffectiveACL(targetDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -43,43 +50,54 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	// Create file to write to
-	// disable G304 (CWE-22): Potential file inclusion via variable
-	// #nosec G304
-	if _, err := os.Create(savepath); err != nil {
-		logger.Errorf("Not able to create file on disk")
-		fs.handleError(w, req, err, http.StatusInternalServerError)
-	}
-
 	reader := bytes.NewReader(body)
 
-	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// #nosec G304
+	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		logger.Warnf("Error opening file: %+v", err)
+		logger.Errorf("Error opening file: %+v", err)
+		fs.handleError(w, req, err, http.StatusInternalServerError)
+		return
 	}
+	defer osFile.Close()
 
 	if _, err := io.Copy(osFile, reader); err != nil {
 		logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
 		fs.handleError(w, req, err, http.StatusInternalServerError)
+		return
 	}
 
 	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+	_ = fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 }
 
 // upload handles the POST request to upload files
 func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
+	if !fs.checkCSRF(w, req) {
+		return
+	}
 	if fs.ReadOnly {
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
 	}
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
+	// Derive and sanitize the target directory (strip trailing "/upload" from URL).
+	upathDir := strings.TrimSuffix(req.URL.Path, "/upload")
+	targetDir, err := sanitizePath(fs.UploadFolder, upathDir)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
 
-	// construct target path
-	targetpath := strings.Split(upath, "/")
-	targetpath = targetpath[:len(targetpath)-1]
-	target := strings.Join(targetpath, "/")
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	acl, aclErr := fs.findEffectiveACL(targetDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
 
 	reader, err := req.MultipartReader()
 	if err != nil {
@@ -104,8 +122,14 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		filenameSlice := strings.Split(part.FileName(), "/")
 		filenameClean := filenameSlice[len(filenameSlice)-1]
 
+		// Block overwriting the .goshs ACL file
+		if filenameClean == ".goshs" {
+			logger.Warnf("blocked attempt to upload file named .goshs")
+			continue
+		}
+
 		// Prepare destination file paths
-		finalPath := fmt.Sprintf("%s%s/%s", fs.UploadFolder, target, filenameClean)
+		finalPath := filepath.Join(targetDir, filenameClean)
 		tempPath := finalPath + "~"
 
 		// Create temp file
@@ -165,10 +189,11 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, http.StatusOK)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 
 	// Redirect back from where we came from
-	http.Redirect(w, req, target, http.StatusSeeOther)
+	http.Redirect(w, req, upathDir, http.StatusSeeOther)
 }
 
 // bulkDownload will provide zip archived download bundle of multiple selected files
@@ -186,20 +211,17 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
 	}
 
-	// Clean file paths and fill slice
-	// Also sanitize path (No path traversal)
-	// If .. in single string just skip file
+	// Validate each path and collect absolute paths; skip any traversal attempts
 	for _, file := range files {
-		fileCleaned, _ := url.QueryUnescape(file)
-		if strings.Contains(fileCleaned, "..") {
-			// Just skip this file
+		absPath, err := sanitizePath(fs.Webroot, file)
+		if err != nil {
 			continue
 		}
-		filesCleaned = append(filesCleaned, fileCleaned)
+		filesCleaned = append(filesCleaned, absPath)
 	}
 
 	// Construct filename to download
-	filename := fmt.Sprintf("%+v_goshs_download.zip", int32(time.Now().Unix()))
+	filename := fmt.Sprintf("%d_goshs_download.zip", time.Now().Unix())
 
 	// Set header and serve file
 	contentDispo := fmt.Sprintf("attachment; filename=\"%s\"", filename)
@@ -254,9 +276,9 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		return nil
 	}
 
-	// Loop over files and add to zip
+	// Loop over files and add to zip (filesCleaned contains validated absolute paths)
 	for _, file := range filesCleaned {
-		err := filepath.Walk(path.Join(fs.Webroot, file), walker)
+		err := filepath.Walk(file, walker)
 		if err != nil {
 			logger.Errorf("creating zip file: %+v", err)
 		}
@@ -266,6 +288,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	if err := resultZip.Close(); err != nil {
 		logger.Error(err)
 	} else {
-		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 	}
 }

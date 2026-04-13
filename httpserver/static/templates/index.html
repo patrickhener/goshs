@@ -1,506 +1,1989 @@
-{{ template "header" . }}
-<!-- Content Row -->
-<div class="container-fluid flex-fill mt-2">
-    <div class="row h-100">
-        <!-- 6: File Listing -->
-        <div class="col-xl-6">
-            {{ if not .ReadOnly}}
-            <!-- Heading Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <h1>Upload File</h1>
-                </div>
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="csrf-token" content="{{.CSRFToken}}" />
+        <title>goshs {{.GoshsVersion}} — {{.AbsPath}}</title>
+        <link rel="stylesheet" href="/css/style.css?static" />
+    </head>
+    <body>
+        <!-- ═══════════ TOPBAR ═══════════ -->
+        <header class="topbar">
+            <div class="topbar-brand">
+                <img
+                    id="goshs-logo"
+                    src="/images/logo-dark.png?static"
+                    alt="goshs-logo"
+                    width="24"
+                    height="24"
+                />
+                goshs<span class="slash">/</span>
             </div>
-            <!-- Upload Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <!-- Upload Form -->
-                    {{ if (eq .Directory.RelPath "/") }}
-                    <form method="post" action="/upload" enctype="multipart/form-data">
-                        {{ else }}
-                        <form method="post" action="{{.Directory.RelPath}}/upload" enctype="multipart/form-data">
-                            {{ end }}
+            <div class="topbar-path" id="topbar-path">
+                <span class="path-seg">{{.AbsPath}}</span>
+            </div>
+            <div class="topbar-actions">
+                <button class="ibtn" onclick="showQR('')" title="QR Code">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="3" height="3" />
+                        <rect x="18" y="14" width="3" height="3" />
+                        <rect x="14" y="18" width="3" height="3" />
+                        <rect x="18" y="18" width="3" height="3" />
+                    </svg>
+                </button>
+                <button
+                    class="ibtn"
+                    onclick="toggleTheme()"
+                    id="theme-btn"
+                    title="Toggle theme"
+                >
+                    <svg
+                        id="theme-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="5" />
+                        <path
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                        />
+                    </svg>
+                </button>
+                <span class="status-text" id="ws-status">●</span>
+            </div>
+        </header>
 
-                            <div class="input-group">
-                                <div class="dropzone form-control" id="mydropzone">
-                                    <div class="dz-message" data-dz-message><span>Drag & Drop files here or click to
-                                            select. Files will be uploaded automatically.</span></div>
-                                </div>
+        <!-- ═══════════ LAYOUT ═══════════ -->
+        <div class="layout">
+            <!-- SIDEBAR -->
+            <nav class="sidebar">
+                <button
+                    class="snav active"
+                    id="nav-files"
+                    onclick="switchPanel('files', this)"
+                    title="Files"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                        />
+                    </svg>
+                    <span class="snav-label">Files</span>
+                </button>
+                {{if not .NoClipboard}}
+                <button
+                    class="snav"
+                    id="nav-clip"
+                    onclick="switchPanel('clipboard', this)"
+                    title="Clipboard"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"
+                        />
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                    </svg>
+                    <span class="snav-label">Clip</span>
+                    <span class="badge" id="clip-badge"></span>
+                </button>
+                {{end}}
+                <button
+                    class="snav"
+                    id="nav-collab"
+                    onclick="switchPanel('collab', this)"
+                    title="Collaborator"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"
+                        />
+                    </svg>
+                    <span class="snav-label">Collab</span>
+                    <span class="badge" id="collab-badge"></span>
+                </button>
+                {{ if .Embedded }}
+                <button
+                    class="snav"
+                    id="nav-embedded"
+                    onclick="switchPanel('embedded', this)"
+                    title="Embedded files"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                        <path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12" />
+                        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+                    </svg>
+                    <span class="snav-label">Embedded</span>
+                </button>
+                {{end}} {{ if gt (len .SharedLinks) 0}}
+                <button
+                    class="snav"
+                    id="nav-share"
+                    onclick="switchPanel('share', this)"
+                    title="Shared Links"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    <span class="snav-label">Shared Links</span>
+                </button>
+                {{ end}} {{if .CLI}}
+                <button
+                    class="snav"
+                    id="nav-cli"
+                    onclick="switchPanel('cli', this)"
+                    title="Terminal"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <polyline points="4 17 10 11 4 5" />
+                        <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
+                    <span class="snav-label">CLI</span>
+                </button>
+                {{end}}
+                <div class="sidebar-spacer"></div>
+                <button
+                    class="snav"
+                    onclick="window.open('/?goshs-info', '_blank')"
+                    title="Info"
+                    style="opacity: 0.5"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span class="snav-label">{{.GoshsVersion}}</span>
+                </button>
+            </nav>
+
+            <!-- ═══════════ MAIN ═══════════ -->
+            <main class="main">
+                <!-- ████ FILES PANEL ████ -->
+                <section class="panel active" id="panel-files">
+                    <!-- toolbar -->
+                    <div class="files-toolbar">
+                        <div class="files-toolbar-left">
+                            <div class="breadcrumb" id="breadcrumb">
+                                {{template "breadcrumb" .}}
                             </div>
+                        </div>
+                        <div class="files-toolbar-right">
+                            <div class="search-wrap">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="M21 21l-4.35-4.35" />
+                                </svg>
+                                <input
+                                    class="search-input"
+                                    id="file-search"
+                                    type="text"
+                                    placeholder="Search files…"
+                                    oninput="filterFiles()"
+                                />
+                            </div>
+                            {{if not .ReadOnly}}
+                            <button
+                                class="btn btn-accent"
+                                onclick="openUpload()"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <polyline points="16 16 12 12 8 16" />
+                                    <line x1="12" y1="12" x2="12" y2="21" />
+                                    <path
+                                        d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"
+                                    />
+                                </svg>
+                                Upload
+                            </button>
+                            <button class="btn" onclick="openMkdir()">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                    />
+                                    <line x1="12" y1="11" x2="12" y2="17" />
+                                    <line x1="9" y1="14" x2="15" y2="14" />
+                                </svg>
+                                New folder
+                            </button>
+                            {{end}}
+                            <button
+                                class="btn"
+                                onclick="downloadBulk()"
+                                id="btn-zip"
+                                title="Download as zip"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                                    />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
-                        </form>
-                </div>
-            </div>
-            {{ end }}
-            <!-- Checkbox Control Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <!-- Control Checkboxes -->
-                    <input type="button" class="btn btn-primary mr-1" value="Select All" onclick=selectAll()>
-                    <input type="button" class="btn btn-primary" value="Select None" onclick=selectNone()>
-                </div>
-            </div>
+                    <!-- bulk actions bar -->
+                    <div class="bulk-bar" id="bulk-bar">
+                        <span class="bulk-bar-label" id="bulk-count"
+                            >0 selected</span
+                        >
+                        <button class="btn btn-sm" onclick="downloadSelected()">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Download
+                        </button>
+                        {{if not .NoDelete}}
+                        <button
+                            class="btn btn-sm btn-danger"
+                            onclick="deleteSelected()"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6l-1 14H6L5 6" />
+                                <path d="M10 11v6M14 11v6M9 6V4h6v2" />
+                            </svg>
+                            Delete
+                        </button>
+                        {{end}}
+                        <div class="bulk-bar-spacer"></div>
+                        <button
+                            class="btn btn-sm btn-ghost"
+                            onclick="clearSelection()"
+                        >
+                            ✕ Clear
+                        </button>
+                    </div>
 
-            <!-- Table Row -->
-            <div class="row">
-                <div class="col">
-                    <!-- Table -->
-                    <form method="GET" action="/">
-                        <table id="tableData" class="table table-striped table-hover">
-                            <thead class="thead-dark">
+                    <!-- file listing -->
+                    <div class="files-scroll">
+                        <table class="file-table" id="file-table">
+                            <thead>
                                 <tr>
-                                    <th width="4%">
-                                        <!--Checkbox multiple downloads -->
+                                    {{if not .ReadOnly}}
+                                    <th class="row-check">
+                                        <input
+                                            type="checkbox"
+                                            id="chk-all"
+                                            onchange="toggleAllChecks(this)"
+                                        />
                                     </th>
-                                    <th width="4%">
-                                        <!--Type (Directory or File)-->
+                                    {{end}}
+                                    <th
+                                        onclick="sortTable('name')"
+                                        id="th-name"
+                                    >
+                                        Name <span class="sort-arrow">↕</span>
                                     </th>
-                                    <th>Name</th>
-                                    <th>Size</th>
-                                    <th>Last Modified</th>
-                                    <th width="4%">
-                                        <!--Direct Download button-->
+                                    <th
+                                        onclick="sortTable('size')"
+                                        id="th-size"
+                                    >
+                                        Size <span class="sort-arrow">↕</span>
                                     </th>
-                                    <th width="4%">
-                                        <!--QR Code-->
+                                    <th
+                                        onclick="sortTable('mtime')"
+                                        id="th-mtime"
+                                    >
+                                        Modified
+                                        <span class="sort-arrow">↕</span>
                                     </th>
-                                    {{ if .Directory.AuthEnabled }}
-                                    <th width="4%">
-                                        <!--Share button-->
-                                    </th>
-                                    {{ end }}
-                                    <th width="4%">
-                                        <!--Delete Button-->
-                                    </th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <!-- Back with .. -->
-                                {{ if .Directory.IsSubdirectory }}
-                                <tr>
+                            <tbody id="file-tbody">
+                                {{if .Subdirectory}}
+                                <tr
+                                    data-name=".."
+                                    data-size="-1"
+                                    data-mtime="0"
+                                >
+                                    {{if not .ReadOnly}}
+                                    <td class="row-check"></td>
+                                    {{end}}
+                                    <td class="fc-name">
+                                        <svg
+                                            class="file-icon dir"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        <a href="../">../</a>
+                                    </td>
+                                    <td class="fc-size">—</td>
+                                    <td class="fc-mtime">—</td>
                                     <td></td>
-                                    <td><i class="fa-solid fa-level-up-alt file_ic"></i></td>
-                                    <td><a href="{{.Directory.Back}}">../</a></td>
-                                    <td data-order="0">--</td>
-                                    <td data-order="0">--</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    {{ if .Directory.AuthEnabled }}
-                                    <td></td>
-                                    {{ end }}
                                 </tr>
-                                {{ end }}
-                                {{range .Directory.Content}}
-                                <tr>
+                                {{end}} {{range .Items}}
+                                <tr
+                                    data-name="{{.Name}}"
+                                    data-size="{{.SizeRaw}}"
+                                    data-mtime="{{.LastModRaw}}"
+                                    data-isdir="{{.IsDir}}"
+                                    data-value="{{.RelPath}}/{{.Name}}"
+                                    data-qr="{{.QRCode}}"
+                                >
+                                    {{if not $.ReadOnly}}
+                                    <td class="row-check">
+                                        <input
+                                            type="checkbox"
+                                            class="row-check-item"
+                                            onchange="updateBulkBar()"
+                                        />
+                                    </td>
+                                    {{end}}
+                                    <td class="fc-name">
+                                        {{if .IsDir}}
+                                        <svg
+                                            class="file-icon dir"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        {{else}} {{template "fileIcon"
+                                        .Extension}} {{end}}
+                                        <a
+                                            href="{{.Name}}{{if .IsDir}}/{{end}}"
+                                            title="{{.Name}}"
+                                            >{{.Name}}</a
+                                        >
+                                    </td>
+                                    <td class="fc-size">
+                                        {{if .IsDir}}—{{else}}{{.Size}}{{end}}
+                                    </td>
+                                    <td class="fc-mtime">{{.LastMod}}</td>
                                     <td>
-                                        <div class="chkbx">
-                                            <input type="checkbox" class="checkbox downloadBulkCheckbox" name="file"
-                                                value="{{.URI}}" />
+                                        <div class="fc-actions">
+                                            {{if not .IsDir}}
+                                            <a
+                                                class="btn btn-sm"
+                                                href="{{.Name}}"
+                                                download
+                                                title="Download"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <polyline
+                                                        points="7 10 12 15 17 10"
+                                                    />
+                                                    <line
+                                                        x1="12"
+                                                        y1="15"
+                                                        x2="12"
+                                                        y2="3"
+                                                    />
+                                                </svg>
+                                            </a>
+                                            {{end}}
+                                            <button
+                                                class="btn btn-sm"
+                                                onclick="showQR('{{.RelPath}}/{{.Name}}')"
+                                                title="QRCode"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <rect
+                                                        x="3"
+                                                        y="3"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="3"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="3"
+                                                        y="14"
+                                                        width="7"
+                                                        height="7"
+                                                        rx="1"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="14"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="18"
+                                                        y="14"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="14"
+                                                        y="18"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                    <rect
+                                                        x="18"
+                                                        y="18"
+                                                        width="3"
+                                                        height="3"
+                                                    ></rect>
+                                                </svg>
+                                            </button>
+                                            {{ if .Auth }}
+                                            <button
+                                                class="btn btn-sm"
+                                                onclick="shareFile('{{.RelPath}}/{{.Name}}')"
+                                                title="Share link"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <circle
+                                                        cx="18"
+                                                        cy="5"
+                                                        r="3"
+                                                    />
+                                                    <circle
+                                                        cx="6"
+                                                        cy="12"
+                                                        r="3"
+                                                    />
+                                                    <circle
+                                                        cx="18"
+                                                        cy="19"
+                                                        r="3"
+                                                    />
+                                                    <line
+                                                        x1="8.59"
+                                                        y1="13.51"
+                                                        x2="15.42"
+                                                        y2="17.49"
+                                                    />
+                                                    <line
+                                                        x1="15.41"
+                                                        y1="6.51"
+                                                        x2="8.59"
+                                                        y2="10.49"
+                                                    />
+                                                </svg>
+                                            </button>
+                                            {{ end }} {{if and (not $.NoDelete)
+                                            (not $.ReadOnly)}}
+                                            <button
+                                                class="btn btn-sm btn-danger"
+                                                onclick="deleteFile('{{.RelPath}}/{{.Name}}',false)"
+                                                title="Delete"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <polyline
+                                                        points="3 6 5 6 21 6"
+                                                    />
+                                                    <path
+                                                        d="M19 6l-1 14H6L5 6"
+                                                    />
+                                                    <path
+                                                        d="M10 11v6M14 11v6M9 6V4h6v2"
+                                                    />
+                                                </svg>
+                                            </button>
+                                            {{end}}
                                         </div>
                                     </td>
-                                    <td>
-                                        <!-- Icon -->
-                                        {{ if .IsDir }}
-                                        <i class="fa-solid fa-folder file_ic"></i>
-                                        <!-- Directory icon -->
-                                        {{ else }}
-                                        {{ if .IsSymlink }}
-                                        <i class="fa-solid fa-file file_ic"></i>
-                                        <!-- File icon -->
-
-                                        {{ else if or (eq .Ext ".gz") (eq .Ext ".zip") (eq .Ext ".tar") (eq .Ext
-                                        ".rar") (eq .Ext ".7z") }}
-                                        <i class="fa-solid fa-file-archive file_ic"></i>
-                                        <!-- Archive icon -->
-
-                                        {{ else if (eq .Ext ".pdf") }}
-                                        <i class="fa-solid fa-file-pdf file_ic"></i>
-                                        <!-- PDF icon -->
-
-                                        {{ else if or (eq .Ext ".pptx") (eq .Ext ".ppt") (eq .Ext ".pps") (eq .Ext
-                                        ".odp") }}
-                                        <i class="fa-solid fa-file-powerpoint file_ic"></i>
-                                        <!-- Powerpoint icon -->
-
-                                        {{ else if or (eq .Ext ".docx") (eq .Ext ".doc") (eq .Ext ".odt") }}
-                                        <i class="fa-solid fa-file-word file_ic"></i>
-                                        <!-- Word icon -->
-
-                                        {{ else if or (eq .Ext ".xlsx") (eq .Ext ".xls") (eq .Ext ".ods") }}
-                                        <i class="fa-solid fa-file-excel file_ic"></i>
-                                        <!-- Excel icon -->
-
-                                        {{ else if (eq .Ext ".csv") }}
-                                        <i class="fa-solid fa-file-csv file_ic"></i>
-                                        <!-- CSV icon -->
-
-                                        {{ else if (eq .Ext ".exe") }}
-                                        <i class="fab fa-windows file_ic"></i>
-                                        <!-- Windows icon -->
-
-                                        {{ else if or (eq .Ext ".txt") (eq .Ext ".rtf") (eq .Ext ".md") (eq .Ext
-                                        ".conf") (eq .Ext ".html") (eq .Ext ".htm") (eq .Ext ".log") (eq .Ext
-                                        ".ini") (eq .Ext ".cfg") (eq .Ext ".yml") (eq .Ext ".toml") (eq .Ext
-                                        ".json") (eq .Ext ".asc") (eq .Ext ".xml") }}
-                                        <i class="fa-solid fa-file-alt file_ic"></i>
-                                        <!-- Text icon -->
-
-                                        {{ else if or (eq .Ext ".flac") (eq .Ext ".wav") (eq .Ext ".mp3") }}
-                                        <i class="fa-solid fa-file-audio file_ic"></i>
-                                        <!-- Audio icon -->
-
-                                        {{ else if or (eq .Ext ".mpeg") (eq .Ext ".mpg") (eq .Ext ".mp4") (eq .Ext
-                                        ".wmv") (eq .Ext ".avi") (eq .Ext ".flv") (eq .Ext ".mkv") (eq .Ext ".mov")
-                                        (eq .Ext ".webm") (eq .Ext ".vob") (eq .Ext ".ogg") (eq .Ext ".m4v") (eq
-                                        .Ext ".h264") }}
-                                        <i class="fa-solid fa-file-video file_ic"></i>
-                                        <!-- Video icon -->
-
-                                        {{ else if or (eq .Ext ".bmp") (eq .Ext ".tiff") (eq .Ext ".tif") (eq .Ext
-                                        ".ai") (eq .Ext ".cdr") (eq .Ext ".xcf") (eq .Ext ".raw") (eq .Ext ".gif")
-                                        (eq .Ext ".png") (eq .Ext ".jpg") (eq .Ext ".jpeg") (eq .Ext ".psd") (eq
-                                        .Ext ".svg") ( eq .Ext ".ico") }}
-                                        <i class="fa-solid fa-file-image file_ic"></i>
-                                        <!-- Picture icon -->
-
-                                        {{ else if or (eq .Ext ".php") (eq .Ext ".py") (eq .Ext ".go") (eq .Ext
-                                        ".cs") (eq .Ext ".c") (eq .Ext ".pl") (eq .Ext ".rb") (eq .Ext ".cgi") (eq
-                                        .Ext ".cpp") (eq .Ext ".java") (eq .Ext ".tex") (eq .Ext ".bat") (eq .Ext
-                                        ".ps1") }}
-                                        <i class="fa-solid fa-file-code file_ic"></i>
-                                        <!-- Code icon -->
-
-                                        {{ else if or (eq .Ext ".iso") (eq .Ext ".dmg") (eq .Ext ".bin") (eq .Ext
-                                        ".vcd") (eq .Ext ".vhd") (eq .Ext ".vhdx") (eq .Ext ".vmdk") (eq .Ext
-                                        ".qcow2") (eq .Ext ".img") }}
-                                        <i class="fa-solid fa-compact-disc file_ic"></i>
-                                        <!-- ISO icon -->
-
-                                        {{ else if or (eq .Ext ".mdb") (eq .Ext ".db") (eq .Ext ".dbf") (eq .Ext
-                                        ".dat") (eq .Ext ".sql") }}
-                                        <i class="fa-solid fa-database file_ic"></i>
-                                        <!-- Database icon -->
-
-                                        {{ else }}
-                                        <i class="fa-solid fa-file file_ic"></i>
-                                        <!--File icon -->
-
-                                        {{ end }}
-                                        {{ end }}
-                                    </td>
-                                    <td>
-                                        <!-- Name -->
-                                        {{ if .IsSymlink }}
-                                        <a href="/{{.URI}}">{{.Name}} --> {{.SymlinkTarget}}</a>
-                                        {{ else }}
-                                        <a href="/{{.URI}}">{{.Name}}</a>
-                                        {{ end }}
-                                    </td>
-
-                                    <!-- File size -->
-                                    {{ if .IsDir }}
-                                    <td data-order="0">
-                                        --
-                                    </td>
-                                    {{ else }}
-                                    <td data-order="{{.SortSize}}">
-                                        {{.DisplaySize}}
-                                    </td>
-                                    {{ end }}
-                                    <td data-order="{{.SortLastModified}}">
-                                        <!-- File last modified -->
-                                        {{ .DisplayLastModified }}
-                                    </td>
-                                    <td>
-                                        {{ if .IsDir }}
-                                        <!--No download button-->
-                                        {{ else }}
-                                        <a href="/{{.URI}}?download"><i class="fa-solid fa-download fa-1x"></i></a>
-                                        {{ end }}
-                                    </td>
-                                    <td>
-                                        <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{.QRCode}}" data-filename="{{.Name}}"><i class="fa-solid fa-qrcode"></i></a>
-                                    </td>
-                                    {{ if .AuthEnabled }}
-                                    <td>
-                                        <a href="" data-bs-toggle="modal" data-bs-target="#shareModal" data-file="{{.URI}}"><i class="fa-solid fa-share-alt"></i></a>
-                                    </td>
-                                    {{ end }}
-                                    <td>
-                                        {{ if or .ReadOnly .NoDelete }}
-                                        {{ else }}
-                                        <a onclick="deleteFile('/{{.URI}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
-                                        {{ end }}
-                                    </td>
                                 </tr>
-                                {{ end }}
+                                {{end}}
                             </tbody>
                         </table>
-                        <input type="hidden" name="bulk" value="true" />
-                        <input type="submit" class="btn btn-primary" id="downloadBulkButton" value="Download Selected"
-                            style="display:none">
-                    </form>
-                    {{ if not .NoDelete }}
-                    <button class="btn btn-primary" id="bulkDelete" onclick="bulkDelete()" style="display:none">Delete Selected</button>
-                    {{ end }}
-                </div>
-            </div>
-        </div>
-        <!-- 6: Clipboard and CLI-->
-        <div class="col-xl-6 h-100">
-            <!-- Clipboard Heading Row -->
-            {{ if not .NoClipboard }}
-            <div class="row">
-                <div class="col mb-2">
-                    <h1>Clipboard</h1>
-                </div>
-            </div>
-            <!-- Clipboard Input Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <form method="GET" action="#" onsubmit="return sendEntry(event)" id="clipform">
-                        <div class="input-group cbInputGroup">
-                            <textarea id="cbEntry" rows="4" cols="80" name="cbEntry" form="clipform"
-                                class="form-control"></textarea>
-                            <button class="btn btn-primary" type="submit">+</button>
+                        {{if and (eq (len .Items) 0) (not .Subdirectory)}}
+                        <div class="empty-state">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            >
+                                <path
+                                    d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                />
+                            </svg>
+                            <p>
+                                This directory is empty.<br />{{if not
+                                .ReadOnly}}Drag files here or click Upload to
+                                add files.{{end}}
+                            </p>
                         </div>
-                    </form>
-                </div>
-            </div>
-            <!-- Clipboard Control Row -->
-            <div class="row">
-                <div class="col mb-2 text-right">
-                    <div class="d-flex flex-row-reverse">
-                        <form action="#" onsubmit="return clearClipboard(event)">
-                            <button type="submit" class="btn btn-danger">Clear Clipboard</button>
-                        </form>
-                        <a href="/?cbDown" class="btn btn-primary"><i class="fa-solid fa-download"></i> Export</a>
+                        {{end}}
                     </div>
-                </div>
-            </div>
-            <!-- Clipboard Cards Row -->
-            <div class="row">
-                <div class="col">
-                    {{ range .Clipboard.Entries }}
-                    <div class="card clipboardCard mt-2" id="card-{{.ID}}">
-                        <div class="card-header d-flex flex-row">
-                            <div class="col-md-10">
-                                <h5 class="card-title">{{.Time}}</h5>
-                            </div>
-                            <div class="col-md-1">
-                                <sup><a href="#" onclick="return delClipboard('{{.ID}}')"><i
-                                            class="fa-solid fa-trash del_button"></i></a></sup>
-                                <sup><a href="#" onclick="return copyToClipboard('{{.ID}}')"><i
-                                    class="fa-solid fa-copy del_button"></i></a></sup>
-                            </div>
-                            <div class="col-md-1">
-                                <h5>{{.ID}}</h5>
-                            </div>
-                        </div>
-                        <div class="card-body" id="card-body-{{.ID}}">
-                            <pre>{{.Content}}</pre>
-                        </div>
-                    </div>
-                    {{ end }}
-                </div>
-            </div>
-            {{ end }}
-            {{ if .Embedded }}
-            <!-- Embedded Heading Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <h1>Embedded files</h1>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col mb-2">
-                    <table id="tableDataEmbedded" class="table table-striped table-hover">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th>Name</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            {{ range .EmbeddedContent.Content }}
-            <tr>
-                <td>
-                    <!-- Name -->
-                    <a href="/{{.URI}}" target="_blank">{{.Name}}</a>
-                </td>
-            </tr>
-            {{ end }}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {{ end }}
-            {{ if .CLI }}
-            <!-- CLI Heading Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <h1>CLI</h1>
-                </div>
-            </div>
-            <!-- CLI Input Row -->
-            <div class="row">
-                <div class="col mb-2">
-                    <form method="GET" action="#" onsubmit="return sendCommand(event)" id="cli">
-                        <div class="input-group cbInputGroup">
-                            <textarea id="cliCommand" rows="2" cols="80" name="cliCommand" form="cliform"
-                                class="form-control disable-scrollbars" autofocus></textarea>
-                            <button class="btn btn-primary" type="submit">run</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <!-- CLI Output Row-->
-            <div class="row h-50">
-                <div class="col mb-2">
-                    <textarea id="cliOutput" name="cliOutput" class="form-control h-100 disable-scrollbars"
-                        disabled></textarea>
-                </div>
-            </div>
-            {{ end }}
-            <!-- ShareLinks Heading Row-->
-            {{ if gt (len .SharedLinks) 0}}
-            <div class="row">
-                <div class="col mb-2">
-                    <h1>Shared Files</h1>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col mb-2">
-                    {{ range $token, $info := .SharedLinks }}
-                    <div class="card shareLinkCard mt-2" id="sl-{{$token}}">
-                        <div class="card-header d-flex flex-row">
-                            <div class="col-md-10">
-                                <h5 class="card-title">{{ $info.FilePath}}</h5>
-                            </div>
-                            <div class="col-md-2">
-                                <a onclick="deleteSharedLink('{{$token}}',false)"><i class="fa-solid fa-trash-alt fa-1x"></i></a>
-                            </div>
-                        </div>
-                        <div class="card-body" id="card-body-{{$token}}">
-                            <p>Expires: {{ formatTime $info.Expires }}</p>
-                            <p>Download Limit: {{ downloadLimitDisplay $info.DownloadLimit }}</p>
-                            {{ range $i, $v := .DownloadEntries }}
-                            <div class="row align-items-center mb-3">
-                                <div class="col-md-1 text-center">
-                                    <a href="" data-bs-toggle="modal" data-bs-target="#qrModal" data-qrcode="{{$v.QRCode}}" data-filename="{{$info.FilePath}}?token={{$token}}"><i class="fa-solid fa-qrcode"></i></a>
+                </section>
+
+                <!-- ████ CLIPBOARD PANEL ████ -->
+                {{if not .NoClipboard}}
+                <section class="panel" id="panel-clipboard">
+                    <div class="clipboard-layout">
+                        <div class="clipboard-entries" id="clip-entries">
+                            {{if .Clipboard}} {{range $i, $e := .Clipboard}}
+                            <div class="clip-card" id="clip-{{$e.ID}}">
+                                <div class="clip-card-header">
+                                    <span class="clip-card-idx">#{{$i}}</span>
+                                    <span class="clip-card-ts"
+                                        >{{$e.Time}}</span
+                                    >
+                                    <div class="clip-card-actions">
+                                        <button
+                                            class="btn btn-sm btn-ghost"
+                                            onclick="copyClip('{{$e.ID}}')"
+                                            title="Copy"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <rect
+                                                    x="9"
+                                                    y="9"
+                                                    width="13"
+                                                    height="13"
+                                                    rx="2"
+                                                    ry="2"
+                                                />
+                                                <path
+                                                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            onclick="deleteClip('{{$e.ID}}')"
+                                            title="Delete"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <polyline
+                                                    points="3 6 5 6 21 6"
+                                                />
+                                                <path d="M19 6l-1 14H6L5 6" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="col-md-11">
-                                    <a href="{{$v.DownloadURL}}" class="d-block text-break hover-bold-link">{{$v.DownloadURL}}</a>
+                                <div class="clip-card-body">{{$e.Content}}</div>
+                            </div>
+                            {{end}} {{else}}
+                            <div class="clip-empty" id="clip-empty">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                >
+                                    <path
+                                        d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"
+                                    />
+                                    <rect
+                                        x="8"
+                                        y="2"
+                                        width="8"
+                                        height="4"
+                                        rx="1"
+                                        ry="1"
+                                    />
+                                </svg>
+                                <p>
+                                    Clipboard is empty.<br />Add an entry below
+                                    to share text across sessions.
+                                </p>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div class="clip-composer">
+                            <textarea
+                                class="clip-textarea"
+                                id="clip-input"
+                                placeholder="Paste or type text to share…"
+                                rows="3"
+                            ></textarea>
+                            <div class="clip-send-actions">
+                                <button
+                                    class="btn btn-accent"
+                                    onclick="sendClip()"
+                                >
+                                    Add
+                                </button>
+                                <button
+                                    class="btn"
+                                    onclick="downloadClipboard()"
+                                >
+                                    Export
+                                </button>
+                                <button
+                                    class="btn btn-danger"
+                                    onclick="clearClipboard()"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {{end}}
+
+                <!-- ████ COLLABORATOR PANEL ████ -->
+                <section class="panel" id="panel-collab">
+                    <div class="collab-layout">
+                        <div class="collab-tabs">
+                            <div
+                                class="ctab active"
+                                onclick="switchCollab('http', this)"
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                                    />
+                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                </svg>
+                                HTTP log
+                                <span class="cbadge" id="http-badge">0</span>
+                            </div>
+                            <div
+                                class="ctab"
+                                onclick="switchCollab('dns', this)"
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"
+                                    />
+                                </svg>
+                                DNS log
+                                <span class="cbadge" id="dns-badge">0</span>
+                            </div>
+                            <div
+                                class="ctab"
+                                onclick="switchCollab('smtp', this)"
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                                    />
+                                    <polyline points="22,6 12,13 2,6" />
+                                </svg>
+                                SMTP inbox
+                                <span class="cbadge" id="smtp-badge">0</span>
+                            </div>
+                            <div
+                                class="ctab"
+                                onclick="switchCollab('smb', this)"
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M3 7h5l2 3h11v9a2 2 0 0 1-2 2H3z"
+                                    />
+                                    <path d="M3 7V5a2 2 0 0 1 2-2h3l2 3" />
+                                </svg>
+                                SMB log
+                                <span class="cbadge" id="smb-badge">0</span>
+                            </div>
+                            <div
+                                style="
+                                    margin-left: auto;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    padding: 0 4px;
+                                "
+                            >
+                                <div class="live-dot" id="collab-dot"></div>
+                                <span class="status-text" id="collab-status"
+                                    >connecting…</span
+                                >
+                            </div>
+                        </div>
+
+                        <!-- HTTP cpanel -->
+                        <div class="cpanel active" id="cpanel-http">
+                            <div class="http-toolbar">
+                                <div class="search-wrap">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="M21 21l-4.35-4.35" />
+                                    </svg>
+                                    <input
+                                        class="search-input"
+                                        id="http-search"
+                                        type="text"
+                                        placeholder="filter…"
+                                        oninput="filterHTTP()"
+                                    />
+                                </div>
+                                <div
+                                    style="
+                                        margin-left: auto;
+                                        display: flex;
+                                        gap: 6px;
+                                    "
+                                >
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        onclick="clearHTTP()"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="http-scroll">
+                                <table class="http-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Method</th>
+                                            <th>Status</th>
+                                            <th>URL</th>
+                                            <th>Source</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="http-tbody">
+                                        <tr id="http-empty-row">
+                                            <td colspan="6">
+                                                <div
+                                                    class="empty-state"
+                                                    style="padding: 32px"
+                                                >
+                                                    <svg
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                        style="
+                                                            width: 32px;
+                                                            height: 32px;
+                                                        "
+                                                    >
+                                                        <path
+                                                            d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                                                        />
+                                                    </svg>
+                                                    <p>
+                                                        No HTTP requests yet.<br />Requests
+                                                        will appear here in
+                                                        real-time.
+                                                    </p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- DNS cpanel -->
+                        <div class="cpanel" id="cpanel-dns">
+                            <div class="dns-stats">
+                                <div class="dns-stat">
+                                    <div
+                                        class="dns-stat-val"
+                                        id="dns-cnt-total"
+                                    >
+                                        0
+                                    </div>
+                                    <div class="dns-stat-label">Total</div>
+                                </div>
+                                <div class="dns-stat">
+                                    <div
+                                        class="dns-stat-val"
+                                        id="dns-cnt-a"
+                                        style="color: var(--green)"
+                                    >
+                                        0
+                                    </div>
+                                    <div class="dns-stat-label">A</div>
+                                </div>
+                                <div class="dns-stat">
+                                    <div
+                                        class="dns-stat-val"
+                                        id="dns-cnt-mx"
+                                        style="color: var(--warn)"
+                                    >
+                                        0
+                                    </div>
+                                    <div class="dns-stat-label">MX</div>
+                                </div>
+                                <div class="dns-stat">
+                                    <div
+                                        class="dns-stat-val"
+                                        id="dns-cnt-txt"
+                                        style="color: var(--purple)"
+                                    >
+                                        0
+                                    </div>
+                                    <div class="dns-stat-label">TXT</div>
+                                </div>
+                                <div class="dns-stat">
+                                    <div
+                                        class="dns-stat-val"
+                                        id="dns-cnt-other"
+                                        style="color: var(--text2)"
+                                    >
+                                        0
+                                    </div>
+                                    <div class="dns-stat-label">Other</div>
+                                </div>
+                                <div
+                                    style="
+                                        margin-left: auto;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 8px;
+                                    "
+                                >
+                                    <div class="search-wrap">
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <circle cx="11" cy="11" r="8" />
+                                            <path d="M21 21l-4.35-4.35" />
+                                        </svg>
+                                        <input
+                                            class="search-input"
+                                            id="dns-search"
+                                            type="text"
+                                            placeholder="filter…"
+                                            oninput="renderDNS()"
+                                        />
+                                    </div>
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        onclick="clearDNS()"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="dns-scroll">
+                                <table class="dns-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Type</th>
+                                            <th>Query</th>
+                                            <th>Source</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dns-tbody">
+                                        <tr id="dns-empty-row">
+                                            <td colspan="4">
+                                                <div
+                                                    class="empty-state"
+                                                    style="padding: 32px"
+                                                >
+                                                    <svg
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                        style="
+                                                            width: 32px;
+                                                            height: 32px;
+                                                        "
+                                                    >
+                                                        <path
+                                                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3"
+                                                        />
+                                                    </svg>
+                                                    <p>No DNS queries yet.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- SMTP cpanel -->
+                        <div class="cpanel" id="cpanel-smtp">
+                            <div class="http-toolbar">
+                                <div class="search-wrap">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="M21 21l-4.35-4.35" />
+                                    </svg>
+                                    <input
+                                        class="search-input"
+                                        id="smtp-search"
+                                        type="text"
+                                        placeholder="filter…"
+                                        oninput="renderSMTP()"
+                                    />
+                                </div>
+                                <div style="margin-left: auto">
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        onclick="clearSMTP()"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="smtp-scroll" id="smtp-inbox">
+                                <div class="empty-state" id="smtp-empty">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <path
+                                            d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                                        />
+                                        <polyline points="22,6 12,13 2,6" />
+                                    </svg>
+                                    <p>No emails received yet.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SMB cpanel -->
+                        <div class="cpanel" id="cpanel-smb">
+                            <div class="http-toolbar">
+                                <div class="search-wrap">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="M21 21l-4.35-4.35" />
+                                    </svg>
+                                    <input
+                                        class="search-input"
+                                        id="smb-search"
+                                        type="text"
+                                        placeholder="filter…"
+                                        oninput="renderSMB()"
+                                    />
+                                </div>
+                                <div style="margin-left: auto">
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        onclick="clearSMB()"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="smb-scroll" id="smb-inbox">
+                                <div class="empty-state" id="smb-empty">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <path
+                                            d="M3 7h5l2 3h11v9a2 2 0 0 1-2 2H3z"
+                                        />
+                                        <path d="M3 7V5a2 2 0 0 1 2-2h3l2 3" />
+                                        <line x1="8" y1="14" x2="16" y2="14" />
+                                    </svg>
+                                    <p>No SMB logs found.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ████ EMBEDDED FILES PANEL ████ -->
+                <section class="panel" id="panel-embedded">
+                    <div class="files-toolbar">
+                        <div class="files-toolbar-left">
+                            <span
+                                style="
+                                    font-family: var(--mono);
+                                    font-size: 12px;
+                                    color: var(--text2);
+                                "
+                            >
+                                Read-only — compiled into binary
+                            </span>
+                        </div>
+                        <div class="files-toolbar-right">
+                            <div class="search-wrap">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="M21 21l-4.35-4.35" />
+                                </svg>
+                                <input
+                                    class="search-input"
+                                    id="emb-search"
+                                    type="text"
+                                    placeholder="Search embedded…"
+                                    oninput="filterEmbedded()"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="files-scroll">
+                        <table class="file-table" id="emb-table">
+                            <thead>
+                                <tr>
+                                    <th
+                                        onclick="sortEmbedded('name')"
+                                        id="emb-th-name"
+                                    >
+                                        Name <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th
+                                        onclick="sortEmbedded('size')"
+                                        id="emb-th-size"
+                                    >
+                                        Size <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th
+                                        onclick="sortEmbedded('mtime')"
+                                        id="emb-th-mtime"
+                                    >
+                                        Modified
+                                        <span class="sort-arrow">↕</span>
+                                    </th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emb-tbody">
+                                {{if .EmbeddedItems}} {{range .EmbeddedItems}}
+                                <tr
+                                    data-name="{{.Name}}"
+                                    data-size="{{.SizeRaw}}"
+                                    data-mtime="{{.LastModRaw}}"
+                                    data-isdir="{{.IsDir}}"
+                                >
+                                    <td class="fc-name">
+                                        {{if .IsDir}}
+                                        <svg
+                                            class="file-icon dir"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        {{else}} {{template "fileIcon"
+                                        .Extension}} {{end}}
+                                        <a
+                                            href="{{.Name}}?embedded"
+                                            title="{{.Name}}"
+                                            target="_blank"
+                                            >{{.Name}}</a
+                                        >
+                                    </td>
+                                    <td class="fc-size">
+                                        {{if .IsDir}}—{{else}}{{.Size}}{{end}}
+                                    </td>
+                                    <td class="fc-mtime">{{.LastMod}}</td>
+                                    <td>
+                                        <div class="fc-actions">
+                                            {{if not .IsDir}}
+                                            <a
+                                                class="btn btn-sm"
+                                                href="{{.Name}}?embedded"
+                                                download
+                                                title="Download"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <polyline
+                                                        points="7 10 12 15 17 10"
+                                                    />
+                                                    <line
+                                                        x1="12"
+                                                        y1="15"
+                                                        x2="12"
+                                                        y2="3"
+                                                    />
+                                                </svg>
+                                            </a>
+                                            <button
+                                                class="btn btn-sm"
+                                                onclick="copyEmbLink('{{.Name}}')"
+                                                title="Copy link"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                >
+                                                    <rect
+                                                        x="9"
+                                                        y="9"
+                                                        width="13"
+                                                        height="13"
+                                                        rx="2"
+                                                    />
+                                                    <path
+                                                        d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                    />
+                                                </svg>
+                                            </button>
+                                            {{end}}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{end}} {{else}}
+                                <tr id="emb-empty-row">
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                            >
+                                                <ellipse
+                                                    cx="12"
+                                                    cy="5"
+                                                    rx="9"
+                                                    ry="3"
+                                                />
+                                                <path
+                                                    d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"
+                                                />
+                                                <path
+                                                    d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"
+                                                />
+                                            </svg>
+                                            <p>
+                                                No embedded files.<br />Compile
+                                                with embedded assets to populate
+                                                this view.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ████ SHARE LINKS PANEL ████ -->
+                <section class="panel" id="panel-share">
+                    <div class="share-layout">
+                        {{ if gt (len .SharedLinks) 0 }}
+                        <div class="share-cards" id="share-cards">
+                            {{ range $token, $link := .SharedLinks }}
+                            <div class="share-card" id="share-card-{{$token}}">
+                                <div class="share-card-header">
+                                    <div class="share-card-title">
+                                        {{ if $link.IsDir }}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            width="14"
+                                            height="14"
+                                            style="color: var(--warn)"
+                                        >
+                                            <path
+                                                d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+                                            />
+                                        </svg>
+                                        {{ else }}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            width="14"
+                                            height="14"
+                                            style="color: var(--info)"
+                                        >
+                                            <path
+                                                d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"
+                                            />
+                                            <polyline points="13 2 13 9 20 9" />
+                                        </svg>
+                                        {{ end }}
+                                        <span class="share-card-path"
+                                            >{{ $link.FilePath }}</span
+                                        >
+                                    </div>
+                                    <div class="share-card-actions">
+                                        <button
+                                            class="btn btn-sm btn-ghost"
+                                            onclick="showShareQR('{{$token}}')"
+                                            title="Show QR"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <rect
+                                                    x="3"
+                                                    y="3"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="3"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="3"
+                                                    y="14"
+                                                    width="7"
+                                                    height="7"
+                                                    rx="1"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="14"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="18"
+                                                    y="14"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="14"
+                                                    y="18"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                                <rect
+                                                    x="18"
+                                                    y="18"
+                                                    width="3"
+                                                    height="3"
+                                                />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-danger"
+                                            onclick="deleteShareLink('{{$token}}', '{{$link.FilePath}}')"
+                                            title="Delete"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="13"
+                                                height="13"
+                                            >
+                                                <polyline
+                                                    points="3 6 5 6 21 6"
+                                                />
+                                                <path d="M19 6l-1 14H6L5 6" />
+                                                <path
+                                                    d="M10 11v6M14 11v6M9 6V4h6v2"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="share-card-body">
+                                    <div class="share-card-meta">
+                                        <div class="share-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                />
+                                                <polyline
+                                                    points="12 6 12 12 16 14"
+                                                />
+                                            </svg>
+                                            <span
+                                                >Expires
+                                                <span
+                                                    class="share-expiry-rel"
+                                                    data-expires="{{ $link.Expires.Unix }}"
+                                                ></span
+                                            ></span>
+                                            <span class="share-expiry-abs"
+                                                >{{ $link.Expires.Format
+                                                "2006-01-02 15:04:05" }}</span
+                                            >
+                                        </div>
+                                        <div class="share-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <path
+                                                    d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                                                />
+                                                <polyline
+                                                    points="7 10 12 15 17 10"
+                                                />
+                                                <line
+                                                    x1="12"
+                                                    y1="15"
+                                                    x2="12"
+                                                    y2="3"
+                                                />
+                                            </svg>
+                                            {{ if eq $link.DownloadLimit -1 }}
+                                            <span>Unlimited downloads</span>
+                                            {{ else }} {{ $used :=
+                                            $link.Downloaded }} {{ $left := sub
+                                            $link.DownloadLimit $used }}
+                                            <span
+                                                >{{ $left }} / {{
+                                                $link.DownloadLimit }}
+                                                remaining</span
+                                            >
+                                            <div class="share-dl-bar">
+                                                <div
+                                                    class="share-dl-bar-fill"
+                                                    style="width: {{ percent $used $link.DownloadLimit }}%"
+                                                ></div>
+                                            </div>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="share-card-url">
+                                        <span
+                                            class="share-token-url"
+                                            id="share-url-{{$token}}"
+                                        ></span>
+                                        <button
+                                            class="btn btn-sm btn-ghost"
+                                            onclick="copyShareUrl('{{$token}}')"
+                                            title="Copy URL"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                width="12"
+                                                height="12"
+                                            >
+                                                <rect
+                                                    x="9"
+                                                    y="9"
+                                                    width="13"
+                                                    height="13"
+                                                    rx="2"
+                                                    ry="2"
+                                                />
+                                                <path
+                                                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             {{ end }}
                         </div>
+                        {{ else }}
+                        <div class="empty-state">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            >
+                                <circle cx="18" cy="5" r="3" />
+                                <circle cx="6" cy="12" r="3" />
+                                <circle cx="18" cy="19" r="3" />
+                                <line
+                                    x1="8.59"
+                                    y1="13.51"
+                                    x2="15.42"
+                                    y2="17.49"
+                                />
+                                <line
+                                    x1="15.41"
+                                    y1="6.51"
+                                    x2="8.59"
+                                    y2="10.49"
+                                />
+                            </svg>
+                            <p>No active shared links.</p>
+                        </div>
+                        {{ end }}
                     </div>
-                    {{ end }}
+                </section>
+
+                <!-- ████ CLI PANEL ████ -->
+                {{if .CLI}}
+                <section class="panel" id="panel-cli">
+                    <div class="cli-layout">
+                        <div class="cli-output" id="cli-output">
+                            <p class="cli-line sys">
+                                goshs {{.GoshsVersion}} — command interface
+                                ready
+                            </p>
+                            <p class="cli-line sys">
+                                type a command and press Enter
+                            </p>
+                        </div>
+                        <div class="cli-input-row">
+                            <span class="cli-prompt">goshs@{{.AbsPath}} $</span>
+                            <input
+                                class="cli-input"
+                                id="cli-input"
+                                type="text"
+                                placeholder="command…"
+                                autocomplete="off"
+                                spellcheck="false"
+                            />
+                        </div>
+                    </div>
+                </section>
+                {{end}}
+            </main>
+        </div>
+
+        <!-- ═══════════ MODALS ═══════════ -->
+
+        <!-- Upload modal -->
+        <div class="modal-backdrop" id="upload-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">Upload files</span>
+                    <button
+                        class="modal-close"
+                        onclick="closeModal('upload-modal')"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="drop-area" id="modal-drop-area">
+                        <input
+                            type="file"
+                            id="file-input"
+                            multiple
+                            onchange="handleFileSelect(this.files)"
+                        />
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                        >
+                            <polyline points="16 16 12 12 8 16" />
+                            <line x1="12" y1="12" x2="12" y2="21" />
+                            <path
+                                d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"
+                            />
+                        </svg>
+                        <p>Click to select or drag files here</p>
+                        <p class="hint">Multiple files supported</p>
+                    </div>
+                    <div id="upload-file-list"></div>
+                    <div class="progress-bar-wrap" id="upload-progress-wrap">
+                        <div
+                            class="progress-bar"
+                            id="upload-progress-bar"
+                        ></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeModal('upload-modal')">
+                        Cancel
+                    </button>
+                    <button class="btn btn-accent" onclick="startUpload()">
+                        Upload
+                    </button>
                 </div>
             </div>
-            {{ end }}
-        </div>
-    </div>
-</div>
-
-<!-- QR Code Modal-->
-<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
-<div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content text-center">
-    <div class="modal-header">
-        <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-        <img id="qrImage" src="" alt="QR Code" class="img-fluid" style="max-width: 256px;">
-        <p class="mt-2 small text-muted">Scan this code to open the file</p>
-    </div>
-    </div>
-</div>
-</div>
-
-<!-- Share Modal-->
-<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg"> <!-- bigger modal -->
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="shareModalLabel">Share File</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
-        <div class="modal-body">
-
-          <!-- Form inputs -->
-          <div id="shareFormArea">
-            <input type="hidden" id="shareFilePath">
-
-            <div class="mb-3">
-              <label for="expiry" class="form-label">Expires in (minutes)</label>
-              <input type="number" class="form-control" id="expiry" value="60" min="1">
+        <!-- Mkdir modal -->
+        <div class="modal-backdrop" id="mkdir-modal">
+            <div class="modal" style="min-width: 360px">
+                <div class="modal-header">
+                    <span class="modal-title">New folder</span>
+                    <button
+                        class="modal-close"
+                        onclick="closeModal('mkdir-modal')"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Folder name</label>
+                    <input
+                        class="form-input"
+                        id="mkdir-input"
+                        type="text"
+                        placeholder="e.g. uploads"
+                        onkeydown="if (event.key === 'Enter') createDir();"
+                    />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeModal('mkdir-modal')">
+                        Cancel
+                    </button>
+                    <button class="btn btn-accent" onclick="createDir()">
+                        Create
+                    </button>
+                </div>
             </div>
+        </div>
 
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="checkbox" id="enableLimit" onclick="toggleLimitInput()">
-              <label class="form-check-label" for="enableLimit">Enable download limit</label>
+        <!-- QR modal -->
+        <div class="modal-backdrop" id="qr-modal">
+            <div class="modal" style="min-width: 320px; max-width: 340px">
+                <div class="modal-header">
+                    <span class="modal-title">QR Code</span>
+                    <button
+                        class="modal-close"
+                        onclick="closeModal('qr-modal')"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="qr-container">
+                        <img
+                            id="qr-canvas"
+                            alt="QR Code"
+                            style="width: 200px; height: 200px"
+                        />
+                    </div>
+                    <div
+                        style="
+                            font-family: var(--mono);
+                            font-size: 11px;
+                            color: var(--text2);
+                            text-align: center;
+                            word-break: break-all;
+                        "
+                        id="qr-url"
+                    ></div>
+                </div>
             </div>
+        </div>
 
-            <div class="mb-3">
-              <label for="downloadLimit" class="form-label">Max downloads</label>
-              <input type="number" class="form-control" id="downloadLimit" min="1" disabled>
+        <!-- Share link modal -->
+        <div class="modal-backdrop" id="share-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">Share link</span>
+                    <button
+                        class="modal-close"
+                        onclick="closeModal('share-modal')"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="share-opts">
+                        <div class="share-opt-row">
+                            <label>Download limit (0 = unlimited)</label>
+                            <input
+                                type="number"
+                                id="share-limit"
+                                value="0"
+                                min="0"
+                            />
+                        </div>
+                        <div class="share-opt-row">
+                            <label>Expire after (minutes, default = 60)</label>
+                            <input
+                                type="number"
+                                id="share-expire"
+                                value="60"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                    <div class="share-link-result" id="share-result"></div>
+                    <div class="share-link-result" id="share-result-qr">
+                        <img
+                            id="share-qr-canvas"
+                            alt="QR Code"
+                            style="width: 200px; height: 200px"
+                        />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="closeModal('share-modal')">
+                        Close
+                    </button>
+                    <button
+                        class="btn btn-accent"
+                        onclick="generateShareLink()"
+                    >
+                        Generate
+                    </button>
+                </div>
             </div>
-          </div>
-
-          <!-- Result container (hidden until filled) -->
-          <div id="shareResultArea" style="display:none;">
-            <h6>Share Links</h6>
-            <div id="shareLinksContainer" class="d-flex flex-wrap gap-3"></div>
-          </div>
         </div>
 
-        <div class="modal-footer" id="shareModalFooter">
-          <button type="button" class="btn btn-primary" onclick="submitShareForm()">Generate Share Links</button>
-        </div>
-      </div>
-    </div>
-  </div>
-<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="shareModalLabel">Share File</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body">
-          <!-- Hidden file path -->
-          <input type="hidden" id="shareFilePath">
-
-          <!-- Expiry (minutes) -->
-          <div class="mb-3">
-            <label for="expiry" class="form-label">Expires in (minutes)</label>
-            <input type="number" class="form-control" id="expiry" value="60" min="1">
-          </div>
-
-          <!-- Enable download limit -->
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="enableLimit" onclick="toggleLimitInput()">
-            <label class="form-check-label" for="enableLimit">Enable download limit</label>
-          </div>
-
-          <!-- Download limit (disabled until enabled) -->
-          <div class="mb-3">
-            <label for="downloadLimit" class="form-label">Max downloads</label>
-            <input type="number" class="form-control" id="downloadLimit" min="1" disabled>
-          </div>
+        <!-- Drop overlay -->
+        <div class="dropzone-overlay" id="drop-overlay">
+            <div class="dropzone-box">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                >
+                    <polyline points="16 16 12 12 8 16" />
+                    <line x1="12" y1="12" x2="12" y2="21" />
+                    <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
+                </svg>
+                <p>Drop files to upload</p>
+                <small>Release to start uploading</small>
+            </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" onclick="submitShareForm()">Generate Link</button>
+        <!-- Context menu -->
+        <div class="ctx-menu" id="ctx-menu">
+            <div class="ctx-item" id="ctx-open">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path
+                        d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"
+                    />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" /></svg
+                >Open
+            </div>
+            <div class="ctx-item" id="ctx-download">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" /></svg
+                >Download
+            </div>
+            <div class="ctx-item" id="ctx-share">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg
+                >Share link
+            </div>
+            <div class="ctx-sep"></div>
+            <div class="ctx-item danger" id="ctx-delete">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6M14 11v6M9 6V4h6v2" /></svg
+                >Delete
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-{{ template "scripts_index" . }}
-{{ template "footer" . }}
+        <!-- Toast container -->
+        <div class="toast-container" id="toast-container"></div>
+
+        <!-- ═══════════ TEMPLATES ═══════════ -->
+        {{define "breadcrumb"}}
+        <span class="bc-part root" onclick="navigateTo('/')">~</span>
+        {{range .BreadcrumbParts}}
+        <span class="bc-sep">/</span>
+        <span class="bc-part" onclick="navigateTo('{{.Path}}')">{{.Name}}</span>
+        {{end}} {{end}} {{define "fileIcon"}} {{if eq . ".jpg" ".jpeg" ".png"
+        ".gif" ".svg" ".webp" ".bmp" ".ico"}}
+        <svg
+            class="file-icon img"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+        </svg>
+        {{else if eq . ".pdf" ".doc" ".docx" ".txt" ".md" ".rst" ".odt"}}
+        <svg
+            class="file-icon doc"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+        </svg>
+        {{else if eq . ".zip" ".tar" ".gz" ".bz2" ".7z" ".rar" ".xz"}}
+        <svg
+            class="file-icon arch"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <polyline points="21 8 21 21 3 21 3 8" />
+            <rect x="1" y="3" width="22" height="5" />
+            <line x1="10" y1="12" x2="14" y2="12" />
+        </svg>
+        {{else if eq . ".go" ".py" ".js" ".ts" ".rs" ".c" ".cpp" ".h" ".java"
+        ".rb" ".sh" ".php" ".cs" ".swift"}}
+        <svg
+            class="file-icon code"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+        </svg>
+        {{else if eq . ".mp4" ".mkv" ".avi" ".mov" ".webm" ".flv"}}
+        <svg
+            class="file-icon vid"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <polygon points="23 7 16 12 23 17 23 7" />
+            <rect x="1" y="5" width="15" height="14" rx="2" />
+        </svg>
+        {{else if eq . ".exe" ".elf" ".bin" ".so" ".dll" ".out"}}
+        <svg
+            class="file-icon bin"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+            <path d="M7 9l2 2-2 2M11 13h4" />
+        </svg>
+        {{else}}
+        <svg
+            class="file-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+        >
+            <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
+            <polyline points="13 2 13 9 20 9" />
+        </svg>
+        {{end}} {{end}}
+
+        <!-- ═══════════ JAVASCRIPT ═══════════ -->
+        <script src="/js/main.min.js?static"></script>
+        <script src="/js/qrious.js?static"></script>
+    </body>
+</html>

@@ -2,8 +2,8 @@ name: goreleaser
 
 on:
   push:
-      tags:
-        - "*"
+    tags:
+      - "*"
   workflow_dispatch:
 
 permissions:
@@ -15,19 +15,17 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
-        uses: actions/setup-go@v5
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: 1.21
-      -
-        name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+          go-version: 1.24
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           distribution: goreleaser
           version: latest

@@ -18,9 +18,9 @@ func NewIPWhitelist(cidrs string, enabled bool, trustedProxies string) (*Whiteli
 		return &Whitelist{}, nil
 	}
 
-	cidrsList := strings.Split(cidrs, ",")
+	cidrsList := strings.SplitSeq(cidrs, ",")
 
-	for _, cidr := range cidrsList {
+	for cidr := range cidrsList {
 		cidr = strings.TrimSpace(cidr)
 
 		if cidr == "" {
@@ -45,9 +45,9 @@ func NewIPWhitelist(cidrs string, enabled bool, trustedProxies string) (*Whiteli
 		whitelist.Networks = append(whitelist.Networks, network)
 	}
 
-	proxyList := strings.Split(trustedProxies, ",")
+	proxyList := strings.SplitSeq(trustedProxies, ",")
 
-	for _, proxy := range proxyList {
+	for proxy := range proxyList {
 		proxy = strings.TrimSpace(proxy)
 
 		if proxy == "" {

@@ -1,97 +1,68 @@
-![Version](https://img.shields.io/badge/Version-v1.1.4-green)
+![Version](https://img.shields.io/badge/Version-v2.0.0-green)
 [![GitHub](https://img.shields.io/github/license/patrickhener/goshs)](https://github.com/patrickhener/goshs/blob/master/LICENSE)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/patrickhener/goshs)
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
 ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/patrickhener/goshs)](https://goreportcard.com/report/github.com/patrickhener/goshs)
+[![GitHub stars](https://img.shields.io/github/stars/patrickhener/goshs?style=social)](https://github.com/patrickhener/goshs/stargazers)
 
-<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png" alt="goshs-logo" height="100">
+<img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png?raw=true" alt="goshs-logo" height="100">
 
-goshs is a replacement for Python's `SimpleHTTPServer`. It allows uploading and downloading via HTTP/S with either self-signed certificate or user provided certificate and you can use HTTP basic auth.
+goshs is a replacement for Python's `SimpleHTTPServer`. It is a feature-rich file server supporting HTTP/S, WebDAV, SFTP, and SMB — with built-in authentication, share links, webhooks, and collaboration features for penetration testing and CTF challenges.
 
-![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif)
+![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif?raw=true)
 
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot.png" alt="goshs-screenshot-light"></kbd>
-<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-dark.png" alt="goshs-screenshot-dark"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2.png?raw=true" alt="goshs-screenshot-light"></kbd>
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2-dark.png?raw=true" alt="goshs-screenshot-dark"></kbd>
 
+# Quick Start
+
+```bash
+# Serve the current directory on port 8000
+goshs
+
+# Serve with HTTPS (self-signed) and basic auth
+goshs -s -ss -b user:password
+
+# Capture SMB hashes
+goshs -smb -smb-domain CORP
+
+# Catch DNS callbacks and receive emails
+goshs -dns -dns-ip 1.2.3.4 -smtp -smtp-domain your-domain.com
+```
 
 # Documentation
 
 For a detailed documentation go to [goshs.de](https://goshs.de)
 
 # Features
-* Download or view files
-  * Bulk download as .zip file
-  * QRCode
-* Upload files
-  * POST request
-  * PUT request
-  * Drag & Drop in web interface
-* Delete files
-  * Individually
-  * Bulk delete
-* Authentication
-  * Basic Authentication
-  * Certificate Based Authentication via Client Certificate
-* Transport Layer Security (HTTPS)
-  * self-signed
-  * let's encrypt
-  * provide own certificate
-* Non persistent clipboard
-  * Download clipboard entries as .json file
-* WebDAV support
-* Read-Only and Upload-Only mode
-* SFTP support
-  * Read-Only
-  * Upload-Only
-  * Key Auth
-  * Password Auth
-* Silent mode (no webserver output)
-* Invisible mode (no output whatsoever)
-* Retrieve json on cli
-* Drop user privileges before execution (Unix only)
-  * Example: Run on port 80, but process is "www-data"
-* Themes
-  * Dark Mode
-  * Light Mode
-* Command Line
-  * Run Commands on the system hosting `goshs`
-* File Based ACLs
-  * You can place a `.goshs` in any folder to apply custom ACLs
-  * You can apply custom basic auth per folder
-  * You can restrict access to specific files completely
-* Embed files on compile time
-* Self updating binary
-* Write output to a log file
-* Control via config file
-* Send notifications via webhook
-  * HTTP Server
-  * Webdav
-  * SFTP
-* Access control via IP Whitelist
-  * Proxy Aware
-* Share Links
-  * Share files without authentication
-  * Use Download Limit
-  * Use Time Limit
-* Tunnel connection via localhost.run
-  * Expose your local goshs to the internet via localhost.run
+
+| | |
+|---|---|
+| 📁 **File Operations** | Download, upload (drag & drop, POST/PUT), delete, bulk ZIP, QR codes |
+| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB |
+| 🔒 **Auth & Security** | Basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert), IP whitelist, file-based ACLs |
+| ⚙️ **Server Modes** | Read-only, upload-only, no-delete, silent, invisible, CLI command execution |
+| 🔗 **Share Links** | Token-based sharing, download limit, time limit |
+| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, redirect endpoint |
+| 🔔 **Integration** | Webhooks, tunnel via localhost.run, config file, JSON API, mDNS |
+| 🛠️ **Misc** | Dark/light themes, clipboard, self-update, log output, embed files, drop privileges |
 
 # Installation
 
-## Release
-You can download the executable from the [release section](https://github.com/patrickhener/goshs/releases)
+| Method | |
+|---|---|
+| 🦫 **Go** | `go install github.com/patrickhener/goshs@latest` |
+| 🐉 **Kali** | `sudo apt install goshs` |
+| 🍺 **Homebrew** | `brew install goshs` |
+| 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
+| 🐳 **Docker** | `docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd` |
+| 📦 **Release** | [Download from GitHub Releases](https://github.com/patrickhener/goshs/releases) |
 
-## Go
+<details>
+<summary>🔧 Build yourself</summary>
 
-```bash
-go get -u github.com/patrickhener/goshs
-go install github.com/patrickhener/goshs@latest
-```
-
-## Build yourself
-
-Building requirements are [ugilfy-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing this packages you can easily just:
+Building requirements are [uglify-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing these packages run:
 
 ```bash
 git clone https://github.com/patrickhener/goshs.git
@@ -99,52 +70,23 @@ cd goshs
 make build-all
 ```
 
-## Kali repositories
-
-When using kali you can easily just install it via cli, if it is not already installed:
-
-```
-sudo apt install goshs
-```
-
-## Windows scoop package
-
-If you are using the [scoop package manager](https://scoop.sh/) under Windows, you can install goshs this way:
-
-```
-scoop bucket add extras
-scoop install extras/goshs
-```
-
-## macOS homebrew
-
-```
-brew install goshs
-```
-
-## Run with docker
-
-```
-docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd
-```
+</details>
 
 # Code Contributors
 
-These are the awesome code contributors of `goshs`:
+[![Contributors](https://contrib.rocks/image?repo=patrickhener/goshs)](https://github.com/patrickhener/goshs/graphs/contributors)
 
-[![](https://github.com/aWZHY0yQH81uOYvH.png?size=50)](https://github.com/aWZHY0yQH81uOYvH)
-[![](https://github.com/Hazegard.png?size=50)](https://github.com/Hazegard)
-[![](https://github.com/closehandle.png?size=50)](https://github.com/closehandle)
-[![](https://github.com/abgordon.png?size=50)](https://github.com/abgordon)
-
-- [parzel](https://github.com/parzel)
-- [ty3gx](https://github.com/ty3gx) 
-
-# Security issues shout out
+# Security Contributors
 
 These are the awesome contributors that made `goshs` even more secure :heart:
 
-- [Guilhem7](https://github.com/Guilhem7)
+<table><tr>
+  <td align="center"><a href="https://github.com/marduc812"><img src="https://github.com/marduc812.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/autobot23920"><img src="https://github.com/autobot23920.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/R1ZZG0D"><img src="https://github.com/R1ZZG0D.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/jaisurya-me"><img src="https://github.com/jaisurya-me.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/Guilhem7">Guilhem7</a></td>
+</tr></table>
 
 # Community
 

@@ -1,5 +1,7 @@
 package webhook
 
+import "slices"
+
 type DiscordWebhook struct {
 	Enabled  bool
 	Events   []string
@@ -25,10 +27,5 @@ func (d *DiscordWebhook) GetEvents() []string {
 }
 
 func (d *DiscordWebhook) Contains(event string) bool {
-	for _, a := range d.Events {
-		if a == event {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(d.Events, event)
 }

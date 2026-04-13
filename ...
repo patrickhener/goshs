@@ -1,0 +1,15 @@
+mode: set
+github.com/patrickhener/goshs/main.go:16.13,23.11 3 0
+github.com/patrickhener/goshs/main.go:23.11,25.17 2 0
+github.com/patrickhener/goshs/main.go:25.17,26.14 1 0
+github.com/patrickhener/goshs/main.go:28.3,29.13 2 0
+github.com/patrickhener/goshs/main.go:33.2,33.27 1 0
+github.com/patrickhener/goshs/main.go:33.27,35.17 2 0
+github.com/patrickhener/goshs/main.go:35.17,37.4 1 0
+github.com/patrickhener/goshs/main.go:41.2,42.16 2 0
+github.com/patrickhener/goshs/main.go:42.16,44.3 1 0
+github.com/patrickhener/goshs/main.go:46.2,47.16 2 0
+github.com/patrickhener/goshs/main.go:47.16,49.3 1 0
+github.com/patrickhener/goshs/main.go:52.2,53.16 2 0
+github.com/patrickhener/goshs/main.go:53.16,55.3 1 0
+github.com/patrickhener/goshs/main.go:58.2,63.45 5 0

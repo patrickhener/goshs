@@ -10,12 +10,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/smtpattach"
 	"github.com/patrickhener/goshs/utils"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -75,15 +77,13 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 	// Get foldername
 	_, foldername := filepath.Split(file.Name())
 
-	for _, name := range parentConfig.Block {
-		if name == fmt.Sprintf("%s/", foldername) {
-			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
-			return
-		}
+	if slices.Contains(parentConfig.Block, fmt.Sprintf("%s/", foldername)) {
+		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+		return
 	}
 
-	// Check if the dir has a .goshs ACL file
-	config, err := fs.findSpecialFile(file.Name())
+	// Check for effective .goshs ACL (walks up to webroot so parent configs apply recursively)
+	config, err := fs.findEffectiveACL(file.Name())
 	if err != nil {
 		logger.Errorf("error reading file based access config: %+v", err)
 	}
@@ -91,27 +91,73 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 }
 
 func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Request) {
-	// If it is a file we need to check for .goshs one directory up
+	// Walk up from the file's directory to find the effective .goshs ACL
 	parent := filepath.Dir(file.Name())
-	config, err := fs.findSpecialFile(parent)
+	config, err := fs.findEffectiveACL(parent)
 	if err != nil {
 		logger.Errorf("error reading file based access config: %+v", err)
 	}
 	fs.sendFile(w, req, file, config)
 }
 
+// checkCSRF validates the X-CSRF-Token header for mutating actions.
+// The token is always generated and always embedded in the page, so legitimate
+// browser users will always have it. File-based .goshs auth creates browser-cached
+// Basic Auth sessions just like global -b auth does, so we enforce this check
+// unconditionally rather than only when global auth is configured.
+func (fs *FileServer) checkCSRF(w http.ResponseWriter, req *http.Request) bool {
+	if req.Header.Get("X-CSRF-Token") != fs.CSRFToken {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
+	if _, ok := req.URL.Query()["smtp"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		fs.handleSMTPAttachment(w, req)
+		return true
+	}
+	if _, ok := req.URL.Query()["goshs-info"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		fs.handleInfo(w)
+		return true
+	}
+	if _, ok := req.URL.Query()["mkdir"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.checkCSRF(w, req) {
+			return true
+		}
+		fs.handleMkdir(w, req)
+		return true
+	}
 	if _, ok := req.URL.Query()["ws"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		fs.socket(w, req)
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.NoClipboard && !fs.Invisible {
 			fs.cbDown(w, req)
 			return true
 		}
 	}
 	if _, ok := req.URL.Query()["bulk"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.bulkDownload(w, req)
 		} else {
@@ -120,6 +166,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["static"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.static(w, req)
 		} else {
@@ -128,18 +177,29 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		return true
 	}
 	if _, ok := req.URL.Query()["embedded"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
 		if err := fs.embedded(w, req); err != nil {
 			if !fs.Invisible {
-				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook)
+				body := fs.emitCollabEvent(req, http.StatusNotFound)
+				logger.LogRequest(req, http.StatusNotFound, fs.Verbose, fs.Webhook, body)
 			} else {
 				fs.handleInvisible(w)
 			}
 			return true
 		}
-		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 		return true
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.checkCSRF(w, req) {
+			return true
+		}
 		if !fs.ReadOnly && !fs.UploadOnly && !fs.NoDelete {
 			fs.deleteFile(w, req)
 			return true
@@ -149,8 +209,25 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		}
 	}
 	if _, ok := req.URL.Query()["share"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.checkCSRF(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.CreateShareHandler(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
+		return true
+	}
+	if _, ok := req.URL.Query()["redirect"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.Invisible {
+			fs.handleRedirect(w, req)
 		} else {
 			fs.handleInvisible(w)
 		}
@@ -162,6 +239,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 			case http.MethodGet:
 				fs.ShareHandler(w, req)
 			case http.MethodDelete:
+				if !fs.checkCSRF(w, req) {
+					return true
+				}
 				fs.DeleteShareHandler(w, req)
 			default:
 			}
@@ -186,18 +266,21 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 		json = true
 	}
 
-	// Get url so you can extract Headline and title
-	upath := req.URL.Path
-
 	// Ignore default browser call to /favicon.ico
-	if upath == "/favicon.ico" {
+	if req.URL.Path == "/favicon.ico" {
 		return
 	}
 
-	upath = filepath.FromSlash(filepath.Clean("/" + strings.Trim(upath, "/")))
-
-	// Define absolute path
-	open := fs.Webroot + upath
+	open, err := sanitizePath(fs.Webroot, req.URL.Path)
+	if err != nil {
+		fs.handleError(w, req, err, http.StatusBadRequest)
+		return
+	}
+	// Relative path used by templates
+	upath := strings.TrimPrefix(open, filepath.Clean(fs.Webroot))
+	if upath == "" {
+		upath = "/"
+	}
 
 	// Check if you are in a dir
 	// disable G304 (CWE-22): Potential file inclusion via variable
@@ -220,11 +303,21 @@ func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
 	// #nosec G307
 	defer file.Close()
 
-	// Log request
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook)
-
 	// Switch and check if dir
 	stat, _ := file.Stat()
+
+	// Skip collaborator logging for paths protected by a .goshs ACL to avoid
+	// broadcasting credentials (Authorization header) to the public collab feed.
+	targetDir := open
+	if !stat.IsDir() {
+		targetDir = filepath.Dir(open)
+	}
+	acl, _ := fs.findEffectiveACL(targetDir)
+	if acl.Auth == "" {
+		body := fs.emitCollabEvent(req, http.StatusOK)
+		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
+	}
+
 	if stat.IsDir() {
 		fs.doDir(file, w, req, upath, json)
 	} else {
@@ -306,10 +399,9 @@ func returnJsonDirListing(w http.ResponseWriter, items []item) {
 func (fileS *FileServer) constructSilent(w http.ResponseWriter) {
 	tem := &baseTemplate{
 		GoshsVersion: fileS.Version,
-		Directory:    &directory{AbsPath: "silent mode"},
 	}
 
-	files := []string{"static/templates/silent.html", "static/templates/header.tmpl", "static/templates/footer.tmpl"}
+	files := []string{"static/templates/silent.html"}
 
 	t, err := template.ParseFS(static, files...)
 	if err != nil {
@@ -322,93 +414,107 @@ func (fileS *FileServer) constructSilent(w http.ResponseWriter) {
 }
 
 func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string, items []item, embeddedItems []item) {
+	var subdirectory bool
 	// Windows upload compatibility
 	if relpath == "\\" {
 		relpath = "/"
 	}
 
-	// Construct directory for template
-	d := &directory{
-		RelPath: relpath,
-		AbsPath: filepath.Join(fileS.Webroot, relpath),
-		Content: items,
-	}
-	if fileS.Pass != "" || fileS.CACert != "" {
-		// Auth -> Sharelinks on
-		d.AuthEnabled = true
-	} else {
-		d.AuthEnabled = false
-	}
 	if relpath != "/" {
-		d.IsSubdirectory = true
-		pathSlice := strings.Split(relpath, "/")
-		if len(pathSlice) > 2 {
-			pathSlice = pathSlice[1 : len(pathSlice)-1]
-
-			var backString string
-			for _, part := range pathSlice {
-				backString += "/" + part
-			}
-			d.Back = backString
-		} else {
-			d.Back = "/"
-		}
+		subdirectory = true
 	} else {
-		d.IsSubdirectory = false
+		subdirectory = false
 	}
 
-	// Construct directory for embedded files
-	e := &directory{
-		RelPath: fileS.Webroot,
-		AbsPath: fileS.Webroot,
-		Content: embeddedItems,
+	var breadcrumbParts []BreadcrumbPart
+	for i, e := range strings.Split(relpath, "/") {
+		if e != "" {
+			breadcrumbParts = append(breadcrumbParts, BreadcrumbPart{Name: e, Path: strings.Join(strings.Split(relpath, "/")[:i+1], "/")})
+		}
 	}
 
-	// upload only mode empty directory
-	if fileS.UploadOnly {
-		d = &directory{}
-		e = &directory{}
+	var fileItems []FileItem
+	for _, item := range items {
+		qrcode := GenerateQRCode(relpath + item.Name)
+		fileItems = append(fileItems, FileItem{
+			RelPath:    relpath,
+			Name:       item.Name,
+			IsDir:      item.IsDir,
+			Size:       item.DisplaySize,
+			SizeRaw:    item.SortSize,
+			LastMod:    item.DisplayLastModified,
+			LastModRaw: item.SortLastModified,
+			Extension:  item.Ext,
+			QRCode:     qrcode,
+			Auth:       fileS.Pass != "" || fileS.CACert != "",
+		})
 	}
 
-	// Construct template
-	tem := &baseTemplate{
-		Directory:       d,
+	var embeddedFiles []FileItem
+	for _, item := range embeddedItems {
+		qrcode := GenerateQRCode(relpath + item.Name)
+		embeddedFiles = append(embeddedFiles, FileItem{
+			RelPath:    relpath,
+			Name:       item.Name,
+			IsDir:      item.IsDir,
+			Size:       item.DisplaySize,
+			SizeRaw:    item.SortSize,
+			LastMod:    item.DisplayLastModified,
+			LastModRaw: item.SortLastModified,
+			Extension:  item.Ext,
+			QRCode:     qrcode,
+			Auth:       fileS.Pass != "" || fileS.CACert != "",
+		})
+	}
+
+	var clipEntries []ClipEntry
+	entries, _ := fileS.Clipboard.GetEntries()
+	for _, entry := range entries {
+		clipEntries = append(clipEntries, ClipEntry{
+			ID:      entry.ID,
+			Content: entry.Content,
+			Time:    entry.Time,
+		})
+	}
+
+	// http(s)://ip:port port only if not 80 and 443
+	proto := "http"
+	if fileS.SSL {
+		proto = "https"
+	}
+	port := fileS.Port
+	if fileS.Port == 80 || fileS.Port == 443 {
+		port = 0
+	}
+	// prefer ip from public interface if available, otherwise use 127.0.0.1
+	ip := fileS.IP
+	if ip == "0.0.0.0" {
+		ip = "127.0.0.1"
+	}
+
+	qrcodeRoot := GenerateQRCode(fmt.Sprintf("%s://%s:%d", proto, ip, port))
+	uiData := UIData{
 		GoshsVersion:    fileS.Version,
-		Clipboard:       fileS.Clipboard,
-		CLI:             fileS.CLI,
-		Embedded:        fileS.Embedded,
-		EmbeddedContent: e,
+		AbsPath:         fileS.Webroot,
+		QRCode:          qrcodeRoot,
+		BreadcrumbParts: breadcrumbParts,
+		Subdirectory:    subdirectory,
+		ReadOnly:        fileS.ReadOnly,
+		UploadOnly:      fileS.UploadOnly,
 		NoClipboard:     fileS.NoClipboard,
 		NoDelete:        fileS.NoDelete,
+		CLI:             fileS.CLI,
+		Embedded:        fileS.Embedded,
+		Items:           fileItems,
+		EmbeddedItems:   embeddedFiles,
+		Clipboard:       clipEntries,
 		SharedLinks:     fileS.SharedLinks,
-		ReadOnly:        fileS.ReadOnly,
+		CSRFToken:       fileS.CSRFToken,
 	}
 
-	files := []string{"static/templates/index.html", "static/templates/header.tmpl", "static/templates/footer.tmpl", "static/templates/scripts_index.tmpl"}
-
-	var err error
-
-	funcMap := template.FuncMap{
-		"downloadLimitDisplay": func(l int) string {
-			if l == -1 {
-				return "disabled"
-			}
-			return strconv.Itoa(l)
-		},
-		"formatTime": func(t time.Time) string {
-			return t.Format("2006-01-02 15:04:05")
-		},
-	}
-
-	t := template.New("root").Funcs(funcMap)
-
-	t, err = t.ParseFS(static, files...)
+	err := renderIndex(w, uiData)
 	if err != nil {
-		logger.Errorf("Error parsing templates: %+v", err)
-	}
-
-	if err := t.ExecuteTemplate(w, "index.html", tem); err != nil {
-		logger.Errorf("Error executing template: %+v", err)
+		logger.Error(err)
 	}
 }
 
@@ -563,11 +669,9 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 	}
 
 	// Check if file is in block list and discard
-	for _, name := range acl.Block {
-		if name == filename {
-			fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
-			return
-		}
+	if slices.Contains(acl.Block, filename) {
+		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
+		return
 	}
 
 	// Extract download parameter
@@ -616,21 +720,31 @@ func (fs *FileServer) socket(w http.ResponseWriter, req *http.Request) {
 
 // deleteFile will delete a file
 func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
-	// Get path
-	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(req.URL.Path, "/")))
-
-	fileCleaned, _ := url.QueryUnescape(upath)
-	if strings.Contains(fileCleaned, "..") {
-		w.WriteHeader(500)
-		_, err := w.Write([]byte("Cannot delete file"))
-		if err != nil {
-			logger.Errorf("error writing answer to client: %+v", err)
-		}
+	deletePath, err := sanitizePath(fs.Webroot, req.URL.Path)
+	if err != nil {
+		http.Error(w, "Cannot delete file", http.StatusBadRequest)
+		body := fs.emitCollabEvent(req, http.StatusBadRequest)
+		logger.LogRequest(req, http.StatusBadRequest, fs.Verbose, fs.Webhook, body)
+		return
 	}
 
-	deletePath := filepath.Join(fs.Webroot, fileCleaned)
+	// Block deletion of the .goshs ACL file itself
+	if filepath.Base(deletePath) == ".goshs" {
+		fs.handleError(w, req, fmt.Errorf("cannot delete ACL file"), http.StatusForbidden)
+		return
+	}
 
-	err := os.RemoveAll(deletePath)
+	// Enforce .goshs ACL (recursive: walks up to webroot)
+	aclDir := filepath.Dir(deletePath)
+	acl, aclErr := fs.findEffectiveACL(aclDir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return
+	}
+
+	err = os.RemoveAll(deletePath)
 	if err != nil {
 		logger.Warnf("error removing %+v", deletePath)
 	}
@@ -638,7 +752,48 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// Send webhook message
 	logger.HandleWebhookSend(fmt.Sprintf("[WEB] File deleted: %s", deletePath), "delete", fs.Webhook)
 
-	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(req, http.StatusResetContent)
+	logger.LogRequest(req, http.StatusResetContent, fs.Verbose, fs.Webhook, body)
+}
+
+// handleRedirect issues an HTTP redirect to the URL given in the ?url= query
+// parameter. An optional ?status= selects the response code (must be 3xx,
+// defaults to 302). Zero or more ?header= values in "Name: Value" format are
+// written to the response before the redirect is sent.
+func (fs *FileServer) handleRedirect(w http.ResponseWriter, req *http.Request) {
+	q := req.URL.Query()
+
+	target := q.Get("url")
+	if target == "" {
+		fs.handleError(w, req, fmt.Errorf("redirect: missing required 'url' parameter"), http.StatusBadRequest)
+		return
+	}
+
+	// Parse and validate status code
+	status := http.StatusFound // 302 default
+	if s := q.Get("status"); s != "" {
+		code, err := strconv.Atoi(s)
+		if err != nil || code < 300 || code > 399 {
+			fs.handleError(w, req, fmt.Errorf("redirect: 'status' must be a 3xx code, got %q", s), http.StatusBadRequest)
+			return
+		}
+		status = code
+	}
+
+	// Set any caller-supplied headers ("Name: Value")
+	for _, h := range q["header"] {
+		parts := strings.SplitN(h, ": ", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
+			fs.handleError(w, req, fmt.Errorf("redirect: malformed header %q — expected 'Name: Value'", h), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set(strings.TrimSpace(parts[0]), parts[1])
+	}
+
+	http.Redirect(w, req, target, status)
+
+	body := fs.emitCollabEvent(req, status)
+	logger.LogRequest(req, status, fs.Verbose, fs.Webhook, body)
 }
 
 func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request) {
@@ -649,12 +804,23 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 
 	// If Auth is not used there is no sharing
 	if fs.Pass == "" && fs.CACert == "" {
-		logger.LogRequest(r, 403, fs.Verbose, fs.Webhook)
+		body := fs.emitCollabEvent(r, 403)
+		logger.LogRequest(r, 403, fs.Verbose, fs.Webhook, body)
 		http.Error(w, "Sharing disabled when auth is disabled", http.StatusForbidden)
 		return
 	}
 
-	upath := filepath.FromSlash(filepath.Clean("/" + strings.Trim(r.URL.Path, "/")))
+	fpath, err := sanitizePath(fs.Webroot, r.URL.Path)
+	if err != nil {
+		body := fs.emitCollabEvent(r, http.StatusBadRequest)
+		logger.LogRequest(r, http.StatusBadRequest, fs.Verbose, fs.Webhook, body)
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	upath := strings.TrimPrefix(fpath, filepath.Clean(fs.Webroot))
+	if upath == "" {
+		upath = "/"
+	}
 
 	var expires time.Time
 	var downloadLimit int
@@ -667,7 +833,8 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	} else {
 		seconds, err := strconv.Atoi(r.URL.Query()["expires"][0])
 		if err != nil {
-			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			body := fs.emitCollabEvent(r, 400)
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook, body)
 			http.Error(w, "expires needs to be integer in seconds", http.StatusBadRequest)
 		}
 		expires = now.Add(time.Duration(seconds) * time.Second)
@@ -680,14 +847,14 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	} else {
 		limit, err := strconv.Atoi(r.URL.Query()["limit"][0])
 		if err != nil {
-			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook)
+			body := fs.emitCollabEvent(r, 400)
+			logger.LogRequest(r, 400, fs.Verbose, fs.Webhook, body)
 			http.Error(w, "limit needs to be integer", http.StatusBadRequest)
 		}
 		downloadLimit = limit
 	}
 
 	// Get stat for file
-	fpath := filepath.Join(fs.Webroot, upath)
 	stat, err = os.Stat(fpath)
 	if err != nil {
 		logger.Errorf("cannot get stat information for file: %s", fpath)
@@ -738,13 +905,15 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		DownloadEntries: downloadEntries,
 		IsDir:           stat.IsDir(),
 		Expires:         expires,
+		Downloaded:      0,
 		DownloadLimit:   downloadLimit,
 	}
 
 	// Add to map
 	fs.SharedLinks[token] = sl
 
-	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(r, http.StatusOK)
+	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook, body)
 	logger.Debugf("A file was shared: %s", shareURLs[0])
 
 	response := map[string][]string{
@@ -799,27 +968,103 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Subtract from download limit
-	if entry.DownloadLimit > 0 {
-		entry.DownloadLimit--
-	}
+	entry.Downloaded++
 
 	fs.SharedLinks[token] = entry
-	if fs.SharedLinks[token].DownloadLimit == 0 {
-		// Remove the share link from map to keep it clean
-		delete(fs.SharedLinks, token)
+	if fs.SharedLinks[token].DownloadLimit != -1 {
+		if fs.SharedLinks[token].Downloaded >= fs.SharedLinks[token].DownloadLimit {
+			// Remove the share link from map to keep it clean
+			delete(fs.SharedLinks, token)
+		}
 	}
 }
 
 func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request) {
 	if _, token := r.URL.Query()["token"]; !token {
-		http.Error(w, "error in token delete handler", 400)
+		http.Error(w, "error in token delete handler", http.StatusBadRequest)
 	}
 
 	token := r.URL.Query().Get("token")
 	delete(fs.SharedLinks, token)
 
-	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook)
+	body := fs.emitCollabEvent(r, http.StatusNoContent)
+	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, body)
 
 	w.WriteHeader(204)
-	w.Write([]byte("shared link deleted successfully"))
+	_, err := w.Write([]byte("shared link deleted successfully"))
+	if err != nil {
+		logger.Error(err)
+	}
+}
+
+func (fs *FileServer) handleMkdir(w http.ResponseWriter, r *http.Request) {
+	if !fs.Invisible {
+		// if not read only or upload only create directory from mkdir query param
+		if fs.ReadOnly || fs.UploadOnly {
+			http.Error(w, "read only or upload only mode", http.StatusForbidden)
+			return
+		}
+
+		// Get and sanitize path
+		finalPath, err := sanitizePath(fs.Webroot, r.URL.Path)
+		if err != nil {
+			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
+
+		// Enforce .goshs ACL (recursive: walks up to webroot)
+		parentDir := filepath.Dir(finalPath)
+		acl, aclErr := fs.findEffectiveACL(parentDir)
+		if aclErr != nil {
+			logger.Errorf("error reading file based access config: %+v", aclErr)
+		}
+		if ok := fs.applyCustomAuth(w, r, acl); !ok {
+			return
+		}
+
+		// Create directory
+		err = os.MkdirAll(finalPath, 0755)
+		if err != nil {
+			body := fs.emitCollabEvent(r, http.StatusInternalServerError)
+			logger.LogRequest(r, http.StatusInternalServerError, fs.Verbose, fs.Webhook, body)
+			logger.Errorf("Error creating directory %s: %+v", finalPath, err)
+			return
+		}
+
+		body := fs.emitCollabEvent(r, http.StatusCreated)
+		logger.LogRequest(r, http.StatusCreated, fs.Verbose, fs.Webhook, body)
+		// Send success response
+		w.WriteHeader(http.StatusCreated)
+		_, err = w.Write([]byte("directory created successfully"))
+		if err != nil {
+			logger.Error(err)
+		}
+		return
+	}
+
+	fs.handleInvisible(w)
+}
+
+func (fs *FileServer) handleSMTPAttachment(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		body := fs.emitCollabEvent(r, http.StatusNotFound)
+		logger.LogRequest(r, http.StatusNotFound, fs.Verbose, fs.Webhook, body)
+		http.NotFound(w, r)
+		return
+	}
+
+	a, ok := smtpattach.Get(id)
+	if !ok {
+		http.Error(w, "attachment not found or expired", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", a.ContentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, a.Filename))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", a.Size))
+	_, err := w.Write(a.Data)
+	if err != nil {
+		logger.Error(err)
+	}
 }

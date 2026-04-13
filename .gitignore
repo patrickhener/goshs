@@ -11,3 +11,6 @@
 *.bak
 /integration/files
 coverage.out
+*.pcapng
+*.pdml
+.claude/

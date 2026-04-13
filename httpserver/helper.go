@@ -6,27 +6,43 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/patrickhener/goshs/logger"
 	"github.com/skip2/go-qrcode"
 )
 
-func removeItem(sSlice []item, item string) []item {
-	index := 0
+// sanitizePath validates that requestPath stays within root after decoding and
+// cleaning. It returns the absolute path on success, or an error if the path
+// would escape root (path traversal).
+func sanitizePath(root, requestPath string) (string, error) {
+	decoded, err := url.QueryUnescape(requestPath)
+	if err != nil {
+		// Malformed percent-encoding — use raw value; filepath.Clean will handle it.
+		decoded = requestPath
+	}
+	clean := filepath.Clean("/" + strings.TrimLeft(decoded, "/"))
+	abs := filepath.Join(root, clean)
+	rootClean := filepath.Clean(root)
+	if abs != rootClean && !strings.HasPrefix(abs, rootClean+string(filepath.Separator)) {
+		return "", fmt.Errorf("path escapes root: %q", requestPath)
+	}
+	return abs, nil
+}
 
+func removeItem(sSlice []item, name string) []item {
 	for idx, sliceItem := range sSlice {
-		if item == sliceItem.Name {
-			index = idx
+		if name == sliceItem.Name {
+			return append(sSlice[:idx], sSlice[idx+1:]...)
 		}
 	}
-
-	return append(sSlice[:index], sSlice[index+1:]...)
+	return sSlice
 }
 
 func (files *FileServer) PrintEmbeddedFiles() {
@@ -62,8 +78,9 @@ func (files *FileServer) AddCertAuth(server *http.Server) {
 
 func GenerateToken() string {
 	b := make([]byte, 16)
-	rand.Read(b)
-
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		panic("goshs: failed to generate token: " + err.Error())
+	}
 	s := base64.RawURLEncoding.EncodeToString(b)
 	return strings.TrimRight(s, "=")
 }
@@ -80,13 +97,10 @@ func GenerateQRCode(uri string) string {
 	return fmt.Sprintf("data:image/png;base64,%s", encoded)
 }
 
-func downloadLimitDisplay(limit int) string {
-	if limit == -1 {
-		return "disabled"
+func denyForTokenAccess(w http.ResponseWriter, r *http.Request) bool {
+	if r.URL.Query().Get("token") != "" {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return true
 	}
-	return strconv.Itoa(limit)
-}
-
-func formatTime(t time.Time) string {
-	return t.Local().Format("2006-01-02 15:04:05")
+	return false
 }

@@ -1,2 +1,167 @@
-{{ template "header" . }}
-{{ template "footer" . }}
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>goshs {{.GoshsVersion}}</title>
+        <link rel="stylesheet" href="/css/style.css?static" />
+        <style>
+            .silent-layout {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: calc(100vh - var(--topbar-h));
+                padding: 24px;
+            }
+            .silent-card {
+                background: var(--bg2);
+                border: 1px solid var(--border);
+                border-radius: var(--r-lg);
+                padding: 48px 56px;
+                max-width: 440px;
+                width: 100%;
+                box-shadow: var(--shadow);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                text-align: center;
+            }
+            .silent-logo {
+                width: 40px;
+                height: 40px;
+                color: var(--accent);
+                margin-bottom: 4px;
+            }
+            .silent-title {
+                font-size: 20px;
+                font-weight: 600;
+                color: var(--text0);
+                margin: 0;
+                letter-spacing: -0.01em;
+            }
+            .silent-title span {
+                color: var(--accent);
+            }
+            .silent-subtitle {
+                font-size: 13px;
+                color: var(--text2);
+                margin: 0;
+                line-height: 1.6;
+            }
+            .silent-version {
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--text2);
+                background: var(--bg3);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
+                padding: 3px 10px;
+                margin-top: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ═══════════ TOPBAR ═══════════ -->
+        <header class="topbar">
+            <div class="topbar-brand">
+                <img
+                    id="goshs-logo"
+                    src="/images/logo-dark.png?static"
+                    alt="goshs-logo"
+                    width="24"
+                    height="24"
+                />
+                goshs<span class="slash">/</span>
+            </div>
+            <div class="topbar-actions">
+                <button
+                    class="ibtn"
+                    onclick="toggleTheme()"
+                    id="theme-btn"
+                    title="Toggle theme"
+                >
+                    <svg
+                        id="theme-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="5" />
+                        <path
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                        />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="silent-layout">
+            <div class="silent-card">
+                <img
+                    id="banner-logo"
+                    src="/images/logo-dark.png?static"
+                    alt="goshs-logo"
+                    width="32"
+                    height="32"
+                />
+
+                <h1 class="silent-title">go<span>shs</span></h1>
+                <p class="silent-subtitle">
+                    Running in silent mode.<br />
+                    The server is active but the directory listing is disabled.
+                </p>
+                <span class="silent-version">{{.GoshsVersion}}</span>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                const t = localStorage.getItem("goshs-theme") || "dark";
+                document.documentElement.setAttribute("data-theme", t);
+
+                const logo = document.getElementById("goshs-logo");
+                const bannerlogo = document.getElementById("banner-logo");
+                if (logo) {
+                    if (t === "light") {
+                        logo.src = "/images/logo-light.png?static";
+                    } else {
+                        logo.src = "/images/logo-dark.png?static";
+                    }
+                }
+                if (bannerlogo) {
+                    if (t === "light") {
+                        bannerlogo.src = "/images/logo-light.png?static";
+                    } else {
+                        bannerlogo.src = "/images/logo-dark.png?static";
+                    }
+                }
+            })();
+            function toggleTheme() {
+                const current =
+                    document.documentElement.getAttribute("data-theme");
+                const next = current === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", next);
+                localStorage.setItem("goshs-theme", next);
+
+                const logo = document.getElementById("goshs-logo");
+                const bannerlogo = document.getElementById("banner-logo");
+                if (logo) {
+                    if (next === "light") {
+                        logo.src = "/images/logo-light.png?static";
+                    } else {
+                        logo.src = "/images/logo-dark.png?static";
+                    }
+                }
+                if (bannerlogo) {
+                    if (next === "light") {
+                        bannerlogo.src = "/images/logo-light.png?static";
+                    } else {
+                        bannerlogo.src = "/images/logo-dark.png?static";
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>

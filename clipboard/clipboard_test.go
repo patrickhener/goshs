@@ -19,7 +19,10 @@ func TestNew(t *testing.T) {
 func TestAddEntry(t *testing.T) {
 	lengthBefore := len(cb.Entries)
 	if lengthBefore == 0 {
-		cb.AddEntry("This is a test entry")
+		err := cb.AddEntry("This is a test entry")
+		if err != nil {
+			t.Errorf("Error in testing AddEntry: %v", err)
+		}
 		lengthAfter := len(cb.Entries)
 		if lengthAfter != 1 {
 			t.Errorf("Error in testing AddEntry: want length of 1 got length of %d", lengthAfter)
@@ -32,7 +35,10 @@ func TestAddEntry(t *testing.T) {
 func TestDeleteEntry(t *testing.T) {
 	lengthBefore := len(cb.Entries)
 	if lengthBefore == 1 {
-		cb.DeleteEntry(0)
+		err := cb.DeleteEntry(0)
+		if err != nil {
+			t.Errorf("Error in testing DeleteEntry: %v", err)
+		}
 		lengthAfter := len(cb.Entries)
 		if lengthAfter != 0 {
 			t.Errorf("Error in testing DeleteEntry: want length of 0 got length of %d", lengthAfter)
@@ -43,9 +49,18 @@ func TestDeleteEntry(t *testing.T) {
 }
 
 func TestGetEntries(t *testing.T) {
-	cb.AddEntry("This is a test entry")
-	cb.AddEntry("This is another test entry")
-	cb.AddEntry("This is yet another test entry")
+	err := cb.AddEntry("This is a test entry")
+	if err != nil {
+		t.Errorf("Error in testing AddEntry: %v", err)
+	}
+	err = cb.AddEntry("This is another test entry")
+	if err != nil {
+		t.Errorf("Error in testing AddEntry: %v", err)
+	}
+	err = cb.AddEntry("This is yet another test entry")
+	if err != nil {
+		t.Errorf("Error in testing AddEntry: %v", err)
+	}
 
 	res, err := cb.GetEntries()
 	if err != nil {

@@ -19,6 +19,9 @@ func TestUnsecureServer(t *testing.T) {
 	// Test connection
 	testConnection(t, baseUrl)
 
+	// Fetch CSRF token
+	csrf := getCSRFToken(t, baseUrl)
+
 	// Test View
 	testView(t, fmt.Sprintf("%s/test_data.txt", baseUrl), false)
 
@@ -26,8 +29,8 @@ func TestUnsecureServer(t *testing.T) {
 	testDownload(t, fmt.Sprintf("%s/test_data.txt?download", baseUrl), false)
 
 	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, false)
-	testUploadPut(t, baseUrl, false, false)
+	testUploadPost(t, baseUrl, false, false, csrf)
+	testUploadPut(t, baseUrl, false, false, csrf)
 
 	// Test Bulk Download
 	testBulkDownload(t, fmt.Sprintf("http://localhost:%d/?file=%%252Ftest_data.txt&file=%%252Fupload_POST_test_data.txt&file=%%252Fupload_PUT_test_data.txt&bulk=true", port.Int()), false)
@@ -36,8 +39,8 @@ func TestUnsecureServer(t *testing.T) {
 	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), false)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), false)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), false, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), false, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
@@ -145,9 +148,12 @@ func TestReadOnly(t *testing.T) {
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
+	// Fetch CSRF token
+	csrf := getCSRFToken(t, baseUrl)
+
 	// Test upload not allowed
-	testUploadPost(t, baseUrl, true, false)
-	testUploadPut(t, baseUrl, true, false)
+	testUploadPost(t, baseUrl, true, false, csrf)
+	testUploadPut(t, baseUrl, true, false, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
@@ -160,6 +166,9 @@ func TestUploadOnly(t *testing.T) {
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
+	// Fetch CSRF token
+	csrf := getCSRFToken(t, baseUrl)
+
 	// Test View
 	testView(t, fmt.Sprintf("%s/test_data.txt", baseUrl), true)
 
@@ -167,8 +176,8 @@ func TestUploadOnly(t *testing.T) {
 	testDownload(t, fmt.Sprintf("%s/test_data.txt?download", baseUrl), true)
 
 	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, true)
-	testUploadPut(t, baseUrl, false, true)
+	testUploadPost(t, baseUrl, false, true, csrf)
+	testUploadPut(t, baseUrl, false, true, csrf)
 
 	// Test Bulk Download
 	testBulkDownload(t, fmt.Sprintf("http://localhost:%d/?file=%%252Ftest_data.txt&file=%%252Fupload_POST_test_data.txt&file=%%252Fupload_PUT_test_data.txt&bulk=true", port.Int()), true)
@@ -177,8 +186,8 @@ func TestUploadOnly(t *testing.T) {
 	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
@@ -205,13 +214,16 @@ func TestNoDelete(t *testing.T) {
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
+	// Fetch CSRF token
+	csrf := getCSRFToken(t, baseUrl)
+
 	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, false)
-	testUploadPut(t, baseUrl, false, false)
+	testUploadPost(t, baseUrl, false, false, csrf)
+	testUploadPut(t, baseUrl, false, false, csrf)
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)

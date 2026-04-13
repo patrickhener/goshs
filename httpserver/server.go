@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -15,12 +17,65 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/patrickhener/goshs/ca"
 	"github.com/patrickhener/goshs/clipboard"
+	"github.com/patrickhener/goshs/goshsversion"
 	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/tunnel"
+	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
+
+func generateCSRFToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("goshs: failed to generate CSRF token: " + err.Error())
+	}
+	return hex.EncodeToString(b)
+}
+
+func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard, wl *Whitelist, wh webhook.Webhook) *FileServer {
+	fs := &FileServer{
+		IP:           opts.IP,
+		Port:         opts.Port,
+		CLI:          opts.CLI,
+		Webroot:      opts.Webroot,
+		Clipboard:    clip,
+		Hub:          hub,
+		UploadFolder: opts.UploadFolder,
+		SSL:          opts.SSL,
+		SelfSigned:   opts.SelfSigned,
+		LetsEncrypt:  opts.LetsEncrypt,
+		MyCert:       opts.MyCert,
+		MyKey:        opts.MyKey,
+		MyP12:        opts.MyP12,
+		P12NoPass:    opts.P12NoPass,
+		User:         opts.Username,
+		Pass:         opts.Password,
+		CACert:       opts.CertAuth,
+		DropUser:     opts.DropUser,
+		UploadOnly:   opts.UploadOnly,
+		ReadOnly:     opts.ReadOnly,
+		NoClipboard:  opts.NoClipboard,
+		NoDelete:     opts.NoDelete,
+		Silent:       opts.Silent,
+		Invisible:    opts.Invisible,
+		Embedded:     opts.Embedded,
+		Verbose:      opts.Verbose,
+		Tunnel:       opts.Tunnel,
+		Version:      goshsversion.GoshsVersion,
+		Options:      opts,
+		CSRFToken:    generateCSRFToken(),
+	}
+
+	fs.Hub = hub
+	fs.Clipboard = clip
+	fs.Webhook = wh
+	fs.Whitelist = wl
+
+	return fs
+}
 
 func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 	var addr string
@@ -50,6 +105,9 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 		// Define routes
 		mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/upload") {
+				if denyForTokenAccess(w, r) {
+					return
+				}
 				fs.upload(w, r)
 				runtime.GC()
 			} else {
@@ -57,6 +115,9 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			}
 		})
 		mux.HandleFunc("PUT /", func(w http.ResponseWriter, r *http.Request) {
+			if denyForTokenAccess(w, r) {
+				return
+			}
 			fs.put(w, r)
 		})
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -126,8 +187,8 @@ func (fs *FileServer) StartListener(server *http.Server, what string, listener n
 				fs.AddCertAuth(server)
 			}
 
-			fs.Fingerprint256 = fingerprint256
-			fs.Fingerprint1 = fingerprint1
+			fs.Fingerprint256 = strings.TrimRight(fingerprint256, " ")
+			fs.Fingerprint1 = strings.TrimRight(fingerprint1, " ")
 			fs.logStart(what)
 
 			// Drop privs if needed
@@ -249,15 +310,6 @@ func (fs *FileServer) Start(what string) {
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
 
-	// init clipboard
-	if !fs.NoClipboard {
-		fs.Clipboard = clipboard.New()
-
-		// init websocket hub
-		fs.Hub = ws.NewHub(fs.Clipboard, fs.CLI)
-		go fs.Hub.Run()
-	}
-
 	// Print silent banner
 	if fs.Silent {
 		logger.Info("Serving in silent mode - no dir listing available at HTTP Listener")
@@ -274,6 +326,7 @@ func (fs *FileServer) Start(what string) {
 		} else {
 			defer t.Close()
 			logger.Infof("Public tunnel URL: %s", t.PublicURL)
+			fs.TunnelURL = t.PublicURL
 		}
 	}
 

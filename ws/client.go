@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/coder/websocket"
 	"github.com/patrickhener/goshs/cli"
@@ -23,20 +22,6 @@ type SendPacket struct {
 	Type    string `json:"type"`
 	Content string `json:"content"`
 }
-
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 8000000
-)
 
 type Conn interface {
 	Read(ctx context.Context) (websocket.MessageType, []byte, error)
@@ -131,6 +116,14 @@ func (c *Client) dispatchReadPump(packet Packet) {
 			logger.Debugf("Output: %+v", output)
 			c.updateCLI(output)
 		}
+	case "clearHTTP":
+		c.hub.HTTPLog.Clear()
+	case "clearDNS":
+		c.hub.DNSLog.Clear()
+	case "clearSMTP":
+		c.hub.SMTPLog.Clear()
+	case "clearSMB":
+		c.hub.SMBLog.Clear()
 
 	default:
 		logger.Warnf("The event sent via websocket cannot be handeled: %+v", packet.Type)
@@ -145,7 +138,11 @@ func (c *Client) dispatchReadPump(packet Packet) {
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
 	for sendPacket := range c.send {
-		c.conn.Write(context.Background(), websocket.MessageText, sendPacket)
+		err := c.conn.Write(context.Background(), websocket.MessageText, sendPacket)
+		if err != nil {
+			logger.Errorf("Failed to write to ws: %+v", err)
+			break
+		}
 	}
 }
 
@@ -175,7 +172,7 @@ func (c *Client) refreshClipboard() {
 		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
 	}
 
-	c.hub.broadcast <- broadcastMessage
+	c.hub.Broadcast <- broadcastMessage
 }
 
 func (c *Client) updateCLI(output string) {
@@ -188,5 +185,5 @@ func (c *Client) updateCLI(output string) {
 		logger.Errorf("Unable to marshal json data in redirect: %+v", err)
 	}
 
-	c.hub.broadcast <- broadcastMessage
+	c.hub.Broadcast <- broadcastMessage
 }

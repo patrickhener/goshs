@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/patrickhener/goshs/clipboard"
+	"github.com/patrickhener/goshs/options"
 	"github.com/patrickhener/goshs/webhook"
 	"github.com/patrickhener/goshs/ws"
 )
@@ -85,6 +86,9 @@ type FileServer struct {
 	Whitelist      *Whitelist
 	SharedLinks    map[string]SharedLink
 	Tunnel         bool
+	TunnelURL      string
+	Options        *options.Options
+	CSRFToken      string
 }
 
 type httperror struct {
@@ -113,6 +117,7 @@ type SharedLink struct {
 	IsDir           bool
 	Expires         time.Time
 	DownloadLimit   int
+	Downloaded      int
 	DownloadEntries []DownloadEntry
 }
 

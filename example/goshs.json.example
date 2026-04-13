@@ -42,5 +42,16 @@
   "sftp_host_keyfile": "",
   "whitelist": "",
   "trusted_proxies": "",
-  "tunnel": false
+  "tunnel": false,
+  "dns_server": false,
+  "dns_port": 8053
+  "dns_ip": "127.0.0.1",
+  "smtp_server": false,
+  "smtp_port": 2525,
+  "smtp_domain": "",
+  "smb_server": false,
+  "smb_port": 445,
+  "smb_domain": "",
+  "smb_share": "",
+  "smb_wordlist": ""
 }
