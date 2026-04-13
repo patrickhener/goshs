@@ -161,6 +161,7 @@ These are the awesome contributors that made `goshs` even more secure :heart:
 [![](https://github.com/marduc812.png?size=50)](https://github.com/marduc812)
 [![](https://github.com/autobot23920.png?size=50)](https://github.com/autobot23920)
 [![](https://github.com/R1ZZG0D.png?size=50)](https://github.com/R1ZZG0D)
+[![](https://github.com/jaisurya-me.png?size=50)](https://github.com/jaisurya-me)
 
 - [Guilhem7](https://github.com/Guilhem7)
 
