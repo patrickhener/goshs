@@ -283,7 +283,7 @@ Webhook options:
   -Wu, --webhook-url        URL to send webhook requests to
   -We, --webhook-events     Comma separated list of events to notify
                             [all, upload, delete, download, view, webdav,
-                            sftp, dns, smtp, verbose] 	  		(default: all)
+                            sftp, smb, dns, smtp, verbose] 	  	(default: all)
   -Wp, --webhook-provider   Webhook provider
                             [Discord, Mattermost, Slack]                (default: Discord)
 
