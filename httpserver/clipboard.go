@@ -10,7 +10,7 @@ import (
 
 // clipboardAdd will handle the add request for adding text to the clipboard
 func (fs *FileServer) cbDown(w http.ResponseWriter, req *http.Request) {
-	filename := fmt.Sprintf("%+v-clipboard.json", int32(time.Now().Unix()))
+	filename := fmt.Sprintf("%d-clipboard.json", time.Now().Unix())
 	contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"", filename)
 	// Handle as download
 	w.Header().Add("Content-Type", "application/octet-stream")

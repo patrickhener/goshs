@@ -54,7 +54,7 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 
 	// disable G304 (CWE-22): Potential file inclusion via variable
 	// #nosec G304
-	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		logger.Errorf("Error opening file: %+v", err)
 		fs.handleError(w, req, err, http.StatusInternalServerError)
@@ -221,7 +221,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Construct filename to download
-	filename := fmt.Sprintf("%+v_goshs_download.zip", int32(time.Now().Unix()))
+	filename := fmt.Sprintf("%d_goshs_download.zip", time.Now().Unix())
 
 	// Set header and serve file
 	contentDispo := fmt.Sprintf("attachment; filename=\"%s\"", filename)
