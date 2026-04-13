@@ -1,7 +1,9 @@
 package httpserver
 
 import (
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -24,6 +26,14 @@ import (
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
+
+func generateCSRFToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("goshs: failed to generate CSRF token: " + err.Error())
+	}
+	return hex.EncodeToString(b)
+}
 
 func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard, wl *Whitelist, wh webhook.Webhook) *FileServer {
 	fs := &FileServer{
@@ -56,6 +66,7 @@ func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard
 		Tunnel:       opts.Tunnel,
 		Version:      goshsversion.GoshsVersion,
 		Options:      opts,
+		CSRFToken:    generateCSRFToken(),
 	}
 
 	fs.Hub = hub

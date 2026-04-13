@@ -19,9 +19,13 @@ func (fs *FileServer) emitCollabEvent(r *http.Request, status int) []byte {
 	}
 	defer r.Body.Close()
 
-	// Flatten headers into a simple map (join multi-value headers with ", ")
+	// Flatten headers into a simple map (join multi-value headers with ", ").
+	// Strip the CSRF token so it is never exposed in the collaborator tab.
 	headers := make(map[string]string, len(r.Header))
 	for k, v := range r.Header {
+		if http.CanonicalHeaderKey(k) == "X-Csrf-Token" {
+			continue
+		}
 		headers[k] = strings.Join(v, ", ")
 	}
 

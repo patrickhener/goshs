@@ -1355,6 +1355,10 @@ function deleteSelected() {
     .then(() => location.reload())
     .catch(() => toast("Delete failed", "error"));
 }
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : "";
+}
 function deleteFile(path, bulk) {
   let ok;
   !bulk
@@ -1366,7 +1370,7 @@ function deleteFile(path, bulk) {
     location.protocol !== "https:"
       ? (url = "http://" + window.location.host + path + "?delete")
       : (url = "https://" + window.location.host + path + "?delete");
-    fetch(url)
+    fetch(url, { headers: { "X-CSRF-Token": getCsrfToken() } })
       .then(() => location.reload())
       .catch(() => toast("Delete failed", "error"));
   }
@@ -1420,6 +1424,7 @@ function startUpload() {
 
   const xhr = new XMLHttpRequest();
   xhr.open("POST", `${window.location.href}upload`);
+  xhr.setRequestHeader("X-CSRF-Token", getCsrfToken());
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) bar.style.width = (e.loaded / e.total) * 100 + "%";
   };
@@ -1438,7 +1443,7 @@ function createDir() {
   const name = document.getElementById("mkdir-input").value.trim();
   if (!name) return;
 
-  fetch(`${name}?mkdir`)
+  fetch(`${name}?mkdir`, { headers: { "X-CSRF-Token": getCsrfToken() } })
     .then((r) => {
       // if response http.Created
       if (r.status === 201) {

@@ -36,6 +36,9 @@ type UIData struct {
 
 	// Clipboard entries (pre-loaded from server state)
 	Clipboard []ClipEntry
+
+	// CSRF token embedded into the page for JS to read
+	CSRFToken string
 }
 
 // BreadcrumbPart is a single segment of the path breadcrumb.

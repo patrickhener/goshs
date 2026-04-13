@@ -88,6 +88,7 @@ type FileServer struct {
 	Tunnel         bool
 	TunnelURL      string
 	Options        *options.Options
+	CSRFToken      string
 }
 
 type httperror struct {

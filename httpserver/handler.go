@@ -100,6 +100,20 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 	fs.sendFile(w, req, file, config)
 }
 
+// checkCSRF validates the X-CSRF-Token header for mutating GET actions.
+// It only enforces the check when auth is enabled; anonymous deployments are
+// already fully open so there is no session to hijack.
+func (fs *FileServer) checkCSRF(w http.ResponseWriter, req *http.Request) bool {
+	if fs.User == "" {
+		return true
+	}
+	if req.Header.Get("X-CSRF-Token") != fs.CSRFToken {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
 	if _, ok := req.URL.Query()["smtp"]; ok {
 		if denyForTokenAccess(w, req) {
@@ -117,6 +131,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 	}
 	if _, ok := req.URL.Query()["mkdir"]; ok {
 		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.checkCSRF(w, req) {
 			return true
 		}
 		fs.handleMkdir(w, req)
@@ -179,6 +196,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 	}
 	if _, ok := req.URL.Query()["delete"]; ok {
 		if denyForTokenAccess(w, req) {
+			return true
+		}
+		if !fs.checkCSRF(w, req) {
 			return true
 		}
 		if !fs.ReadOnly && !fs.UploadOnly && !fs.NoDelete {
@@ -471,6 +491,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		EmbeddedItems:   embeddedFiles,
 		Clipboard:       clipEntries,
 		SharedLinks:     fileS.SharedLinks,
+		CSRFToken:       fileS.CSRFToken,
 	}
 
 	err := renderIndex(w, uiData)
