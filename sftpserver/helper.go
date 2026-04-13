@@ -45,18 +45,17 @@ func loadAuthorizedKeys(path string) (map[string]bool, error) {
 
 // Sanitize client path to restrict to sftpRoot
 func sanitizePath(clientPath string, sftpRoot string) (string, error) {
-	var cleanPath string
 	if runtime.GOOS == "windows" {
 		clientPath = rewritePathWindows(clientPath)
 		sftpRoot = rewritePathWindows(sftpRoot)
-		cleanPath = clientPath
-	} else {
-		cleanPath = filepath.Clean("/" + clientPath)
 	}
-	if !strings.HasPrefix(cleanPath, sftpRoot) {
+	clean := filepath.Clean("/" + strings.TrimLeft(clientPath, "/"))
+	abs := filepath.Join(sftpRoot, clean)
+	rootClean := filepath.Clean(sftpRoot)
+	if abs != rootClean && !strings.HasPrefix(abs, rootClean+string(filepath.Separator)) {
 		return "", errors.New("access denied: outside of webroot")
 	}
-	return cleanPath, nil
+	return abs, nil
 }
 
 // simpleListerAt is a simple implementation of sftp.ListerAt
