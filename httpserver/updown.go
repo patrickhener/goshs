@@ -50,24 +50,22 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	// Create file to write to
-	// disable G304 (CWE-22): Potential file inclusion via variable
-	// #nosec G304
-	if _, err := os.Create(savepath); err != nil {
-		logger.Errorf("Not able to create file on disk")
-		fs.handleError(w, req, err, http.StatusInternalServerError)
-	}
-
 	reader := bytes.NewReader(body)
 
-	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// #nosec G304
+	osFile, err := os.OpenFile(savepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
-		logger.Warnf("Error opening file: %+v", err)
+		logger.Errorf("Error opening file: %+v", err)
+		fs.handleError(w, req, err, http.StatusInternalServerError)
+		return
 	}
+	defer osFile.Close()
 
 	if _, err := io.Copy(osFile, reader); err != nil {
 		logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
 		fs.handleError(w, req, err, http.StatusInternalServerError)
+		return
 	}
 
 	// Log request

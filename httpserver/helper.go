@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -77,8 +78,9 @@ func (files *FileServer) AddCertAuth(server *http.Server) {
 
 func GenerateToken() string {
 	b := make([]byte, 16)
-	rand.Read(b)
-
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		panic("goshs: failed to generate token: " + err.Error())
+	}
 	s := base64.RawURLEncoding.EncodeToString(b)
 	return strings.TrimRight(s, "=")
 }

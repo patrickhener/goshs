@@ -212,6 +212,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		if denyForTokenAccess(w, req) {
 			return true
 		}
+		if !fs.checkCSRF(w, req) {
+			return true
+		}
 		if !fs.Invisible {
 			fs.CreateShareHandler(w, req)
 		} else {
@@ -223,7 +226,11 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		if denyForTokenAccess(w, req) {
 			return true
 		}
-		fs.handleRedirect(w, req)
+		if !fs.Invisible {
+			fs.handleRedirect(w, req)
+		} else {
+			fs.handleInvisible(w)
+		}
 		return true
 	}
 	if _, ok := req.URL.Query()["token"]; ok {
@@ -232,6 +239,9 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 			case http.MethodGet:
 				fs.ShareHandler(w, req)
 			case http.MethodDelete:
+				if !fs.checkCSRF(w, req) {
+					return true
+				}
 				fs.DeleteShareHandler(w, req)
 			default:
 			}
