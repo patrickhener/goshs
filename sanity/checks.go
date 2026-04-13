@@ -84,6 +84,11 @@ func Check(opts *options.Options) (*options.Options, error) {
 		logger.Fatal("When using SFTP you need to either specify an authorized keyfile using -sfk or username and password using -b")
 	}
 
+	// Sanity check: empty username is not valid for SFTP password auth
+	if opts.SFTP && strings.HasPrefix(opts.BasicAuth, ":") {
+		logger.Fatal("When using SFTP with password authentication, the username cannot be empty. Please provide a non-empty username with -b 'user:pass'.")
+	}
+
 	if yes, out := update.CheckForUpdates(goshsversion.GoshsVersion); yes {
 		logger.Warnf("There is a newer Version (%s) of goshs available. Run --update to update goshs.", out)
 	} else {
