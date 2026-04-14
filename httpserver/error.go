@@ -4,8 +4,8 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/patrickhener/goshs/v2/logger"
-	"github.com/patrickhener/goshs/v2/utils"
+	"goshs.de/goshs/logger"
+	"goshs.de/goshs/utils"
 )
 
 func (fs *FileServer) handleInvisible(w http.ResponseWriter) {

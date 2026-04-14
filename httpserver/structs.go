@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/patrickhener/goshs/v2/clipboard"
-	"github.com/patrickhener/goshs/v2/options"
-	"github.com/patrickhener/goshs/v2/webhook"
-	"github.com/patrickhener/goshs/v2/ws"
+	"goshs.de/goshs/clipboard"
+	"goshs.de/goshs/options"
+	"goshs.de/goshs/webhook"
+	"goshs.de/goshs/ws"
 )
 
 type baseTemplate struct {

@@ -3,7 +3,7 @@
 package httpserver
 
 import (
-	"github.com/patrickhener/goshs/v2/logger"
+	"goshs.de/goshs/logger"
 )
 
 func (fs *FileServer) dropPrivs() {

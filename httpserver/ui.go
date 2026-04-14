@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/patrickhener/goshs/v2/logger"
+	"goshs.de/goshs/logger"
 )
 
 // UIData is the struct passed to index.html on every page render.

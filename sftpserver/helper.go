@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/patrickhener/goshs/v2/httpserver"
-	"github.com/patrickhener/goshs/v2/logger"
+	"goshs.de/goshs/httpserver"
+	"goshs.de/goshs/logger"
 	"github.com/pkg/sftp"
 	gossh "golang.org/x/crypto/ssh"
 )

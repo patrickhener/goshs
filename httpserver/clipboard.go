@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/patrickhener/goshs/v2/logger"
+	"goshs.de/goshs/logger"
 )
 
 // clipboardAdd will handle the add request for adding text to the clipboard

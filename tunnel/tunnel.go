@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickhener/goshs/v2/logger"
+	"goshs.de/goshs/logger"
 	"golang.org/x/crypto/ssh"
 )
 

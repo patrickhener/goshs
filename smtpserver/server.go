@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-smtp"
-	"github.com/patrickhener/goshs/v2/logger"
-	"github.com/patrickhener/goshs/v2/options"
-	"github.com/patrickhener/goshs/v2/webhook"
-	"github.com/patrickhener/goshs/v2/ws"
+	"goshs.de/goshs/logger"
+	"goshs.de/goshs/options"
+	"goshs.de/goshs/webhook"
+	"goshs.de/goshs/ws"
 )
 
 type SMTPServer struct {
