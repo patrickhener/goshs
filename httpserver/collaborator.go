@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/ws"
 )
 
 func (fs *FileServer) emitCollabEvent(r *http.Request, status int) []byte {

@@ -1,17 +1,17 @@
 package server
 
 import (
-	"goshs.de/goshs/clipboard"
-	"goshs.de/goshs/dnsserver"
-	"goshs.de/goshs/httpserver"
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/options"
-	"goshs.de/goshs/sftpserver"
-	"goshs.de/goshs/smbserver"
-	"goshs.de/goshs/smtpserver"
-	"goshs.de/goshs/utils"
-	"goshs.de/goshs/webhook"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/clipboard"
+	"goshs.de/goshs/v2/dnsserver"
+	"goshs.de/goshs/v2/httpserver"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/options"
+	"goshs.de/goshs/v2/sftpserver"
+	"goshs.de/goshs/v2/smbserver"
+	"goshs.de/goshs/v2/smtpserver"
+	"goshs.de/goshs/v2/utils"
+	"goshs.de/goshs/v2/webhook"
+	"goshs.de/goshs/v2/ws"
 )
 
 func StartAll(opts *options.Options) {

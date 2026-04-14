@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/smtpattach"
-	"goshs.de/goshs/utils"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/smtpattach"
+	"goshs.de/goshs/v2/utils"
+	"goshs.de/goshs/v2/ws"
 )
 
 // embedded will give additional embedded content shipped with the binary

@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"goshs.de/goshs/config"
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/options"
-	"goshs.de/goshs/sanity"
-	"goshs.de/goshs/server"
+	"goshs.de/goshs/v2/config"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/options"
+	"goshs.de/goshs/v2/sanity"
+	"goshs.de/goshs/v2/server"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 	"github.com/pkg/sftp"
 )
 

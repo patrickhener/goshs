@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 )
 
 func (fs *FileServer) handleInfo(w http.ResponseWriter) {

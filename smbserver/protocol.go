@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 )
 
 // ── SMB2 Commands ──────────────────────────────────────────────────────────

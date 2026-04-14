@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goshs.de/goshs/ca"
-	"goshs.de/goshs/goshsversion"
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/options"
-	"goshs.de/goshs/update"
+	"goshs.de/goshs/v2/ca"
+	"goshs.de/goshs/v2/goshsversion"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/options"
+	"goshs.de/goshs/v2/update"
 )
 
 func Sanitize(opts *options.Options) (*options.Options, error) {

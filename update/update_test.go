@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v42/github"
-	"goshs.de/goshs/goshsversion"
+	"goshs.de/goshs/v2/goshsversion"
 	"github.com/stretchr/testify/require"
 )
 

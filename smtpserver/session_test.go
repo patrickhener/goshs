@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/ws"
 	"github.com/stretchr/testify/require"
 )
 

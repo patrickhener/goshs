@@ -17,10 +17,10 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/google/uuid"
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/smtpattach"
-	"goshs.de/goshs/webhook"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/smtpattach"
+	"goshs.de/goshs/v2/webhook"
+	"goshs.de/goshs/v2/ws"
 )
 
 type Session struct {

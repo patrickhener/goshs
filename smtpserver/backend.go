@@ -2,8 +2,8 @@ package smtpserver
 
 import (
 	"github.com/emersion/go-smtp"
-	"goshs.de/goshs/webhook"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/webhook"
+	"goshs.de/goshs/v2/ws"
 )
 
 type Backend struct {

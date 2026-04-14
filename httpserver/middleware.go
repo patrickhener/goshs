@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"goshs.de/goshs/options"
+	"goshs.de/goshs/v2/options"
 	"github.com/stretchr/testify/require"
 )
 

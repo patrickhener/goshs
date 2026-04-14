@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 	"github.com/skip2/go-qrcode"
 )
 

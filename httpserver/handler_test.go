@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"goshs.de/goshs/clipboard"
-	"goshs.de/goshs/webhook"
-	"goshs.de/goshs/ws"
+	"goshs.de/goshs/v2/clipboard"
+	"goshs.de/goshs/v2/webhook"
+	"goshs.de/goshs/v2/ws"
 	"github.com/stretchr/testify/require"
 )
 

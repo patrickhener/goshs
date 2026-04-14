@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/options"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/options"
 )
 
 type Config struct {

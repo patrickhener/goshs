@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/coder/websocket"
-	"goshs.de/goshs/cli"
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/cli"
+	"goshs.de/goshs/v2/logger"
 )
 
 // Packet defines a packet struct

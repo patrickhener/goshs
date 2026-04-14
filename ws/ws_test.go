@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"goshs.de/goshs/clipboard"
+	"goshs.de/goshs/v2/clipboard"
 	"github.com/stretchr/testify/require"
 )
 

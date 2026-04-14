@@ -16,7 +16,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 )
 
 // LetsEncryptUser is the struct of all information needed to rollout a lets encrypt certificate

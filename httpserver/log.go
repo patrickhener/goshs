@@ -3,7 +3,7 @@ package httpserver
 import (
 	"net/http"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 )
 
 func (fs *FileServer) logOnly(w http.ResponseWriter, req *http.Request) {

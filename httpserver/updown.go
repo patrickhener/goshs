@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/logger"
 )
 
 // put handles the PUT request to upload files

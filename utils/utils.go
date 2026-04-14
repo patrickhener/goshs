@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/grandcat/zeroconf"
-	"goshs.de/goshs/goshsversion"
-	"goshs.de/goshs/logger"
+	"goshs.de/goshs/v2/goshsversion"
+	"goshs.de/goshs/v2/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 

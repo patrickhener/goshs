@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"goshs.de/goshs/clipboard"
+	"goshs.de/goshs/v2/clipboard"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the

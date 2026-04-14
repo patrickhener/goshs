@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"goshs.de/goshs/logger"
-	"goshs.de/goshs/utils"
+	"goshs.de/goshs/v2/logger"
+	"goshs.de/goshs/v2/utils"
 )
 
 // Sum will give the sha256 and sha1 sum of the certificate
