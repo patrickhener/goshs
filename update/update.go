@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/go-github/v42/github"
 	"github.com/inconshreveable/go-update"
-	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/v2/logger"
 )
 
 const (

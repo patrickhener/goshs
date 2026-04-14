@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/patrickhener/goshs/webhook"
+	"github.com/patrickhener/goshs/v2/webhook"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
 )

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/v2/logger"
 )
 
 // ── SMB2 Commands ──────────────────────────────────────────────────────────

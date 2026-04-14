@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"github.com/gliderlabs/ssh"
-	"github.com/patrickhener/goshs/httpserver"
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/options"
-	"github.com/patrickhener/goshs/webhook"
+	"github.com/patrickhener/goshs/v2/httpserver"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/options"
+	"github.com/patrickhener/goshs/v2/webhook"
 	"github.com/pkg/sftp"
 	gossh "golang.org/x/crypto/ssh"
 )

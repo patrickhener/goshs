@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/howeyc/gopass"
-	"github.com/patrickhener/goshs/goshsversion"
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/update"
-	"github.com/patrickhener/goshs/utils"
+	"github.com/patrickhener/goshs/v2/goshsversion"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/update"
+	"github.com/patrickhener/goshs/v2/utils"
 )
 
 type Options struct {

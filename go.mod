@@ -1,4 +1,4 @@
-module github.com/patrickhener/goshs
+module github.com/patrickhener/goshs/v2
 
 go 1.24.1
 

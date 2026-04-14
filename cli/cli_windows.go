@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/v2/logger"
 )
 
 func RunCMD(cmd string) (string, error) {

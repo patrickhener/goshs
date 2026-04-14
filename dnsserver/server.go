@@ -6,10 +6,10 @@ import (
 	"net"
 
 	"github.com/miekg/dns"
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/options"
-	"github.com/patrickhener/goshs/webhook"
-	"github.com/patrickhener/goshs/ws"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/options"
+	"github.com/patrickhener/goshs/v2/webhook"
+	"github.com/patrickhener/goshs/v2/ws"
 )
 
 type DNSServer struct {

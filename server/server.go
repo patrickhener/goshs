@@ -1,17 +1,17 @@
 package server
 
 import (
-	"github.com/patrickhener/goshs/clipboard"
-	"github.com/patrickhener/goshs/dnsserver"
-	"github.com/patrickhener/goshs/httpserver"
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/options"
-	"github.com/patrickhener/goshs/sftpserver"
-	"github.com/patrickhener/goshs/smbserver"
-	"github.com/patrickhener/goshs/smtpserver"
-	"github.com/patrickhener/goshs/utils"
-	"github.com/patrickhener/goshs/webhook"
-	"github.com/patrickhener/goshs/ws"
+	"github.com/patrickhener/goshs/v2/clipboard"
+	"github.com/patrickhener/goshs/v2/dnsserver"
+	"github.com/patrickhener/goshs/v2/httpserver"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/options"
+	"github.com/patrickhener/goshs/v2/sftpserver"
+	"github.com/patrickhener/goshs/v2/smbserver"
+	"github.com/patrickhener/goshs/v2/smtpserver"
+	"github.com/patrickhener/goshs/v2/utils"
+	"github.com/patrickhener/goshs/v2/webhook"
+	"github.com/patrickhener/goshs/v2/ws"
 )
 
 func StartAll(opts *options.Options) {

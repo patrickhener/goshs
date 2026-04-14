@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/patrickhener/goshs/config"
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/options"
-	"github.com/patrickhener/goshs/sanity"
-	"github.com/patrickhener/goshs/server"
+	"github.com/patrickhener/goshs/v2/config"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/options"
+	"github.com/patrickhener/goshs/v2/sanity"
+	"github.com/patrickhener/goshs/v2/server"
 )
 
 func main() {

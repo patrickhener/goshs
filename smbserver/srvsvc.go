@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/v2/logger"
 )
 
 // ── DCE/RPC packet types ───────────────────────────────────────────────────

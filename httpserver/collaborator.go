@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickhener/goshs/logger"
-	"github.com/patrickhener/goshs/ws"
+	"github.com/patrickhener/goshs/v2/logger"
+	"github.com/patrickhener/goshs/v2/ws"
 )
 
 func (fs *FileServer) emitCollabEvent(r *http.Request, status int) []byte {

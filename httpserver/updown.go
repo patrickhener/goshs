@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickhener/goshs/logger"
+	"github.com/patrickhener/goshs/v2/logger"
 )
 
 // put handles the PUT request to upload files
