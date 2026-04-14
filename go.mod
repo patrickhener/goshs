@@ -1,4 +1,4 @@
-module goshs.de/goshs
+module goshs.de/goshs/v2
 
 go 1.24.1
 

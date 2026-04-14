@@ -52,7 +52,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 
 | Method | |
 |---|---|
-| 🦫 **Go** | `go install goshs.de/goshs@latest` |
+| 🦫 **Go** | `go install goshs.de/goshs/v2@latest` |
 | 🐉 **Kali** | `sudo apt install goshs` |
 | 🍺 **Homebrew** | `brew install goshs` |
 | 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
