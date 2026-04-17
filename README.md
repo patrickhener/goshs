@@ -4,6 +4,7 @@
 [![GitHub issues](https://img.shields.io/github/issues-raw/patrickhener/goshs)](https://github.com/patrickhener/goshs/issues)
 ![goreleaser](https://github.com/patrickhener/goshs/workflows/goreleaser/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/patrickhener/goshs)](https://goreportcard.com/report/github.com/patrickhener/goshs)
+[![codecov](https://codecov.io/gh/patrickhener/goshs/branch/main/graph/badge.svg)](https://codecov.io/gh/patrickhener/goshs)
 [![GitHub stars](https://img.shields.io/github/stars/patrickhener/goshs?style=social)](https://github.com/patrickhener/goshs/stargazers)
 
 <img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png?raw=true" alt="goshs-logo" height="100">
