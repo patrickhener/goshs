@@ -97,7 +97,7 @@ func TestDeriveFilename_KnownTypes(t *testing.T) {
 		{"application/pdf", "attachment.pdf"},
 		{"application/zip", "attachment.zip"},
 		{"text/plain", "attachment.txt"},
-		{"video/mp4", "attachment.mpg4"},
+		{"video/mp4", "attachment.mp4"},
 	}
 	for _, tc := range tests {
 		got := deriveFilename(tc.mime)
