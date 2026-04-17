@@ -18,6 +18,12 @@ You're mid-engagement. You need to transfer a file, catch an SMB hash, or stand 
 <kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2.png?raw=true" alt="goshs-screenshot-light"></kbd>
 <kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-screenshot-v2-dark.png?raw=true" alt="goshs-screenshot-dark"></kbd>
 
+### Collaboration / CTF Features
+
+![goshs-collab](https://github.com/patrickhener/image-cdn/blob/main/goshs-collab.gif?raw=true)
+
+<kbd><img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-smb-ntlm.png?raw=true" alt="goshs-smb-ntlm"></kbd>
+
 # Quick Start
 
 ```bash
