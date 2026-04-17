@@ -9,7 +9,9 @@
 
 <img src="https://github.com/patrickhener/image-cdn/blob/main/goshs-banner-light.png?raw=true" alt="goshs-logo" height="100">
 
-goshs is a replacement for Python's `SimpleHTTPServer`. It is a feature-rich file server supporting HTTP/S, WebDAV, SFTP, and SMB — with built-in authentication, share links, webhooks, and collaboration features for penetration testing and CTF challenges.
+You're mid-engagement. You need to transfer a file, catch an SMB hash, or stand up a quick HTTPS server — and `python3 -m http.server` won't cut it.
+
+**goshs** is a single-binary file server built for the moments when you need more than Python's SimpleHTTPServer but don't want to configure Apache. HTTP/S, WebDAV, SFTP, SMB, basic auth, share links, DNS/SMTP callbacks, NTLM hash capture + cracking — all from one command.
 
 ![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif?raw=true)
 
