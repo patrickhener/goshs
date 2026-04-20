@@ -56,7 +56,7 @@ func StartAll(opts *options.Options) {
 
 	// Zeroconf mDNS
 	if opts.MDNS {
-		err := utils.RegisterZeroconfMDNS(opts.SSL, opts.Port, opts.WebDav, opts.WebDavPort, opts.SFTP, opts.SFTPPort)
+		err := utils.RegisterZeroconfMDNS(opts.SSL, opts.Port, opts.WebDav, opts.WebDavPort, opts.SFTP, opts.SFTPPort, opts.SMTP, opts.SMTPPort, opts.DNS, opts.DNSPort, opts.SMB, opts.SMBPort)
 		if err != nil {
 			logger.Warnf("error registering zeroconf mDNS: %+v", err)
 		}

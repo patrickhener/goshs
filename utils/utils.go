@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/grandcat/zeroconf"
+	"golang.org/x/crypto/bcrypt"
 	"goshs.de/goshs/v2/goshsversion"
 	"goshs.de/goshs/v2/logger"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // ByteCountDecimal generates human readable file sizes and returns a string
@@ -108,7 +108,7 @@ func GenerateHashedPassword(password []byte) string {
 	return string(bytes)
 }
 
-func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int) error {
+func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int, smtp bool, smtpPort int, dns bool, dnsPort int, smb bool, smbPort int) error {
 	// Register zeroconf mDNS
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -185,6 +185,60 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 		defer zeroDav.Shutdown()
 
 		logger.Infof("mDNS service registered as ssh://%s.local:%d", hostname, sftpPort)
+	}
+
+	// Register smtp if enabled
+	if smtp {
+		zeroDav, err := zeroconf.Register(
+			"goshs SMTP",
+			"_smtp._tcp",
+			"local.",
+			smtpPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), "auth=false", fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDNS service registered as smtp://%s.local:%d", hostname, smtpPort)
+	}
+
+	// Register dns if enabled
+	if dns {
+		zeroDav, err := zeroconf.Register(
+			"goshs DNS",
+			"_dns._udp",
+			"local.",
+			dnsPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDNS service registered as dns://%s.local:%d", hostname, dnsPort)
+	}
+
+	// Register smb if enabled
+	if smb {
+		zeroDav, err := zeroconf.Register(
+			"goshs SMB",
+			"_smb._tcp",
+			"local.",
+			smbPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDNS service registered as smb://%s.local:%d", hostname, smbPort)
 	}
 
 	return nil
