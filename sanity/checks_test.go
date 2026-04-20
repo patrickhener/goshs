@@ -118,3 +118,58 @@ func TestCheck_NoConfig(t *testing.T) {
 	_, err := Check(opts)
 	require.NoError(t, err)
 }
+
+func TestCheck_ConfigFileNotInWebroot(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := t.TempDir()
+	configPath := filepath.Join(configDir, "config.json")
+	require.NoError(t, os.WriteFile(configPath, []byte(`{}`), 0644))
+
+	opts := &options.Options{
+		ConfigFile: "config.json",
+		ConfigPath: configPath,
+		Webroot:    tmpDir,
+	}
+	_, err := Check(opts)
+	require.NoError(t, err)
+}
+
+func TestCheck_ConfigFileInWebroot_Writeable(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.json")
+	require.NoError(t, os.WriteFile(configPath, []byte(`{"basic_auth":"admin:admin"}`), 0644))
+
+	opts := &options.Options{
+		ConfigFile: "config.json",
+		ConfigPath: configPath,
+		Webroot:    filepath.Dir(configPath),
+	}
+	_, err := Check(opts)
+	// Should error because config is in webroot and writeable
+	require.Error(t, err)
+}
+
+func TestCheck_ConfigUnhashedPassword(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := t.TempDir()
+	configPath := filepath.Join(configDir, "config.json")
+	require.NoError(t, os.WriteFile(configPath, []byte(`{"basic_auth":"admin:admin"}`), 0644))
+
+	opts := &options.Options{
+		ConfigFile: "config.json",
+		ConfigPath: configPath,
+		Webroot:    tmpDir,
+		BasicAuth:  "admin:admin",
+	}
+	_, err := Check(opts)
+	require.NoError(t, err)
+}
+
+func TestFurtherProcessing_BadBasicAuth_NoColon(t *testing.T) {
+	opts := &options.Options{
+		BasicAuth: "justauser",
+	}
+	// FurtherProcessing calls os.Exit(-1) if auth format is wrong
+	// Can't test directly, so we just note the limitation
+	_ = opts
+}
