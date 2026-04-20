@@ -48,7 +48,7 @@ jobs:
           mkdir -p integration/covdata
           chmod 0777 integration/covdata
 
-      - name: Clean structure for unit tests
+      - name: Clean structure for integration tests
         run: |
           mkdir -p ./integration/files
           rm -rf ./integration/files/*

@@ -85,9 +85,6 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 			Repo:       "patrickhener/goshs",
 			Tag:        "integration",
 		},
-		ConfigModifier: func(c *container.Config) {
-			c.User = "1000:1000"
-		},
 		HostConfigModifier: func(hc *container.HostConfig) {
 			// Bind-mount host coverage dir so the -cover instrumented
 			// binary's emitted covdata survives container removal.
