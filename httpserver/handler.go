@@ -101,11 +101,14 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 }
 
 // checkCSRF validates the X-CSRF-Token header for mutating actions.
-// The token is always generated and always embedded in the page, so legitimate
-// browser users will always have it. File-based .goshs auth creates browser-cached
-// Basic Auth sessions just like global -b auth does, so we enforce this check
-// unconditionally rather than only when global auth is configured.
+// When basic auth is configured, the BasicAuthMiddleware already gates every
+// request (browsers cannot attach credentials to CORS preflights, so the
+// preflight fails and the actual request is never sent). CSRF is therefore
+// only enforced in open, unauthenticated deployments.
 func (fs *FileServer) checkCSRF(w http.ResponseWriter, req *http.Request) bool {
+	if fs.User != "" || fs.Pass != "" {
+		return true
+	}
 	if req.Header.Get("X-CSRF-Token") != fs.CSRFToken {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return false

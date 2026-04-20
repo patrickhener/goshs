@@ -17,6 +17,9 @@ import (
 
 // put handles the PUT request to upload files
 func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
+	if !fs.checkCSRF(w, req) {
+		return
+	}
 	if fs.ReadOnly {
 		fs.handleError(w, req, fmt.Errorf("%s", "Upload not allowed due to 'read only' option"), http.StatusForbidden)
 		return
