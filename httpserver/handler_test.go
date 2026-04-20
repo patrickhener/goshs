@@ -26,13 +26,15 @@ func newTestFileServer(t *testing.T, webroot string) (*FileServer, func()) {
 	wh := webhook.Register(false, "", "discord", []string{})
 
 	fs := &FileServer{
-		Webroot:     webroot,
+		Webroot:      webroot,
 		UploadFolder: webroot,
-		CSRFToken:   "test-csrf",
-		Hub:         hub,
-		Webhook:     *wh,
-		SharedLinks: map[string]SharedLink{},
-		Version:     "test",
+		CSRFToken:    "test-csrf",
+		Hub:          hub,
+		Clipboard:    cb,
+		Webhook:      *wh,
+		SharedLinks:  map[string]SharedLink{},
+		Version:      "test",
+		Whitelist:    &Whitelist{},
 	}
 	return fs, func() {} // hub goroutine is cleaned up by process exit in tests
 }

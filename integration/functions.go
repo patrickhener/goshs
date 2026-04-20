@@ -1,18 +1,11 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
-	"regexp"
 	"testing"
 	"time"
 
@@ -175,210 +168,6 @@ func cleanupContainer(t *testing.T, c testcontainers.Container) {
 	testcontainers.CleanupContainer(t, c)
 }
 
-func testConnection(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	require.Equal(t, resp.Status, "200 OK")
-}
-
-func getCSRFToken(t *testing.T, basePath string) string {
-	resp, err := http.Get(basePath)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	re := regexp.MustCompile(`<meta\s+name="csrf-token"\s+content="([^"]+)"`)
-	matches := re.FindStringSubmatch(string(body))
-	require.Len(t, matches, 2, "csrf token not found in page")
-	return matches[1]
-}
-
-func testView(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Equal(t, resp.Status, "200 OK")
-		bodyBytes, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.Equal(t, string(bodyBytes), test_data)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testDownload(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Contains(t, resp.Header.Get("Content-Disposition"), "attachment; filename=\"test_data.txt\"")
-
-		respBytes, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		require.Equal(t, string(respBytes), test_data)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
-	// Read input file
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_POST_test_data.txt")
-	file, err := os.Open(filePath)
-	require.NoError(t, err)
-
-	// new multipart writer
-	var requestBody bytes.Buffer
-	writer := multipart.NewWriter(&requestBody)
-
-	// Create file
-	part, err := writer.CreateFormFile("files[0]", "upload_POST_test_data.txt")
-	require.NoError(t, err)
-
-	// Copy content of file in part
-	_, err = io.Copy(part, file)
-	require.NoError(t, err)
-
-	// Close writer
-	err = writer.Close()
-	require.NoError(t, err)
-
-	// Construct request
-	uploadUrl := fmt.Sprintf("%s/upload", basePath)
-	req, err := http.NewRequest("POST", uploadUrl, &requestBody)
-	require.NoError(t, err)
-	req.Header.Add("Content-Type", writer.FormDataContentType())
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-
-	// Do request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-
-		if !upload_only {
-			// Check if file was uploaded
-			path := fmt.Sprintf("%s/upload_POST_test_data.txt", basePath)
-			resp, err = http.Get(path)
-			require.NoError(t, err)
-			require.Equal(t, resp.StatusCode, 200)
-			respBytes, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Equal(t, string(respBytes), post_data)
-		}
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUploadPut(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
-	// Read input file
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_PUT_test_data.txt")
-	file, err := os.Open(filePath)
-	require.NoError(t, err)
-
-	// Construct request
-	uploadUrl := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
-	req, err := http.NewRequest("PUT", uploadUrl, file)
-	require.NoError(t, err)
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-
-	// Do request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-		if !upload_only {
-			// Check if file was uploaded
-			path := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
-			resp, err = http.Get(path)
-			require.NoError(t, err)
-			require.Equal(t, resp.StatusCode, 200)
-			respBytes, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Equal(t, string(respBytes), put_data)
-		}
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-
-}
-
-func testBulkDownload(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Contains(t, resp.Header.Get("Content-Disposition"), "goshs_download.zip")
-		require.Contains(t, resp.Header.Get("Content-Transfer-Encoding"), "binary")
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testRemoval(t *testing.T, path string, negative bool, csrfToken string) {
-	req, err := http.NewRequest(http.MethodDelete, path, nil)
-	require.NoError(t, err)
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-
-		resp, err = http.Get(path)
-		require.NoError(t, err)
-		require.Equal(t, resp.StatusCode, 404)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUnauthConnection(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 401)
-}
-
-func testAuthConnection(t *testing.T, path string) {
-	username := "admin"
-	password := "admin"
-
-	auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", path, nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-}
-
-func testJsonOutput(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-
-	var items []item
-
-	respBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	err = json.Unmarshal(respBytes, &items)
-	require.NoError(t, err)
-
-	require.Equal(t, items[0].Name, "ACL/")
-}
-
 func testUnauthCertConnection(t *testing.T, path string) {
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -434,14 +223,6 @@ func testSelfSigned(t *testing.T, url string) {
 	require.Equal(t, resp.StatusCode, 200)
 }
 
-func testNoClipboard(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	respBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.NotContains(t, string(respBytes), "<h1>Clipboard</h1>")
-}
-
 func testWebdavConnection(t *testing.T, path string) {
 	c := gowebdav.NewClient(path, "", "")
 	err := c.Connect()
@@ -460,7 +241,7 @@ func testWebdavListFiles(t *testing.T, path string) {
 	for _, f := range files {
 		names = append(names, f.Name())
 	}
-	require.Contains(t, names, "upload_POST_test_data.txt")
+	require.Contains(t, names, "test_data.txt")
 }
 
 func testWebdavCreateDir(t *testing.T, path string) {
@@ -491,7 +272,7 @@ func testWebdavUpload(t *testing.T, path string) {
 	err := c.Connect()
 	require.NoError(t, err)
 
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_webdav_test_data.txt")
+	filePath := fmt.Sprintf("%s/keepFiles/upload_webdav_test_data.txt", os.Getenv("PWD"))
 	file, err := os.Open(filePath)
 	require.NoError(t, err)
 
@@ -537,79 +318,4 @@ func testWebdavAuthConnection(t *testing.T, path string) {
 	c := gowebdav.NewClient(path, "admin", "admin")
 	err := c.Connect()
 	require.NoError(t, err)
-}
-
-func testACLs(t *testing.T, path string) {
-	// ACL/testfile.txt should be blocked
-	resp, err := http.Get(fmt.Sprintf("%s/ACL/testfile.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACL/testfile2.txt should be allowed
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfile2.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-	// ACL/testfolder should be blocked
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfolder", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACL/testfolder/testfile2.txt should be allowed
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfolder/testfile2.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-
-	// ACLAuth/ should only be allowed only with auth
-	resp, err = http.Get(fmt.Sprintf("%s/ACLAuth/", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 401)
-
-	username := "admin"
-	password := "admin"
-
-	auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-
-	// ACLAuth/testfile.txt should be blocked
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfile.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACLAuth/testfile2.txt should be allowed
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfile2.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-	// ACLAuth/testfolder should be blocked
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfolder", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACLAuth/testfolder/testfile2.txt should be allowed
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfolder/testfile2.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-}
-
-func testLogOutput(t *testing.T, path string) {
-	resp, err := http.Get(fmt.Sprintf("%s/goshs.log", path))
-	require.NoError(t, err)
-	respBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Greater(t, len(string(respBytes)), 0)
-	require.Contains(t, string(respBytes), "Serving HTTP from /pwd")
 }

@@ -615,7 +615,7 @@ func (fileS *FileServer) processDir(w http.ResponseWriter, req *http.Request, fi
 
 	// Apply Custom Auth if there is any due to file based acl
 	if ok := fileS.applyCustomAuth(w, req, acl); !ok {
-		fileS.handleError(w, req, err, http.StatusUnauthorized)
+		fileS.handleError(w, req, fmt.Errorf("unauthorized"), http.StatusUnauthorized)
 		return
 	}
 
