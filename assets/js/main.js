@@ -1368,9 +1368,12 @@ function deleteFile(path, bulk) {
   if (ok) {
     var url = "";
     location.protocol !== "https:"
-      ? (url = "http://" + window.location.host + path + "?delete")
-      : (url = "https://" + window.location.host + path + "?delete");
-    fetch(url, { headers: { "X-CSRF-Token": getCsrfToken() } })
+      ? (url = "http://" + window.location.host + path)
+      : (url = "https://" + window.location.host + path);
+    fetch(url, {
+      method: "DELETE",
+      headers: { "X-CSRF-Token": getCsrfToken() },
+    })
       .then(() => location.reload())
       .catch(() => toast("Delete failed", "error"));
   }
@@ -1443,7 +1446,11 @@ function createDir() {
   const name = document.getElementById("mkdir-input").value.trim();
   if (!name) return;
 
-  fetch(`${name}?mkdir`, { headers: { "X-CSRF-Token": getCsrfToken() } })
+  const target = name.endsWith("/") ? name : name + "/";
+  fetch(target, {
+    method: "POST",
+    headers: { "X-CSRF-Token": getCsrfToken() },
+  })
     .then((r) => {
       // if response http.Created
       if (r.status === 201) {

@@ -13,10 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/studio-b12/gowebdav"
@@ -25,6 +26,12 @@ import (
 )
 
 func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, testcontainers.Container, error) {
+	// Make sure the host-side coverage drop dir exists and is writable
+	// by the container's non-root uid (1000). 0o777 is fine for an
+	// ephemeral test artifact directory.
+	require.NoError(t, os.MkdirAll(coverageDir, 0o777))
+	require.NoError(t, os.Chmod(coverageDir, 0o777))
+
 	// webdav ports
 	var webdavPort string
 	var webdavPortNat nat.Port
@@ -80,6 +87,15 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 		},
 		ConfigModifier: func(c *container.Config) {
 			c.User = "1000:1000"
+		},
+		HostConfigModifier: func(hc *container.HostConfig) {
+			// Bind-mount host coverage dir so the -cover instrumented
+			// binary's emitted covdata survives container removal.
+			hc.Mounts = append(hc.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: coverageDir,
+				Target: "/covdata",
+			})
 		},
 		// mount a volume to the container; this will allow you to
 		// use a behavior analogous to docker run -v "$PWD:/pwd"
@@ -149,8 +165,17 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 	}
 }
 
-func cleanupContainer(t *testing.T, container testcontainers.Container) {
-	testcontainers.CleanupContainer(t, container)
+func cleanupContainer(t *testing.T, c testcontainers.Container) {
+	// Send SIGTERM and wait for graceful shutdown so the -cover
+	// instrumented binary flushes its covdata files into the bind-mounted
+	// /covdata before the container is removed. testcontainers.CleanupContainer
+	// otherwise terminates with a short timeout that may not give Go time
+	// to write the profile.
+	timeout := 5 * time.Second
+	if err := c.Stop(context.Background(), &timeout); err != nil {
+		t.Logf("graceful stop failed (coverage may be incomplete): %v", err)
+	}
+	testcontainers.CleanupContainer(t, c)
 }
 
 func testConnection(t *testing.T, path string) {
@@ -302,7 +327,7 @@ func testBulkDownload(t *testing.T, path string, negative bool) {
 }
 
 func testRemoval(t *testing.T, path string, negative bool, csrfToken string) {
-	req, err := http.NewRequest("GET", path, nil)
+	req, err := http.NewRequest(http.MethodDelete, path, nil)
 	require.NoError(t, err)
 	if csrfToken != "" {
 		req.Header.Add("X-CSRF-Token", csrfToken)
@@ -313,8 +338,7 @@ func testRemoval(t *testing.T, path string, negative bool, csrfToken string) {
 	if !negative {
 		require.Equal(t, resp.StatusCode, 200)
 
-		getPath := strings.Split(path, "?")[0]
-		resp, err = http.Get(getPath)
+		resp, err = http.Get(path)
 		require.NoError(t, err)
 		require.Equal(t, resp.StatusCode, 404)
 	} else {

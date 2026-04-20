@@ -44,7 +44,7 @@ func TestHandleMkdir_Success(t *testing.T) {
 	fs, cleanup := newTestFileServer(t, root)
 	defer cleanup()
 
-	r := httptest.NewRequest(http.MethodPost, "/newdir?mkdir", nil)
+	r := httptest.NewRequest(http.MethodPost, "/newdir/", nil)
 	r.Header.Set("X-CSRF-Token", "test-csrf")
 	w := httptest.NewRecorder()
 
@@ -60,7 +60,7 @@ func TestHandleMkdir_ReadOnly(t *testing.T) {
 	defer cleanup()
 	fs.ReadOnly = true
 
-	r := httptest.NewRequest(http.MethodPost, "/blocked?mkdir", nil)
+	r := httptest.NewRequest(http.MethodPost, "/blocked/", nil)
 	r.Header.Set("X-CSRF-Token", "test-csrf")
 	w := httptest.NewRecorder()
 
@@ -75,7 +75,7 @@ func TestHandleMkdir_UploadOnly(t *testing.T) {
 	defer cleanup()
 	fs.UploadOnly = true
 
-	r := httptest.NewRequest(http.MethodPost, "/blocked?mkdir", nil)
+	r := httptest.NewRequest(http.MethodPost, "/blocked/", nil)
 	r.Header.Set("X-CSRF-Token", "test-csrf")
 	w := httptest.NewRecorder()
 

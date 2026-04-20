@@ -10,7 +10,10 @@
 !httpserver/embedded/example.txt
 *.bak
 /integration/files
+/integration/covdata
 coverage.out
+unit.out
+integration.out
 *.pcapng
 *.pdml
 .claude/

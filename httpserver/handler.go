@@ -100,20 +100,49 @@ func (fs *FileServer) doFile(file *os.File, w http.ResponseWriter, req *http.Req
 	fs.sendFile(w, req, file, config)
 }
 
-// checkCSRF validates the X-CSRF-Token header for mutating actions.
-// When basic auth is configured, the BasicAuthMiddleware already gates every
-// request (browsers cannot attach credentials to CORS preflights, so the
-// preflight fails and the actual request is never sent). CSRF is therefore
-// only enforced in open, unauthenticated deployments.
+// checkCSRF validates that mutating requests are not cross-origin browser
+// submissions abusing cached credentials.
+//
+// We accept a request if any of the following holds:
+//
+//  1. It carries the correct X-CSRF-Token header. The token is set by our own
+//     frontend on every fetch() call, and a custom header forces a CORS
+//     preflight that a malicious cross-origin page cannot satisfy.
+//
+//  2. It carries no Origin and no Referer header. Browsers always attach at
+//     least one of these on cross-origin requests, so their absence means the
+//     request came from a non-browser client (curl, scripts, WebDAV clients).
+//     Those clients do not silently replay cached basic-auth credentials, so
+//     CSRF is not a meaningful threat for them. This preserves the ergonomics
+//     of `curl -u user:pass -X DELETE /file` without an extra round-trip to
+//     fetch the token.
+//
+//  3. The Origin (or Referer, as fallback) host matches our own Host header.
+//     Same-origin browser requests are by definition not CSRF.
+//
+// Anything else — a browser request from a different origin without a valid
+// token — is rejected.
 func (fs *FileServer) checkCSRF(w http.ResponseWriter, req *http.Request) bool {
-	if fs.User != "" || fs.Pass != "" {
+	if req.Header.Get("X-CSRF-Token") == fs.CSRFToken {
 		return true
 	}
-	if req.Header.Get("X-CSRF-Token") != fs.CSRFToken {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return false
+
+	origin := req.Header.Get("Origin")
+	referer := req.Header.Get("Referer")
+	if origin == "" && referer == "" {
+		return true
 	}
-	return true
+
+	source := origin
+	if source == "" {
+		source = referer
+	}
+	if u, err := url.Parse(source); err == nil && u.Host == req.Host {
+		return true
+	}
+
+	http.Error(w, "Forbidden", http.StatusForbidden)
+	return false
 }
 
 func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Request) bool {
@@ -129,16 +158,6 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 			return true
 		}
 		fs.handleInfo(w)
-		return true
-	}
-	if _, ok := req.URL.Query()["mkdir"]; ok {
-		if denyForTokenAccess(w, req) {
-			return true
-		}
-		if !fs.checkCSRF(w, req) {
-			return true
-		}
-		fs.handleMkdir(w, req)
 		return true
 	}
 	if _, ok := req.URL.Query()["ws"]; ok {
@@ -196,21 +215,6 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 		logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
 		return true
 	}
-	if _, ok := req.URL.Query()["delete"]; ok {
-		if denyForTokenAccess(w, req) {
-			return true
-		}
-		if !fs.checkCSRF(w, req) {
-			return true
-		}
-		if !fs.ReadOnly && !fs.UploadOnly && !fs.NoDelete {
-			fs.deleteFile(w, req)
-			return true
-		} else {
-			fs.handleError(w, req, fmt.Errorf("delete not allowed"), http.StatusForbidden)
-			return true
-		}
-	}
 	if _, ok := req.URL.Query()["share"]; ok {
 		if denyForTokenAccess(w, req) {
 			return true
@@ -258,7 +262,7 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 
 // handler is the function which actually handles dir or file retrieval
 func (fs *FileServer) handler(w http.ResponseWriter, req *http.Request) {
-	// Early break for /?ws, /?cbDown, /?bulk, /?static /?delete, ?embedded, ?share, ?token
+	// Early break for /?ws, /?cbDown, /?bulk, /?static, ?embedded, ?share, ?token
 	if ok := fs.earlyBreakParameters(w, req); ok {
 		return
 	}
@@ -341,8 +345,11 @@ func (fileS *FileServer) applyCustomAuth(w http.ResponseWriter, req *http.Reques
 			return false
 		}
 
-		user := strings.Split(acl.Auth, ":")[0]
-		passwordHash := strings.Split(acl.Auth, ":")[1]
+		user, passwordHash, ok := strings.Cut(acl.Auth, ":")
+		if !ok {
+			fileS.handleError(w, req, fmt.Errorf("%s", "invalid auth format in config file"), http.StatusInternalServerError)
+			return false
+		}
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
 			fileS.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)
@@ -653,8 +660,11 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 			return
 		}
 
-		user := strings.Split(acl.Auth, ":")[0]
-		passwordHash := strings.Split(acl.Auth, ":")[1]
+		user, passwordHash, ok := strings.Cut(acl.Auth, ":")
+		if !ok {
+			fs.handleError(w, req, fmt.Errorf("%s", "invalid auth format in config file"), http.StatusInternalServerError)
+			return
+		}
 
 		if username != user || !checkPasswordHash(password, passwordHash) {
 			fs.handleError(w, req, fmt.Errorf("%s", "not authorized"), http.StatusUnauthorized)

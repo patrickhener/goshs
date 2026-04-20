@@ -19,12 +19,26 @@ jobs:
         with:
           go-version: stable
 
-      - name: Run tests with coverage
-        run: go test $(go list ./... | grep -v /integration) -coverprofile=coverage.out -covermode=atomic
+      - name: Run unit tests with coverage
+        run: go test $(go list ./... | grep -v /integration) -coverprofile=unit.out -covermode=atomic
+
+      - name: Prepare integration coverage dir
+        run: |
+          mkdir -p integration/covdata
+          chmod 0777 integration/covdata
+
+      - name: Run integration tests
+        # The Docker image used by these tests is built with `go build -cover`
+        # and bind-mounts integration/covdata to /covdata. Each container
+        # writes Go binary-coverage data there on graceful shutdown.
+        run: go test ./integration -count=1
+
+      - name: Convert integration binary coverage to text format
+        run: go tool covdata textfmt -i=integration/covdata -o=integration.out
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.out
+          files: ./unit.out,./integration.out
           fail_ci_if_error: true

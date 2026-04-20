@@ -39,8 +39,8 @@ func TestUnsecureServer(t *testing.T) {
 	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), false, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), false, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt", baseUrl), false, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt", baseUrl), false, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
@@ -186,8 +186,8 @@ func TestUploadOnly(t *testing.T) {
 	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt", baseUrl), true, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
@@ -222,8 +222,8 @@ func TestNoDelete(t *testing.T) {
 	testUploadPut(t, baseUrl, false, false, csrf)
 
 	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt", baseUrl), true, csrf)
+	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt", baseUrl), true, csrf)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
