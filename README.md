@@ -94,6 +94,7 @@ These are the awesome contributors that made `goshs` even more secure :heart:
   <td align="center"><a href="https://github.com/autobot23920"><img src="https://github.com/autobot23920.png?size=50" width="50" height="50"></a></td>
   <td align="center"><a href="https://github.com/R1ZZG0D"><img src="https://github.com/R1ZZG0D.png?size=50" width="50" height="50"></a></td>
   <td align="center"><a href="https://github.com/jaisurya-me"><img src="https://github.com/jaisurya-me.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/wooseokdotkim">wooseokdotkim</a></td>
   <td align="center"><a href="https://github.com/Guilhem7">Guilhem7</a></td>
 </tr></table>
 
