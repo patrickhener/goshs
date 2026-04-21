@@ -375,3 +375,143 @@ func TestSanitizePath_Subpath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "/home/user/subdir/file.txt", path)
 }
+
+// ─── readFile error paths ────────────────────────────────────────────────────
+
+func TestReadFile_DotDotPathRerootedAndMissing(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	// sanitizePath re-roots this inside dir; os.Open fails because the file doesn't exist
+	r := &sftp.Request{Method: "Get", Filepath: "/../../../etc/passwd"}
+	_, err := readFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestReadFile_NonexistentFile(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Get", Filepath: "/missing.txt"}
+	_, err := readFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+// ─── listFile error paths ────────────────────────────────────────────────────
+
+func TestListFile_DotDotPathRerootedMissingDir(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	// sanitizePath re-roots inside dir; os.Open fails because the subdir doesn't exist
+	r := &sftp.Request{Method: "List", Filepath: "/../../../etc"}
+	_, err := listFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestListFile_StatNonexistent(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Stat", Filepath: "/missing_dir"}
+	_, err := listFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestListFile_StatExisting(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "f.txt"), []byte("x"), 0644))
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Stat", Filepath: "/f.txt"}
+	lister, err := listFile(dir, r, "1.2.3.4", srv)
+	require.NoError(t, err)
+	require.NotNil(t, lister)
+}
+
+func TestListFile_OpenNonexistentDir(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "List", Filepath: "/no_such_dir"}
+	_, err := listFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+// ─── writeFile error paths ───────────────────────────────────────────────────
+
+func TestWriteFile_DotDotPathRerootedNoParentDir(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	// sanitizePath re-roots inside dir; os.Create fails — parent "tmp" subdir doesn't exist
+	r := &sftp.Request{Method: "Put", Filepath: "/../../../tmp/evil.txt"}
+	_, err := writeFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestWriteFile_Success(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Put", Filepath: "/newfile.txt"}
+	f, err := writeFile(dir, r, "1.2.3.4", srv)
+	require.NoError(t, err)
+	require.NotNil(t, f)
+	f.Close()
+}
+
+// ─── cmdFile error paths ─────────────────────────────────────────────────────
+
+func TestCmdFile_DotDotPathRerootedNoParentDir(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	// sanitizePath re-roots inside dir; os.Mkdir fails — parent "tmp" subdir doesn't exist
+	r := &sftp.Request{Method: "Mkdir", Filepath: "/../../../tmp/evil"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestCmdFile_StatNonexistent(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Stat", Filepath: "/nonexistent"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestCmdFile_LstatNonexistent(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Lstat", Filepath: "/nonexistent"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestCmdFile_MkdirAlreadyExists(t *testing.T) {
+	dir := t.TempDir()
+	existing := filepath.Join(dir, "exists")
+	require.NoError(t, os.Mkdir(existing, 0755))
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Mkdir", Filepath: "/exists"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestCmdFile_RemoveNonexistent(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Remove", Filepath: "/nonexistent.txt"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}
+
+func TestCmdFile_UnsupportedMethod(t *testing.T) {
+	dir := t.TempDir()
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Symlink", Filepath: "/foo"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unsupported")
+}
+
+func TestCmdFile_RenameTargetTraversalBlocked(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "src.txt"), []byte("x"), 0644))
+	srv := testSFTPServer(dir)
+	r := &sftp.Request{Method: "Rename", Filepath: "/src.txt", Target: "/../../../tmp/dst.txt"}
+	err := cmdFile(dir, r, "1.2.3.4", srv)
+	require.Error(t, err)
+}

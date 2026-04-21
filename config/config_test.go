@@ -144,3 +144,132 @@ func TestPrintExample_DefaultValues(t *testing.T) {
 	require.Equal(t, ".", cfg.Directory)
 	require.Equal(t, "discord", cfg.WebhookProvider)
 }
+
+func TestLoadConfig_SMBFields(t *testing.T) {
+	cfg := Config{
+		SMBServer:   true,
+		SMBPort:     8445,
+		SMBDomain:   "WORKGROUP",
+		SMBShare:    "myshare",
+		SMBWordlist: "/tmp/wordlist.txt",
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.SMB)
+	require.Equal(t, 8445, result.SMBPort)
+	require.Equal(t, "WORKGROUP", result.SMBDomain)
+	require.Equal(t, "myshare", result.SMBShare)
+	require.Equal(t, "/tmp/wordlist.txt", result.SMBWordlist)
+}
+
+func TestLoadConfig_SMTPFields(t *testing.T) {
+	cfg := Config{
+		SMTPServer: true,
+		SMTPPort:   2525,
+		SMTPDomain: "mail.example.com",
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.SMTP)
+	require.Equal(t, 2525, result.SMTPPort)
+	require.Equal(t, "mail.example.com", result.SMTPDomain)
+}
+
+func TestLoadConfig_DNSFields(t *testing.T) {
+	cfg := Config{
+		DNSServer: true,
+		DNSPort:   8053,
+		DNSIP:     "10.0.0.1",
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.DNS)
+	require.Equal(t, 8053, result.DNSPort)
+	require.Equal(t, "10.0.0.1", result.DNSIP)
+}
+
+func TestLoadConfig_SFTPFields(t *testing.T) {
+	cfg := Config{
+		SFTP:            true,
+		SFTPPort:        2022,
+		SFTPKeyFile:     "/etc/goshs/authorized_keys",
+		SFTPHostKeyFile: "/etc/goshs/host_key",
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.SFTP)
+	require.Equal(t, 2022, result.SFTPPort)
+	require.Equal(t, "/etc/goshs/authorized_keys", result.SFTPKeyFile)
+	require.Equal(t, "/etc/goshs/host_key", result.SFTPHostKeyFile)
+}
+
+func TestLoadConfig_TLSFields(t *testing.T) {
+	cfg := Config{
+		SSL:         true,
+		PrivateKey:  "/etc/goshs/server.key",
+		Certificate: "/etc/goshs/server.crt",
+		P12:         "/etc/goshs/server.p12",
+		P12NoPass:   true,
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.SSL)
+	require.Equal(t, "/etc/goshs/server.key", result.MyKey)
+	require.Equal(t, "/etc/goshs/server.crt", result.MyCert)
+	require.Equal(t, "/etc/goshs/server.p12", result.MyP12)
+	require.True(t, result.P12NoPass)
+}
+
+func TestLoadConfig_BooleanFlags(t *testing.T) {
+	cfg := Config{
+		ReadOnly:    true,
+		UploadOnly:  false,
+		NoDelete:    true,
+		NoClipboard: true,
+		Invisible:   true,
+		Silent:      true,
+		Verbose:     true,
+		Tunnel:      true,
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.ReadOnly)
+	require.False(t, result.UploadOnly)
+	require.True(t, result.NoDelete)
+	require.True(t, result.NoClipboard)
+	require.True(t, result.Invisible)
+	require.True(t, result.Silent)
+	require.True(t, result.Verbose)
+	require.True(t, result.Tunnel)
+}
+
+func TestLoadConfig_LetsEncryptFields(t *testing.T) {
+	cfg := Config{
+		LetsEncrypt:         true,
+		LetsEncryptDomain:   "example.com",
+		LetsEncryptEmail:    "admin@example.com",
+		LetsEncryptHTTPPort: "80",
+		LetsEncryptTLSPort:  "443",
+	}
+	path := writeTempConfig(t, cfg)
+	opts := &options.Options{ConfigFile: path}
+	result, err := LoadConfig(opts)
+	require.NoError(t, err)
+	require.True(t, result.LetsEncrypt)
+	require.Equal(t, "example.com", result.LEDomains)
+	require.Equal(t, "admin@example.com", result.LEEmail)
+	require.Equal(t, "80", result.LEHTTPPort)
+	require.Equal(t, "443", result.LETLSPort)
+}

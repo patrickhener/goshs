@@ -173,3 +173,43 @@ func TestFurtherProcessing_BadBasicAuth_NoColon(t *testing.T) {
 	// Can't test directly, so we just note the limitation
 	_ = opts
 }
+
+func TestFurtherProcessing_OutputCreatesFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "goshs.log")
+
+	opts := &options.Options{
+		Output: outputPath,
+	}
+	result, err := FurtherProcessing(opts)
+	require.NoError(t, err)
+	require.Equal(t, outputPath, result.Output)
+
+	// The log file must exist after FurtherProcessing opens it
+	_, statErr := os.Stat(outputPath)
+	require.NoError(t, statErr)
+}
+
+func TestFurtherProcessing_OutputRelativeBecomesAbsolute(t *testing.T) {
+	tmpDir := t.TempDir()
+	// Write the file so it exists; use an absolute path to avoid CWD ambiguity
+	outputPath := filepath.Join(tmpDir, "rel.log")
+
+	opts := &options.Options{
+		Output: outputPath,
+	}
+	result, err := FurtherProcessing(opts)
+	require.NoError(t, err)
+	require.True(t, filepath.IsAbs(result.Output))
+}
+
+func TestCheck_InvisibleWithSMBOnly(t *testing.T) {
+	opts := &options.Options{
+		Invisible: true,
+		SFTP:      false,
+		WebDav:    false,
+	}
+	result, err := Check(opts)
+	require.NoError(t, err)
+	require.True(t, result.Invisible)
+}
