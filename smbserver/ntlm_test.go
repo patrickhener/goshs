@@ -393,3 +393,226 @@ func buildAuthMessage(username, domain, workstation string, lmResp, ntResp, encK
 
 	return msg
 }
+
+// ─── asn1Len ──────────────────────────────────────────────────────────────────
+
+func TestAsn1Len_Short(t *testing.T) {
+	// n < 128 → single byte
+	require.Equal(t, []byte{0x00}, asn1Len(0))
+	require.Equal(t, []byte{0x7F}, asn1Len(127))
+}
+
+func TestAsn1Len_OneByte(t *testing.T) {
+	// 128 ≤ n < 256 → 0x81 length
+	require.Equal(t, []byte{0x81, 0x80}, asn1Len(128))
+	require.Equal(t, []byte{0x81, 0xFF}, asn1Len(255))
+}
+
+func TestAsn1Len_TwoBytes(t *testing.T) {
+	// n ≥ 256 → 0x82 high low
+	require.Equal(t, []byte{0x82, 0x01, 0x00}, asn1Len(256))
+	require.Equal(t, []byte{0x82, 0x02, 0x00}, asn1Len(512))
+}
+
+// ─── DeriveNTLMv2SigningKey ───────────────────────────────────────────────────
+
+func TestDeriveNTLMv2SigningKey_NoKeyExchange(t *testing.T) {
+	// Without an EncryptedRandomSessionKey the function returns the KeyExchangeKey.
+	// Two calls with the same inputs must produce the same output.
+	ntProofStr := make([]byte, 16)
+	for i := range ntProofStr {
+		ntProofStr[i] = byte(i)
+	}
+
+	key1, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, nil)
+	require.NoError(t, err)
+
+	key2, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, key1, key2)
+	require.Equal(t, 16, len(key1))
+}
+
+func TestDeriveNTLMv2SigningKey_WithKeyExchange(t *testing.T) {
+	// With a 16-byte EncryptedRandomSessionKey the function RC4-decrypts it.
+	ntProofStr := make([]byte, 16)
+	encKey := make([]byte, 16)
+	for i := range encKey {
+		encKey[i] = byte(i + 1)
+	}
+
+	key, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, encKey)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv2SigningKey_EmptyDomain(t *testing.T) {
+	ntProofStr := make([]byte, 16)
+	key, err := DeriveNTLMv2SigningKey("password", "user", "", ntProofStr, nil)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+// ─── DeriveNTLMv1SigningKey ───────────────────────────────────────────────────
+
+func TestDeriveNTLMv1SigningKey_NoKeyExchange(t *testing.T) {
+	captured := &CapturedHash{
+		Protocol: ProtoNTLMv1,
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_ESS(t *testing.T) {
+	captured := &CapturedHash{
+		Protocol:   ProtoNTLMv1ESS,
+		LMResponse: make([]byte, 8),
+	}
+	for i := range captured.LMResponse {
+		captured.LMResponse[i] = byte(i)
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_WithKeyExchange(t *testing.T) {
+	encKey := make([]byte, 16)
+	for i := range encKey {
+		encKey[i] = byte(i + 0x10)
+	}
+	captured := &CapturedHash{
+		Protocol:                  ProtoNTLMv1,
+		EncryptedRandomSessionKey: encKey,
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_Deterministic(t *testing.T) {
+	captured := &CapturedHash{Protocol: ProtoNTLMv1}
+	k1, err := DeriveNTLMv1SigningKey("pass", captured)
+	require.NoError(t, err)
+	k2, err := DeriveNTLMv1SigningKey("pass", captured)
+	require.NoError(t, err)
+	require.Equal(t, k1, k2)
+}
+
+// ─── ParseAuthMessage additional branches ────────────────────────────────────
+
+func TestParseAuthMessage_NotAuthType(t *testing.T) {
+	c := &NTLMChallenge{}
+	msg := make([]byte, 72)
+	copy(msg[0:8], "NTLMSSP\x00")
+	binary.LittleEndian.PutUint32(msg[8:12], NTLMSSP_NEGOTIATE) // wrong type
+	_, err := c.ParseAuthMessage(msg)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not an authenticate")
+}
+
+func TestParseAuthMessage_AnonymousSession(t *testing.T) {
+	c := &NTLMChallenge{}
+	// nil lmResp and ntResp → anonymous
+	msg := buildAuthMessage("", "DOMAIN", "", nil, nil, nil)
+	hash, err := c.ParseAuthMessage(msg)
+	require.NoError(t, err)
+	require.NotNil(t, hash)
+	require.Equal(t, "", hash.Username)
+}
+
+func TestParseAuthMessage_NTLMv1(t *testing.T) {
+	c := &NTLMChallenge{}
+	ntResp := make([]byte, 24)
+	lmResp := make([]byte, 24) // last 16 bytes are not all zeros → NTLMv1 (not ESS)
+	for i := range lmResp {
+		lmResp[i] = byte(i + 1)
+	}
+	msg := buildAuthMessage("user", "DOMAIN", "WS", lmResp, ntResp, nil)
+	hash, err := c.ParseAuthMessage(msg)
+	require.NoError(t, err)
+	require.Equal(t, ProtoNTLMv1, hash.Protocol)
+	require.Equal(t, "5500", hash.HashcatMode)
+}
+
+func TestParseAuthMessage_NTLMv1ESS(t *testing.T) {
+	c := &NTLMChallenge{}
+	ntResp := make([]byte, 24)
+	// ESS: lmResp[0:8] = client nonce, lmResp[8:24] = all zeros
+	lmResp := make([]byte, 24)
+	for i := 0; i < 8; i++ {
+		lmResp[i] = byte(i + 1) // client nonce
+	}
+	// lmResp[8:24] stays zero
+	msg := buildAuthMessage("user", "DOMAIN", "WS", lmResp, ntResp, nil)
+	hash, err := c.ParseAuthMessage(msg)
+	require.NoError(t, err)
+	require.Equal(t, ProtoNTLMv1ESS, hash.Protocol)
+}
+
+func TestParseAuthMessage_NTLMv2(t *testing.T) {
+	c := &NTLMChallenge{}
+	// NT response ≥ 16 bytes (but not 24) → NTLMv2
+	ntResp := make([]byte, 40) // 16-byte NTProofStr + 24-byte blob
+	for i := range ntResp {
+		ntResp[i] = byte(i)
+	}
+	msg := buildAuthMessage("user", "DOMAIN", "WS", nil, ntResp, nil)
+	hash, err := c.ParseAuthMessage(msg)
+	require.NoError(t, err)
+	require.Equal(t, ProtoNTLMv2, hash.Protocol)
+	require.Equal(t, "5600", hash.HashcatMode)
+}
+
+func TestParseAuthMessage_NTRespTooShort(t *testing.T) {
+	c := &NTLMChallenge{}
+	// NT response < 16 and != 0 and != 24 → error
+	ntResp := make([]byte, 8)
+	msg := buildAuthMessage("user", "DOMAIN", "WS", nil, ntResp, nil)
+	_, err := c.ParseAuthMessage(msg)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not 24")
+}
+
+// ─── NTLMv1Verify ESS path ───────────────────────────────────────────────────
+
+func TestNTLMv1Verify_ESS_WrongPassword(t *testing.T) {
+	// Build a captured NTLMv1+ESS hash with a known password, verify wrong pass fails.
+	password := "Password"
+	ntHash := ntHashFromPassword(password)
+
+	key := make([]byte, 21)
+	copy(key, ntHash)
+
+	serverChallenge := [8]byte{1, 2, 3, 4, 5, 6, 7, 8}
+	clientNonce := []byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22}
+
+	// Effective challenge = MD5(server || client)[:8]
+	h := md5.New()
+	h.Write(serverChallenge[:])
+	h.Write(clientNonce)
+	effChallenge := h.Sum(nil)[:8]
+
+	expected := make([]byte, 24)
+	for i, off := range []int{0, 7, 14} {
+		keyPart := expandDESKey(key[off : off+7])
+		block, _ := des.NewCipher(keyPart)
+		block.Encrypt(expected[i*8:i*8+8], effChallenge)
+	}
+
+	// LMResponse = clientNonce + 16 zero bytes (ESS format)
+	lmResp := make([]byte, 24)
+	copy(lmResp[:8], clientNonce)
+
+	captured := &CapturedHash{
+		Protocol:        ProtoNTLMv1ESS,
+		ServerChallenge: serverChallenge,
+		LMResponse:      lmResp,
+		NTResponse:      expected,
+	}
+
+	require.True(t, NTLMv1Verify(captured, password))
+	require.False(t, NTLMv1Verify(captured, "wrongpassword"))
+}

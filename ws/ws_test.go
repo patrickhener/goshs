@@ -101,6 +101,42 @@ func TestInvalidEventSent(t *testing.T) {
 
 	client.dispatchReadPump(packet)
 }
+
+func TestDispatchReadPump_ClearHTTP(t *testing.T) {
+	hub := NewHub(&clipboard.Clipboard{}, false)
+	hub.HTTPLog.Add([]byte(`{"type":"http"}`))
+	client := &Client{hub: hub}
+
+	client.dispatchReadPump(Packet{Type: "clearHTTP"})
+	require.Equal(t, 0, len(hub.HTTPLog.Last(10)))
+}
+
+func TestDispatchReadPump_ClearDNS(t *testing.T) {
+	hub := NewHub(&clipboard.Clipboard{}, false)
+	hub.DNSLog.Add([]byte(`{"type":"dns"}`))
+	client := &Client{hub: hub}
+
+	client.dispatchReadPump(Packet{Type: "clearDNS"})
+	require.Equal(t, 0, len(hub.DNSLog.Last(10)))
+}
+
+func TestDispatchReadPump_ClearSMTP(t *testing.T) {
+	hub := NewHub(&clipboard.Clipboard{}, false)
+	hub.SMTPLog.Add([]byte(`{"type":"smtp"}`))
+	client := &Client{hub: hub}
+
+	client.dispatchReadPump(Packet{Type: "clearSMTP"})
+	require.Equal(t, 0, len(hub.SMTPLog.Last(10)))
+}
+
+func TestDispatchReadPump_ClearSMB(t *testing.T) {
+	hub := NewHub(&clipboard.Clipboard{}, false)
+	hub.SMBLog.Add([]byte(`{"type":"smb"}`))
+	client := &Client{hub: hub}
+
+	client.dispatchReadPump(Packet{Type: "clearSMB"})
+	require.Equal(t, 0, len(hub.SMBLog.Last(10)))
+}
 func TestHub_Run(t *testing.T) {
 	cb := &clipboard.Clipboard{} // Use a mock or real instance as needed
 	hub := NewHub(cb, false)

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net"
 	"net/http"
@@ -8,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"goshs.de/goshs/v2/logger"
 	"golang.org/x/crypto/bcrypt"
+	"goshs.de/goshs/v2/logger"
 )
 
 var (
@@ -73,7 +74,7 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			if username != fs.User || password != fs.Pass {
+			if subtle.ConstantTimeCompare([]byte(username), []byte(fs.User)) == 0 || subtle.ConstantTimeCompare([]byte(password), []byte(fs.Pass)) == 0 {
 				http.Error(w, "Not authorized", http.StatusUnauthorized)
 				return
 			}
@@ -131,7 +132,7 @@ func (fs *FileServer) InvisibleBasicAuthMiddleware(next http.Handler) http.Handl
 				return
 			}
 
-			if username != fs.User || password != fs.Pass {
+			if subtle.ConstantTimeCompare([]byte(username), []byte(fs.User)) == 0 || subtle.ConstantTimeCompare([]byte(password), []byte(fs.Pass)) == 0 {
 				fs.handleInvisible(w)
 				return
 			}

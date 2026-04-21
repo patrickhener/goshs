@@ -108,6 +108,22 @@ func TestDNSHandler_UnknownType_NoAnswer(t *testing.T) {
 	require.Empty(t, w.written.Answer)
 }
 
+func TestDNSHandler_MultipleQuestions(t *testing.T) {
+	s := newTestServer()
+
+	req := new(dns.Msg)
+	req.Question = []dns.Question{
+		{Name: "a.example.com.", Qtype: dns.TypeA, Qclass: dns.ClassINET},
+		{Name: "b.example.com.", Qtype: dns.TypeMX, Qclass: dns.ClassINET},
+	}
+
+	w := &mockResponseWriter{}
+	s.handler(w, req)
+
+	require.NotNil(t, w.written)
+	require.Len(t, w.written.Answer, 2)
+}
+
 func TestDNSHandler_ReplyIPFallback(t *testing.T) {
 	// When ReplyIP is empty, it should fall back to the server's IP.
 	cb := clipboard.New()

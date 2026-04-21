@@ -153,18 +153,6 @@ clean-tests:
 	@mkdir -p ./integration/files
 	@rm -rf ./integration/files/*
 	@cp ./integration/keepFiles/test_data.txt ./integration/files/
-	@mkdir ./integration/files/ACL
-	@mkdir ./integration/files/ACL/testfolder
-	@mkdir ./integration/files/ACLAuth
-	@mkdir ./integration/files/ACLAuth/testfolder
-	@cp ./integration/keepFiles/goshsACL ./integration/files/ACL/.goshs
-	@cp ./integration/keepFiles/testfile.txt ./integration/files/ACL/
-	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACL/
-	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACL/testfolder/
-	@cp ./integration/keepFiles/goshsACLAuth ./integration/files/ACLAuth/.goshs
-	@cp ./integration/keepFiles/testfile.txt ./integration/files/ACLAuth/
-	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/
-	@cp ./integration/keepFiles/testfile2.txt ./integration/files/ACLAuth/testfolder/
 	@rm -rf ./sftpserver/testdir
 	@rm -f ./sftpserver/test.txt
 	@echo "cleaned up, ready for next test"

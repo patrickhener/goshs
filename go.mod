@@ -12,6 +12,7 @@ require (
 	github.com/google/go-github/v42 v42.0.0
 	github.com/google/uuid v1.6.0
 	github.com/grandcat/zeroconf v1.0.0
+	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/miekg/dns v1.1.72
@@ -45,6 +46,7 @@ require (
 	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

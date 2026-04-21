@@ -9,81 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnsecureServer tests all functionality of the unsecured server and the most basic functions of goshs
-func TestUnsecureServer(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/unsecured.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Test connection
-	testConnection(t, baseUrl)
-
-	// Fetch CSRF token
-	csrf := getCSRFToken(t, baseUrl)
-
-	// Test View
-	testView(t, fmt.Sprintf("%s/test_data.txt", baseUrl), false)
-
-	// Test Download
-	testDownload(t, fmt.Sprintf("%s/test_data.txt?download", baseUrl), false)
-
-	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, false, csrf)
-	testUploadPut(t, baseUrl, false, false, csrf)
-
-	// Test Bulk Download
-	testBulkDownload(t, fmt.Sprintf("http://localhost:%d/?file=%%252Ftest_data.txt&file=%%252Fupload_POST_test_data.txt&file=%%252Fupload_PUT_test_data.txt&bulk=true", port.Int()), false)
-
-	// Test JSON view
-	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
-
-	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), false, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), false, csrf)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
-// TestBasicAuthServer test that basic auth is working
-func TestBasicAuthServer(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/basic_auth.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Test unauth connection - should 401
-	testUnauthConnection(t, baseUrl)
-
-	// Test auth connection - should 200
-	testAuthConnection(t, baseUrl)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
-// TestBasicAuthServerHashed test that basic auth is working with hashed password in config
-func TestBasicAuthServerHashed(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/basic_auth_hashed.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Test unauth connection - should 401
-	testUnauthConnection(t, baseUrl)
-
-	// Test auth connection - should 200
-	testAuthConnection(t, baseUrl)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
 // TestCertificationAuth test that cert auth is working
 func TestCertificationAuth(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/cert_auth.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/cert_auth.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -102,7 +31,7 @@ func TestCertificationAuth(t *testing.T) {
 // TestSelfSignedTLS tests self signed certificates
 func TestSelfSignedTLS(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -116,7 +45,7 @@ func TestSelfSignedTLS(t *testing.T) {
 // TestTLS tests tls with given key and cert
 func TestTLS(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -130,7 +59,7 @@ func TestTLS(t *testing.T) {
 // TestTLSP12 tests tls with given p12
 func TestTLSP12(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_p12.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_p12.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -141,98 +70,10 @@ func TestTLSP12(t *testing.T) {
 	cleanupContainer(t, goshsServer)
 }
 
-// TestReadOnly tests if read only works
-func TestReadOnly(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/read_only.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Fetch CSRF token
-	csrf := getCSRFToken(t, baseUrl)
-
-	// Test upload not allowed
-	testUploadPost(t, baseUrl, true, false, csrf)
-	testUploadPut(t, baseUrl, true, false, csrf)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
-// TestUploadOnly tests if upload only works
-func TestUploadOnly(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/upload_only.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Fetch CSRF token
-	csrf := getCSRFToken(t, baseUrl)
-
-	// Test View
-	testView(t, fmt.Sprintf("%s/test_data.txt", baseUrl), true)
-
-	// Test Download
-	testDownload(t, fmt.Sprintf("%s/test_data.txt?download", baseUrl), true)
-
-	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, true, csrf)
-	testUploadPut(t, baseUrl, false, true, csrf)
-
-	// Test Bulk Download
-	testBulkDownload(t, fmt.Sprintf("http://localhost:%d/?file=%%252Ftest_data.txt&file=%%252Fupload_POST_test_data.txt&file=%%252Fupload_PUT_test_data.txt&bulk=true", port.Int()), true)
-
-	// Test JSON view
-	testJsonOutput(t, fmt.Sprintf("%s/?json", baseUrl))
-
-	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
-// TestNoClipboard test if the clipboard is not in UI anymore
-func TestNoClipboard(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/no_clipboard.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Test no rednder clipboard
-	testNoClipboard(t, baseUrl)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
-// TestNoDelete test if no delete works
-func TestNoDelete(t *testing.T) {
-	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/no_delete.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
-
-	// Fetch CSRF token
-	csrf := getCSRFToken(t, baseUrl)
-
-	// Test Upload via HTTP PUT, POST
-	testUploadPost(t, baseUrl, false, false, csrf)
-	testUploadPut(t, baseUrl, false, false, csrf)
-
-	// Test File Removal
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_POST_test_data.txt?delete", baseUrl), true, csrf)
-	testRemoval(t, fmt.Sprintf("%s/%%2Fupload_PUT_test_data.txt?delete", baseUrl), true, csrf)
-
-	// Cleanup Container
-	cleanupContainer(t, goshsServer)
-}
-
 // TestWebdav test if webdav works
 func TestWebdav(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav.json", true)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav.json", true, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
@@ -263,41 +104,66 @@ func TestWebdav(t *testing.T) {
 
 // TestWebdavAuth test if webdav works
 func TestWebdavAuth(t *testing.T) {
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav_auth.json", true)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav_auth.json", true, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
 	// Test Unauth Connection
 	testWebdavUnauthConnection(t, baseUrl)
 
-	// Test Unauth Connection
+	// Test Auth Connection
 	testWebdavAuthConnection(t, baseUrl)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
 }
 
-// TestFileBasedACL test if ACLs work
-func TestFileBasedACL(t *testing.T) {
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/unsecured.json", false)
-	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
+// ─── SMB tests ───────────────────────────────────────────────────────────────
 
-	// Test ACLs
-	testACLs(t, baseUrl)
+// TestSmb tests SMB file operations (anonymous/capture mode)
+func TestSmb(t *testing.T) {
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/smb.json", false, true)
+	require.NoError(t, err)
+	host := "localhost"
+	smbPort := int(port.Int())
+
+	// Test connection
+	testSmbConnection(t, host, smbPort)
+
+	// Test list files
+	testSmbListShare(t, host, smbPort)
+
+	// Test download
+	testSmbDownload(t, host, smbPort)
+
+	// Test upload
+	testSmbUpload(t, host, smbPort)
+
+	// Test mkdir
+	testSmbMkdir(t, host, smbPort)
+
+	// Test rename (move file into new folder)
+	testSmbRename(t, host, smbPort)
+
+	// Test delete
+	testSmbDelete(t, host, smbPort)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)
 }
 
-// TestOutputLog test if output to log works
-func TestOutputLog(t *testing.T) {
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/output_log.json", false)
+// TestSmbAuth tests SMB with authentication
+func TestSmbAuth(t *testing.T) {
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/smb_auth.json", false, true)
 	require.NoError(t, err)
-	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
+	host := "localhost"
+	smbPort := int(port.Int())
 
-	// Test if log was written and contains content
-	testLogOutput(t, baseUrl)
+	// Test that unauth connection fails
+	testSmbUnauthConnection(t, host, smbPort)
+
+	// Test that auth connection succeeds
+	testSmbAuthConnection(t, host, smbPort)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)

@@ -1,17 +1,18 @@
 package sftpserver
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/pkg/sftp"
+	gossh "golang.org/x/crypto/ssh"
 	"goshs.de/goshs/v2/httpserver"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/options"
 	"goshs.de/goshs/v2/webhook"
-	"github.com/pkg/sftp"
-	gossh "golang.org/x/crypto/ssh"
 )
 
 // SFTPServer represents an SFTP server configuration
@@ -81,7 +82,7 @@ func (s *SFTPServer) Start() error {
 
 	if s.Username != "" && s.Password != "" {
 		sshServer.PasswordHandler = func(ctx ssh.Context, password string) bool {
-			return ctx.User() == s.Username && password == s.Password
+			return subtle.ConstantTimeCompare([]byte(ctx.User()), []byte(s.Username)) == 1 && subtle.ConstantTimeCompare([]byte(password), []byte(s.Password)) == 1
 		}
 	}
 

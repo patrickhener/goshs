@@ -1,33 +1,40 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
-	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
+	smb2 "github.com/hirochachacha/go-smb2"
 	"github.com/stretchr/testify/require"
 	"github.com/studio-b12/gowebdav"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, testcontainers.Container, error) {
+func spawnTestContainer(t *testing.T, config string, webdav bool, smb bool) (nat.Port, testcontainers.Container, error) {
+	// Make sure the host-side coverage drop dir exists and is writable
+	// by the container's non-root uid (1000). 0o777 is fine for an
+	// ephemeral test artifact directory.
+	require.NoError(t, os.MkdirAll(coverageDir, 0o777))
+	require.NoError(t, os.Chmod(coverageDir, 0o777))
+
 	// webdav ports
 	var webdavPort string
 	var webdavPortNat nat.Port
+
+	// smb ports
+	var smbPort string
+	var smbPortNat nat.Port
 
 	// fetch the server config
 	configPath := fmt.Sprintf(config, os.Getenv("PWD"))
@@ -69,6 +76,13 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 		require.NoError(t, err)
 	}
 
+	if smb {
+		// declare smb port
+		smbPort = fmt.Sprintf("%d", UnsecuredSMBPort)
+		smbPortNat, err = nat.NewPort("tcp", smbPort)
+		require.NoError(t, err)
+	}
+
 	// ContainerRequest for the test container
 	ctx := context.Background()
 	testContainer := testcontainers.ContainerRequest{
@@ -78,8 +92,14 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 			Repo:       "patrickhener/goshs",
 			Tag:        "integration",
 		},
-		ConfigModifier: func(c *container.Config) {
-			c.User = "1000:1000"
+		HostConfigModifier: func(hc *container.HostConfig) {
+			// Bind-mount host coverage dir so the -cover instrumented
+			// binary's emitted covdata survives container removal.
+			hc.Mounts = append(hc.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: coverageDir,
+				Target: "/covdata",
+			})
 		},
 		// mount a volume to the container; this will allow you to
 		// use a behavior analogous to docker run -v "$PWD:/pwd"
@@ -121,14 +141,21 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 		Cmd: []string{"-C", "/configs/config.json"},
 	}
 
-	// Set ports and waitFor depending on webdav
+	// Build exposed ports and wait strategies
+	testContainer.ExposedPorts = []string{testPort}
+	waits := []wait.Strategy{wait.ForListeningPort(testPortNat)}
+
 	if webdav {
-		testContainer.ExposedPorts = []string{testPort, webdavPort}
-		testContainer.WaitingFor = wait.ForAll(wait.ForListeningPort(testPortNat), wait.ForListeningPort(webdavPortNat))
-	} else {
-		testContainer.ExposedPorts = []string{testPort}
-		testContainer.WaitingFor = wait.ForListeningPort(testPortNat)
+		testContainer.ExposedPorts = append(testContainer.ExposedPorts, webdavPort)
+		waits = append(waits, wait.ForListeningPort(webdavPortNat))
 	}
+
+	if smb {
+		testContainer.ExposedPorts = append(testContainer.ExposedPorts, smbPort)
+		waits = append(waits, wait.ForListeningPort(smbPortNat))
+	}
+
+	testContainer.WaitingFor = wait.ForAll(waits...)
 
 	// start container
 	goshsServer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -137,8 +164,12 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 	})
 	require.NoError(t, err)
 
-	// return either webdav or web port for testing
-	if webdav {
+	// return the appropriate port for testing
+	if smb {
+		smbReturnPort, err := goshsServer.MappedPort(ctx, smbPortNat)
+		require.NoError(t, err)
+		return smbReturnPort, goshsServer, nil
+	} else if webdav {
 		webdavReturnPort, err := goshsServer.MappedPort(ctx, webdavPortNat)
 		require.NoError(t, err)
 		return webdavReturnPort, goshsServer, nil
@@ -149,214 +180,20 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 	}
 }
 
-func cleanupContainer(t *testing.T, container testcontainers.Container) {
-	testcontainers.CleanupContainer(t, container)
-}
-
-func testConnection(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	require.Equal(t, resp.Status, "200 OK")
-}
-
-func getCSRFToken(t *testing.T, basePath string) string {
-	resp, err := http.Get(basePath)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	re := regexp.MustCompile(`<meta\s+name="csrf-token"\s+content="([^"]+)"`)
-	matches := re.FindStringSubmatch(string(body))
-	require.Len(t, matches, 2, "csrf token not found in page")
-	return matches[1]
-}
-
-func testView(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Equal(t, resp.Status, "200 OK")
-		bodyBytes, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.Equal(t, string(bodyBytes), test_data)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
+func cleanupContainer(t *testing.T, c testcontainers.Container) {
+	// Send SIGTERM and wait for graceful shutdown so the -cover
+	// instrumented binary flushes its covdata files into the bind-mounted
+	// /covdata before the container is removed. testcontainers.CleanupContainer
+	// otherwise terminates with a short timeout that may not give Go time
+	// to write the profile.
+	timeout := 5 * time.Second
+	if err := c.Stop(context.Background(), &timeout); err != nil {
+		t.Logf("graceful stop failed (coverage may be incomplete): %v", err)
 	}
+	testcontainers.CleanupContainer(t, c)
 }
 
-func testDownload(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Contains(t, resp.Header.Get("Content-Disposition"), "attachment; filename=\"test_data.txt\"")
-
-		respBytes, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		require.Equal(t, string(respBytes), test_data)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUploadPost(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
-	// Read input file
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_POST_test_data.txt")
-	file, err := os.Open(filePath)
-	require.NoError(t, err)
-
-	// new multipart writer
-	var requestBody bytes.Buffer
-	writer := multipart.NewWriter(&requestBody)
-
-	// Create file
-	part, err := writer.CreateFormFile("files[0]", "upload_POST_test_data.txt")
-	require.NoError(t, err)
-
-	// Copy content of file in part
-	_, err = io.Copy(part, file)
-	require.NoError(t, err)
-
-	// Close writer
-	err = writer.Close()
-	require.NoError(t, err)
-
-	// Construct request
-	uploadUrl := fmt.Sprintf("%s/upload", basePath)
-	req, err := http.NewRequest("POST", uploadUrl, &requestBody)
-	require.NoError(t, err)
-	req.Header.Add("Content-Type", writer.FormDataContentType())
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-
-	// Do request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-
-		if !upload_only {
-			// Check if file was uploaded
-			path := fmt.Sprintf("%s/upload_POST_test_data.txt", basePath)
-			resp, err = http.Get(path)
-			require.NoError(t, err)
-			require.Equal(t, resp.StatusCode, 200)
-			respBytes, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Equal(t, string(respBytes), post_data)
-		}
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUploadPut(t *testing.T, basePath string, negative bool, upload_only bool, csrfToken string) {
-	// Read input file
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_PUT_test_data.txt")
-	file, err := os.Open(filePath)
-	require.NoError(t, err)
-
-	// Construct request
-	uploadUrl := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
-	req, err := http.NewRequest("PUT", uploadUrl, file)
-	require.NoError(t, err)
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-
-	// Do request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-		if !upload_only {
-			// Check if file was uploaded
-			path := fmt.Sprintf("%s/upload_PUT_test_data.txt", basePath)
-			resp, err = http.Get(path)
-			require.NoError(t, err)
-			require.Equal(t, resp.StatusCode, 200)
-			respBytes, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.Equal(t, string(respBytes), put_data)
-		}
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-
-}
-
-func testBulkDownload(t *testing.T, path string, negative bool) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	if !negative {
-		require.Contains(t, resp.Header.Get("Content-Disposition"), "goshs_download.zip")
-		require.Contains(t, resp.Header.Get("Content-Transfer-Encoding"), "binary")
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testRemoval(t *testing.T, path string, negative bool, csrfToken string) {
-	req, err := http.NewRequest("GET", path, nil)
-	require.NoError(t, err)
-	if csrfToken != "" {
-		req.Header.Add("X-CSRF-Token", csrfToken)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	if !negative {
-		require.Equal(t, resp.StatusCode, 200)
-
-		getPath := strings.Split(path, "?")[0]
-		resp, err = http.Get(getPath)
-		require.NoError(t, err)
-		require.Equal(t, resp.StatusCode, 404)
-	} else {
-		require.Equal(t, resp.StatusCode, 403)
-	}
-}
-
-func testUnauthConnection(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 401)
-}
-
-func testAuthConnection(t *testing.T, path string) {
-	username := "admin"
-	password := "admin"
-
-	auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", path, nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-}
-
-func testJsonOutput(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-
-	var items []item
-
-	respBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	err = json.Unmarshal(respBytes, &items)
-	require.NoError(t, err)
-
-	require.Equal(t, items[0].Name, "ACL/")
-}
+// ─── TLS helpers ─────────────────────────────────────────────────────────────
 
 func testUnauthCertConnection(t *testing.T, path string) {
 	client := &http.Client{
@@ -413,13 +250,7 @@ func testSelfSigned(t *testing.T, url string) {
 	require.Equal(t, resp.StatusCode, 200)
 }
 
-func testNoClipboard(t *testing.T, path string) {
-	resp, err := http.Get(path)
-	require.NoError(t, err)
-	respBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.NotContains(t, string(respBytes), "<h1>Clipboard</h1>")
-}
+// ─── WebDAV helpers ──────────────────────────────────────────────────────────
 
 func testWebdavConnection(t *testing.T, path string) {
 	c := gowebdav.NewClient(path, "", "")
@@ -439,7 +270,7 @@ func testWebdavListFiles(t *testing.T, path string) {
 	for _, f := range files {
 		names = append(names, f.Name())
 	}
-	require.Contains(t, names, "upload_POST_test_data.txt")
+	require.Contains(t, names, "test_data.txt")
 }
 
 func testWebdavCreateDir(t *testing.T, path string) {
@@ -470,7 +301,7 @@ func testWebdavUpload(t *testing.T, path string) {
 	err := c.Connect()
 	require.NoError(t, err)
 
-	filePath := filepath.Join(os.Getenv("PWD"), "keepFiles", "upload_webdav_test_data.txt")
+	filePath := fmt.Sprintf("%s/keepFiles/upload_webdav_test_data.txt", os.Getenv("PWD"))
 	file, err := os.Open(filePath)
 	require.NoError(t, err)
 
@@ -518,77 +349,122 @@ func testWebdavAuthConnection(t *testing.T, path string) {
 	require.NoError(t, err)
 }
 
-func testACLs(t *testing.T, path string) {
-	// ACL/testfile.txt should be blocked
-	resp, err := http.Get(fmt.Sprintf("%s/ACL/testfile.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACL/testfile2.txt should be allowed
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfile2.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-	// ACL/testfolder should be blocked
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfolder", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACL/testfolder/testfile2.txt should be allowed
-	resp, err = http.Get(fmt.Sprintf("%s/ACL/testfolder/testfile2.txt", path))
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
+// ─── SMB helpers ─────────────────────────────────────────────────────────────
 
-	// ACLAuth/ should only be allowed only with auth
-	resp, err = http.Get(fmt.Sprintf("%s/ACLAuth/", path))
+func smbConnect(t *testing.T, host string, port int, user, pass string) (*smb2.Session, *smb2.Share) {
+	t.Helper()
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 401)
+	t.Cleanup(func() { conn.Close() })
 
-	username := "admin"
-	password := "admin"
+	d := &smb2.Dialer{
+		Initiator: &smb2.NTLMInitiator{User: user, Password: pass},
+	}
+	s, err := d.Dial(conn)
+	require.NoError(t, err)
 
-	auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+	fs, err := s.Mount("goshs")
+	require.NoError(t, err)
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-
-	// ACLAuth/testfile.txt should be blocked
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfile.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACLAuth/testfile2.txt should be allowed
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfile2.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
-	// ACLAuth/testfolder should be blocked
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfolder", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 404)
-	// ACLAuth/testfolder/testfile2.txt should be allowed
-	req, err = http.NewRequest("GET", fmt.Sprintf("%s/ACLAuth/testfolder/testfile2.txt", path), nil)
-	require.NoError(t, err)
-	req.Header.Add("Authorization", "Basic "+auth)
-	resp, err = client.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, resp.StatusCode, 200)
+	return s, fs
 }
 
-func testLogOutput(t *testing.T, path string) {
-	resp, err := http.Get(fmt.Sprintf("%s/goshs.log", path))
+func testSmbConnection(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+}
+
+func testSmbListShare(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	entries, err := fs.ReadDir(".")
 	require.NoError(t, err)
-	respBytes, err := io.ReadAll(resp.Body)
+
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	require.Contains(t, names, "test_data.txt")
+}
+
+func testSmbDownload(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	f, err := fs.Open("test_data.txt")
 	require.NoError(t, err)
-	require.Greater(t, len(string(respBytes)), 0)
-	require.Contains(t, string(respBytes), "Serving HTTP from /pwd")
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	require.NoError(t, err)
+	require.Equal(t, test_data, string(data))
+}
+
+func testSmbUpload(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.WriteFile("upload_smb_test_data.txt", []byte("SMB TEST CONFIRMED"), 0644)
+	require.NoError(t, err)
+
+	data, err := fs.ReadFile("upload_smb_test_data.txt")
+	require.NoError(t, err)
+	require.Equal(t, "SMB TEST CONFIRMED", string(data))
+}
+
+func testSmbMkdir(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Mkdir("smbtestfolder", 0755)
+	require.NoError(t, err)
+
+	info, err := fs.Stat("smbtestfolder")
+	require.NoError(t, err)
+	require.True(t, info.IsDir())
+}
+
+func testSmbRename(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Rename("upload_smb_test_data.txt", "smbtestfolder/upload_smb_test_data.txt")
+	require.NoError(t, err)
+}
+
+func testSmbDelete(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Remove("smbtestfolder/upload_smb_test_data.txt")
+	require.NoError(t, err)
+
+	err = fs.Remove("smbtestfolder")
+	require.NoError(t, err)
+}
+
+func testSmbUnauthConnection(t *testing.T, host string, port int) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	d := &smb2.Dialer{
+		Initiator: &smb2.NTLMInitiator{},
+	}
+	_, err = d.Dial(conn)
+	require.Error(t, err)
+}
+
+func testSmbAuthConnection(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "admin", "admin")
+	defer s.Logoff()
+	defer fs.Umount()
 }
