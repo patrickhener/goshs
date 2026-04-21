@@ -1,0 +1,8 @@
+{
+  "interface": "0.0.0.0",
+  "port": 8001,
+  "directory": "/pwd",
+  "smb_server": true,
+  "smb_port": 8445,
+  "smb_share": "goshs"
+}

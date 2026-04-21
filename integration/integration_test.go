@@ -12,7 +12,7 @@ import (
 // TestCertificationAuth test that cert auth is working
 func TestCertificationAuth(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/cert_auth.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/cert_auth.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -31,7 +31,7 @@ func TestCertificationAuth(t *testing.T) {
 // TestSelfSignedTLS tests self signed certificates
 func TestSelfSignedTLS(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -45,7 +45,7 @@ func TestSelfSignedTLS(t *testing.T) {
 // TestTLS tests tls with given key and cert
 func TestTLS(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_self_signed.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -59,7 +59,7 @@ func TestTLS(t *testing.T) {
 // TestTLSP12 tests tls with given p12
 func TestTLSP12(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_p12.json", false)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/tls_p12.json", false, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("https://localhost:%d", port.Int())
 
@@ -73,7 +73,7 @@ func TestTLSP12(t *testing.T) {
 // TestWebdav test if webdav works
 func TestWebdav(t *testing.T) {
 	// spawn a test container
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav.json", true)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav.json", true, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
@@ -104,15 +104,66 @@ func TestWebdav(t *testing.T) {
 
 // TestWebdavAuth test if webdav works
 func TestWebdavAuth(t *testing.T) {
-	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav_auth.json", true)
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/webdav_auth.json", true, false)
 	require.NoError(t, err)
 	baseUrl := fmt.Sprintf("http://localhost:%d", port.Int())
 
 	// Test Unauth Connection
 	testWebdavUnauthConnection(t, baseUrl)
 
-	// Test Unauth Connection
+	// Test Auth Connection
 	testWebdavAuthConnection(t, baseUrl)
+
+	// Cleanup Container
+	cleanupContainer(t, goshsServer)
+}
+
+// ─── SMB tests ───────────────────────────────────────────────────────────────
+
+// TestSmb tests SMB file operations (anonymous/capture mode)
+func TestSmb(t *testing.T) {
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/smb.json", false, true)
+	require.NoError(t, err)
+	host := "localhost"
+	smbPort := int(port.Int())
+
+	// Test connection
+	testSmbConnection(t, host, smbPort)
+
+	// Test list files
+	testSmbListShare(t, host, smbPort)
+
+	// Test download
+	testSmbDownload(t, host, smbPort)
+
+	// Test upload
+	testSmbUpload(t, host, smbPort)
+
+	// Test mkdir
+	testSmbMkdir(t, host, smbPort)
+
+	// Test rename (move file into new folder)
+	testSmbRename(t, host, smbPort)
+
+	// Test delete
+	testSmbDelete(t, host, smbPort)
+
+	// Cleanup Container
+	cleanupContainer(t, goshsServer)
+}
+
+// TestSmbAuth tests SMB with authentication
+func TestSmbAuth(t *testing.T) {
+	port, goshsServer, err := spawnTestContainer(t, "%s/configs/smb_auth.json", false, true)
+	require.NoError(t, err)
+	host := "localhost"
+	smbPort := int(port.Int())
+
+	// Test that unauth connection fails
+	testSmbUnauthConnection(t, host, smbPort)
+
+	// Test that auth connection succeeds
+	testSmbAuthConnection(t, host, smbPort)
 
 	// Cleanup Container
 	cleanupContainer(t, goshsServer)

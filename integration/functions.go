@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -12,13 +14,14 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
+	smb2 "github.com/hirochachacha/go-smb2"
 	"github.com/stretchr/testify/require"
 	"github.com/studio-b12/gowebdav"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, testcontainers.Container, error) {
+func spawnTestContainer(t *testing.T, config string, webdav bool, smb bool) (nat.Port, testcontainers.Container, error) {
 	// Make sure the host-side coverage drop dir exists and is writable
 	// by the container's non-root uid (1000). 0o777 is fine for an
 	// ephemeral test artifact directory.
@@ -28,6 +31,10 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 	// webdav ports
 	var webdavPort string
 	var webdavPortNat nat.Port
+
+	// smb ports
+	var smbPort string
+	var smbPortNat nat.Port
 
 	// fetch the server config
 	configPath := fmt.Sprintf(config, os.Getenv("PWD"))
@@ -66,6 +73,13 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 		// declare webdav port
 		webdavPort = fmt.Sprintf("%d", UnsecuredWebdavPort)
 		webdavPortNat, err = nat.NewPort("tcp", webdavPort)
+		require.NoError(t, err)
+	}
+
+	if smb {
+		// declare smb port
+		smbPort = fmt.Sprintf("%d", UnsecuredSMBPort)
+		smbPortNat, err = nat.NewPort("tcp", smbPort)
 		require.NoError(t, err)
 	}
 
@@ -127,14 +141,21 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 		Cmd: []string{"-C", "/configs/config.json"},
 	}
 
-	// Set ports and waitFor depending on webdav
+	// Build exposed ports and wait strategies
+	testContainer.ExposedPorts = []string{testPort}
+	waits := []wait.Strategy{wait.ForListeningPort(testPortNat)}
+
 	if webdav {
-		testContainer.ExposedPorts = []string{testPort, webdavPort}
-		testContainer.WaitingFor = wait.ForAll(wait.ForListeningPort(testPortNat), wait.ForListeningPort(webdavPortNat))
-	} else {
-		testContainer.ExposedPorts = []string{testPort}
-		testContainer.WaitingFor = wait.ForListeningPort(testPortNat)
+		testContainer.ExposedPorts = append(testContainer.ExposedPorts, webdavPort)
+		waits = append(waits, wait.ForListeningPort(webdavPortNat))
 	}
+
+	if smb {
+		testContainer.ExposedPorts = append(testContainer.ExposedPorts, smbPort)
+		waits = append(waits, wait.ForListeningPort(smbPortNat))
+	}
+
+	testContainer.WaitingFor = wait.ForAll(waits...)
 
 	// start container
 	goshsServer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -143,8 +164,12 @@ func spawnTestContainer(t *testing.T, config string, webdav bool) (nat.Port, tes
 	})
 	require.NoError(t, err)
 
-	// return either webdav or web port for testing
-	if webdav {
+	// return the appropriate port for testing
+	if smb {
+		smbReturnPort, err := goshsServer.MappedPort(ctx, smbPortNat)
+		require.NoError(t, err)
+		return smbReturnPort, goshsServer, nil
+	} else if webdav {
 		webdavReturnPort, err := goshsServer.MappedPort(ctx, webdavPortNat)
 		require.NoError(t, err)
 		return webdavReturnPort, goshsServer, nil
@@ -167,6 +192,8 @@ func cleanupContainer(t *testing.T, c testcontainers.Container) {
 	}
 	testcontainers.CleanupContainer(t, c)
 }
+
+// ─── TLS helpers ─────────────────────────────────────────────────────────────
 
 func testUnauthCertConnection(t *testing.T, path string) {
 	client := &http.Client{
@@ -222,6 +249,8 @@ func testSelfSigned(t *testing.T, url string) {
 	require.NoError(t, err)
 	require.Equal(t, resp.StatusCode, 200)
 }
+
+// ─── WebDAV helpers ──────────────────────────────────────────────────────────
 
 func testWebdavConnection(t *testing.T, path string) {
 	c := gowebdav.NewClient(path, "", "")
@@ -318,4 +347,124 @@ func testWebdavAuthConnection(t *testing.T, path string) {
 	c := gowebdav.NewClient(path, "admin", "admin")
 	err := c.Connect()
 	require.NoError(t, err)
+}
+
+// ─── SMB helpers ─────────────────────────────────────────────────────────────
+
+func smbConnect(t *testing.T, host string, port int, user, pass string) (*smb2.Session, *smb2.Share) {
+	t.Helper()
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	d := &smb2.Dialer{
+		Initiator: &smb2.NTLMInitiator{User: user, Password: pass},
+	}
+	s, err := d.Dial(conn)
+	require.NoError(t, err)
+
+	fs, err := s.Mount("goshs")
+	require.NoError(t, err)
+
+	return s, fs
+}
+
+func testSmbConnection(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+}
+
+func testSmbListShare(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	entries, err := fs.ReadDir(".")
+	require.NoError(t, err)
+
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	require.Contains(t, names, "test_data.txt")
+}
+
+func testSmbDownload(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	f, err := fs.Open("test_data.txt")
+	require.NoError(t, err)
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	require.NoError(t, err)
+	require.Equal(t, test_data, string(data))
+}
+
+func testSmbUpload(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.WriteFile("upload_smb_test_data.txt", []byte("SMB TEST CONFIRMED"), 0644)
+	require.NoError(t, err)
+
+	data, err := fs.ReadFile("upload_smb_test_data.txt")
+	require.NoError(t, err)
+	require.Equal(t, "SMB TEST CONFIRMED", string(data))
+}
+
+func testSmbMkdir(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Mkdir("smbtestfolder", 0755)
+	require.NoError(t, err)
+
+	info, err := fs.Stat("smbtestfolder")
+	require.NoError(t, err)
+	require.True(t, info.IsDir())
+}
+
+func testSmbRename(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Rename("upload_smb_test_data.txt", "smbtestfolder/upload_smb_test_data.txt")
+	require.NoError(t, err)
+}
+
+func testSmbDelete(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "some", "thing")
+	defer s.Logoff()
+	defer fs.Umount()
+
+	err := fs.Remove("smbtestfolder/upload_smb_test_data.txt")
+	require.NoError(t, err)
+
+	err = fs.Remove("smbtestfolder")
+	require.NoError(t, err)
+}
+
+func testSmbUnauthConnection(t *testing.T, host string, port int) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	d := &smb2.Dialer{
+		Initiator: &smb2.NTLMInitiator{},
+	}
+	_, err = d.Dial(conn)
+	require.Error(t, err)
+}
+
+func testSmbAuthConnection(t *testing.T, host string, port int) {
+	s, fs := smbConnect(t, host, port, "admin", "admin")
+	defer s.Logoff()
+	defer fs.Umount()
 }

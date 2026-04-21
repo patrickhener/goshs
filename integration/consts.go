@@ -11,4 +11,5 @@ Honour and recognition in event of success`
 	// we fetch that port at test runtime
 	UnsecuredServerPort = 8001
 	UnsecuredWebdavPort = 8002
+	UnsecuredSMBPort    = 8445
 )
