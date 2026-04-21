@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"math/big"
 	"runtime"
 	"strings"
 	"testing"
@@ -70,13 +69,6 @@ func TestReturnExt(t *testing.T) {
 	}
 }
 
-func TestRandomNumber(t *testing.T) {
-	n, err := RandomNumber()
-	require.NoError(t, err, "RandomNumber should not return an error")
-	require.True(t, n.Cmp(big.NewInt(0)) >= 0, "Random number should be >= 0")
-	require.True(t, n.Cmp(big.NewInt(1000)) < 0, "Random number should be < 1000")
-}
-
 func TestGetIPv4Addr(t *testing.T) {
 	os := runtime.GOOS
 	var lo string
@@ -113,8 +105,8 @@ func TestGenerateHashedPassword(t *testing.T) {
 	}
 }
 
-func TestGetAllIPAdresses(t *testing.T) {
-	ifacesMap, err := GetAllIPAdresses()
+func TestGetAllIPAddresses(t *testing.T) {
+	ifacesMap, err := GetAllIPAddresses()
 	require.NoError(t, err)
 	require.NotNil(t, ifacesMap)
 

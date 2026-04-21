@@ -2,9 +2,7 @@
 package utils
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"mime"
 	"net"
 	"os"
@@ -41,16 +39,6 @@ func ReturnExt(n string) string {
 	return "." + extSlice[len(extSlice)-1]
 }
 
-// RandomNumber returns a random int64
-func RandomNumber() (big.Int, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(1000))
-	if err != nil {
-		logger.Errorf("when generating random number: %+v", err)
-		return *big.NewInt(0), err
-	}
-	return *n, err
-}
-
 // GetInterfaceIpv4Addr will return the ip address by name
 func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 	var (
@@ -65,7 +53,11 @@ func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 		return
 	}
 	for _, addr := range addrs { // get ipv4 address
-		if ipv4Addr = addr.(*net.IPNet).IP.To4(); ipv4Addr != nil {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		if ipv4Addr = ipNet.IP.To4(); ipv4Addr != nil {
 			break
 		}
 	}
@@ -75,8 +67,8 @@ func GetInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 	return ipv4Addr.String(), nil
 }
 
-// GetAllIPAdresses will return a map of interface and associated ipv4 addresses for displaying reasons
-func GetAllIPAdresses() (map[string]string, error) {
+// GetAllIPAddresses returns a map of interface name to IPv4 address for all interfaces.
+func GetAllIPAddresses() (map[string]string, error) {
 	ifaceAddress := make(map[string]string)
 
 	ifaces, err := net.Interfaces()
@@ -89,9 +81,7 @@ func GetAllIPAdresses() (map[string]string, error) {
 		if err != nil {
 			continue
 		}
-
 		ifaceAddress[i.Name] = ip
-
 	}
 	return ifaceAddress, nil
 }
@@ -171,18 +161,18 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 
 	// Register sftp if enabled
 	if sftp {
-		zeroDav, err := zeroconf.Register(
-			"goshs WebDAV",
+		zeroSFTP, err := zeroconf.Register(
+			"goshs SFTP",
 			"_ssh._tcp",
 			"local.",
-			webdavPort,
+			sftpPort,
 			[]string{fmt.Sprintf("host=%s.local", hostname), "subsystem=sftp", "path=/", fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
 			nil,
 		)
 		if err != nil {
 			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
 		}
-		defer zeroDav.Shutdown()
+		defer zeroSFTP.Shutdown()
 
 		logger.Infof("mDNS service registered as ssh://%s.local:%d", hostname, sftpPort)
 	}

@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -85,7 +86,7 @@ func (s *SMBServer) Start() {
 		logger.Fatalf("SMB: failed to generate server GUID: %v", err)
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.IP, s.Port)
+	addr := net.JoinHostPort(s.IP, strconv.Itoa(s.Port))
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		logger.Fatalf("SMB: failed to listen on %s: %v", addr, err)

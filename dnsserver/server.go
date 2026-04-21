@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/miekg/dns"
 	"goshs.de/goshs/v2/logger"
@@ -85,7 +86,7 @@ func (d *DNSServer) handler(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 func (d *DNSServer) Start() {
-	addr := fmt.Sprintf("%s:%d", d.IP, d.Port)
+	addr := net.JoinHostPort(d.IP, strconv.Itoa(d.Port))
 	udpServer := &dns.Server{Addr: addr, Net: "udp", Handler: dns.HandlerFunc(d.handler)}
 	tcpServer := &dns.Server{Addr: addr, Net: "tcp", Handler: dns.HandlerFunc(d.handler)}
 	logger.Infof("DNS server listening on udp/tcp %s:%d", d.IP, d.Port)

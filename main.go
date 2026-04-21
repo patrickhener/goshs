@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"goshs.de/goshs/v2/config"
+	"goshs.de/goshs/v2/goshsversion"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/options"
 	"goshs.de/goshs/v2/sanity"
@@ -54,11 +57,18 @@ func main() {
 		logger.Fatalf("Further processing failed: %+v", err)
 	}
 
-	// Start all server
-	server.StartAll(opts)
+	logger.PrintBanner(goshsversion.GoshsVersion)
+
+	// Start all servers
+	shutdown := server.StartAll(opts)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	<-done
-	logger.Infof("Received CTRL+C, exiting...")
+	logger.Infof("Received CTRL+C, shutting down gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	shutdown(ctx)
+	logger.Infof("Shutdown complete")
 }

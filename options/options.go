@@ -3,6 +3,7 @@ package options
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -177,6 +178,7 @@ func Parse() (*Options, bool) {
 	flag.StringVar(&opts.SMBDomain, "smb-domain", "GOSHS", "SMB server domain")
 	flag.StringVar(&opts.SMBShare, "smb-share", "goshs", "SMB server share")
 	flag.StringVar(&opts.SMBWordlist, "smb-wordlist", "", "Wordlist file for SMB hash cracking")
+	flag.Int64Var(&opts.MaxUploadSize, "mu", 0, "Maximum upload size in bytes (0 = unlimited)")
 	flag.Int64Var(&opts.MaxUploadSize, "max-upload", 0, "Maximum upload size in bytes (0 = unlimited)")
 
 	// One-shot flags
@@ -228,7 +230,7 @@ Web server options:
   -ro, --read-only      Read only mode, no upload possible        (default: false)
   -uo, --upload-only    Upload only mode, no download possible    (default: false)
   -uf, --upload-folder  Specify a different upload folder         (default: current working path)
-       --max-upload     Maximum upload size in bytes, 0=unlimited (default: 0)
+  -mu, --max-upload     Maximum upload size in bytes, 0=unlimited (default: 0)
   -nc, --no-clipboard   Disable the clipboard sharing             (default: false)
   -nd, --no-delete      Disable the delete option                 (default: false)
   -si, --silent         Running without dir listing               (default: false)
@@ -323,6 +325,7 @@ func oneShotFunctions(upd, hash, hashLong, version *bool) {
 		if err != nil {
 			logger.Fatalf("Failed to update tool: %+v", err)
 		}
+		os.Exit(0)
 	}
 
 	// Check for hash flag
@@ -338,28 +341,26 @@ func oneShotFunctions(upd, hash, hashLong, version *bool) {
 	//
 	// Check for version flag
 	if *version {
-		fmt.Printf("goshs version is: %+v\n", goshsversion.GoshsVersion)
+		logger.PrintBanner(goshsversion.GoshsVersion)
 		os.Exit(0)
 	}
 
 }
 
 func resolveInterface(ip string) string {
-	// Check if interface name was provided as -i
-	// If so, resolve to ip address of interface
-	if !strings.Contains(ip, ".") {
-		addr, err := utils.GetInterfaceIpv4Addr(ip)
-		if err != nil {
-			logger.Fatal(err)
-			os.Exit(-1)
-		}
-
-		if addr == "" {
-			logger.Fatal("IP address cannot be found for provided interface")
-			os.Exit(-1)
-		}
-
-		return addr
+	// If it parses as an IP address (v4 or v6), use it directly.
+	if net.ParseIP(ip) != nil {
+		return ip
 	}
-	return ip
+	// Otherwise treat it as an interface name and resolve to its IPv4 address.
+	addr, err := utils.GetInterfaceIpv4Addr(ip)
+	if err != nil {
+		logger.Fatal(err)
+		os.Exit(-1)
+	}
+	if addr == "" {
+		logger.Fatal("IP address cannot be found for provided interface")
+		os.Exit(-1)
+	}
+	return addr
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -156,7 +157,7 @@ func proxy(remote ssh.Channel, localIP string, localPort int) {
 	defer remote.Close()
 	logger.Debugf("tunnel: proxy connecting to %s:%d", localIP, localPort)
 	local, err := net.DialTimeout("tcp",
-		fmt.Sprintf("%s:%d", localIP, localPort), 5*time.Second)
+		net.JoinHostPort(localIP, strconv.Itoa(localPort)), 5*time.Second)
 	if err != nil {
 		logger.Debugf("tunnel: proxy dial failed: %v", err)
 		return

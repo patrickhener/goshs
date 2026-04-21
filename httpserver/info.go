@@ -39,7 +39,7 @@ func (fs *FileServer) handleInfo(w http.ResponseWriter) {
 			"embedded":        fmt.Sprintf("%t", fs.Embedded),
 			"verbose":         fmt.Sprintf("%t", fs.Verbose),
 			"webroot":         fs.Webroot,
-			"shared-links":    fmt.Sprintf("%d", len(fs.SharedLinks)),
+			"shared-links":    fmt.Sprintf("%d", fs.sharedLinksCount()),
 			"dns":             fmt.Sprintf("%t", fs.Options.DNS),
 			"dns-port":        fmt.Sprintf("%d", fs.Options.DNSPort),
 			"dns-ip":          fs.Options.DNSIP,

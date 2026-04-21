@@ -518,7 +518,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		Items:           fileItems,
 		EmbeddedItems:   embeddedFiles,
 		Clipboard:       clipEntries,
-		SharedLinks:     fileS.SharedLinks,
+		SharedLinks:     fileS.snapshotSharedLinks(),
 		CSRFToken:       fileS.CSRFToken,
 		MaxUpload:       fileS.MaxUpload,
 	}
@@ -882,7 +882,7 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	interfaceAdresses := make(map[string]string)
 	// Return share URL
 	if fs.IP == "0.0.0.0" {
-		interfaceAdresses, err = utils.GetAllIPAdresses()
+		interfaceAdresses, err = utils.GetAllIPAddresses()
 		if err != nil {
 			logger.Errorf("There has been an error fetching the interface addresses: %+v\n", err)
 		}
@@ -925,7 +925,9 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Add to map
+	fs.sharedLinksMu.Lock()
 	fs.SharedLinks[token] = sl
+	fs.sharedLinksMu.Unlock()
 
 	body := fs.emitCollabEvent(r, http.StatusOK)
 	logger.LogRequest(r, http.StatusOK, fs.Verbose, fs.Webhook, body)
@@ -947,34 +949,37 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
-	if _, token := r.URL.Query()["token"]; !token {
-		http.Error(w, "error in token handler", 400)
+	if _, hasToken := r.URL.Query()["token"]; !hasToken {
+		http.Error(w, "error in token handler", http.StatusBadRequest)
+		return
 	}
 
-	token := r.URL.Query()["token"][0]
+	token := r.URL.Query().Get("token")
+
+	fs.sharedLinksMu.RLock()
 	entry, ok := fs.SharedLinks[token]
+	fs.sharedLinksMu.RUnlock()
+
 	if !ok || time.Now().After(entry.Expires) {
 		http.NotFound(w, r)
 		return
 	}
 
-	file, err := os.Open(filepath.Join(fs.Webroot, entry.FilePath))
-	if err != nil {
-		logger.Errorf("error opening shared file: %s", entry.FilePath)
-	}
-
 	// Only send if download limit not reached
 	if entry.DownloadLimit > 0 || entry.DownloadLimit == -1 {
 		if entry.IsDir {
-			// bulkDownload folder as zip
-			// GET /?file=%252Ffilepath&bulk=true
 			q := r.URL.Query()
 			q.Set("file", entry.FilePath)
 			q.Set("bulk", "true")
 			r.URL.RawQuery = q.Encode()
-
 			fs.bulkDownload(w, r)
 		} else {
+			file, err := os.Open(filepath.Join(fs.Webroot, entry.FilePath))
+			if err != nil {
+				logger.Errorf("error opening shared file: %s", entry.FilePath)
+				fs.handleError(w, r, err, http.StatusInternalServerError)
+				return
+			}
 			fs.sendFile(w, r, file, configFile{})
 		}
 	} else {
@@ -982,25 +987,48 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Subtract from download limit
-	entry.Downloaded++
-
-	fs.SharedLinks[token] = entry
-	if fs.SharedLinks[token].DownloadLimit != -1 {
-		if fs.SharedLinks[token].Downloaded >= fs.SharedLinks[token].DownloadLimit {
-			// Remove the share link from map to keep it clean
+	// Update download counter and remove link if limit reached
+	fs.sharedLinksMu.Lock()
+	if current, exists := fs.SharedLinks[token]; exists {
+		current.Downloaded++
+		if current.DownloadLimit != -1 && current.Downloaded >= current.DownloadLimit {
 			delete(fs.SharedLinks, token)
+		} else {
+			fs.SharedLinks[token] = current
 		}
 	}
+	fs.sharedLinksMu.Unlock()
+}
+
+// snapshotSharedLinks returns a copy of the SharedLinks map for safe use in
+// templates without holding the lock for the entire render.
+func (fs *FileServer) snapshotSharedLinks() map[string]SharedLink {
+	fs.sharedLinksMu.RLock()
+	snapshot := make(map[string]SharedLink, len(fs.SharedLinks))
+	for k, v := range fs.SharedLinks {
+		snapshot[k] = v
+	}
+	fs.sharedLinksMu.RUnlock()
+	return snapshot
+}
+
+func (fs *FileServer) sharedLinksCount() int {
+	fs.sharedLinksMu.RLock()
+	n := len(fs.SharedLinks)
+	fs.sharedLinksMu.RUnlock()
+	return n
 }
 
 func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request) {
-	if _, token := r.URL.Query()["token"]; !token {
+	if _, hasToken := r.URL.Query()["token"]; !hasToken {
 		http.Error(w, "error in token delete handler", http.StatusBadRequest)
+		return
 	}
 
 	token := r.URL.Query().Get("token")
+	fs.sharedLinksMu.Lock()
 	delete(fs.SharedLinks, token)
+	fs.sharedLinksMu.Unlock()
 
 	body := fs.emitCollabEvent(r, http.StatusNoContent)
 	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, body)

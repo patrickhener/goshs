@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+
 	"goshs.de/goshs/v2/clipboard"
 	"goshs.de/goshs/v2/dnsserver"
 	"goshs.de/goshs/v2/httpserver"
@@ -14,7 +16,7 @@ import (
 	"goshs.de/goshs/v2/ws"
 )
 
-func StartAll(opts *options.Options) {
+func StartAll(opts *options.Options) func(context.Context) {
 	// Init clipboard and hub
 	clip := clipboard.New()
 	hub := ws.NewHub(clip, opts.CLI)
@@ -28,8 +30,9 @@ func StartAll(opts *options.Options) {
 	go httpSrv.Start("web")
 
 	// webdav
+	var webdavSrv *httpserver.FileServer
 	if opts.WebDav {
-		webdavSrv := httpserver.NewHttpServer(opts, hub, clip, wl, *wh)
+		webdavSrv = httpserver.NewHttpServer(opts, hub, clip, wl, *wh)
 		webdavSrv.WebdavPort = opts.WebDavPort
 		go webdavSrv.Start("webdav")
 	}
@@ -59,6 +62,17 @@ func StartAll(opts *options.Options) {
 		err := utils.RegisterZeroconfMDNS(opts.SSL, opts.Port, opts.WebDav, opts.WebDavPort, opts.SFTP, opts.SFTPPort, opts.SMTP, opts.SMTPPort, opts.DNS, opts.DNSPort, opts.SMB, opts.SMBPort)
 		if err != nil {
 			logger.Warnf("error registering zeroconf mDNS: %+v", err)
+		}
+	}
+
+	return func(ctx context.Context) {
+		if err := httpSrv.Shutdown(ctx); err != nil {
+			logger.Errorf("error shutting down HTTP server: %+v", err)
+		}
+		if webdavSrv != nil {
+			if err := webdavSrv.Shutdown(ctx); err != nil {
+				logger.Errorf("error shutting down WebDAV server: %+v", err)
+			}
 		}
 	}
 }

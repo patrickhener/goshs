@@ -14,6 +14,22 @@ import (
 	"goshs.de/goshs/v2/logger"
 )
 
+// prepareWrite enforces the ACL for dir and applies the upload size limit.
+// Returns false if the request has already been rejected.
+func (fs *FileServer) prepareWrite(w http.ResponseWriter, req *http.Request, dir string) bool {
+	acl, aclErr := fs.findEffectiveACL(dir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return false
+	}
+	if fs.MaxUpload > 0 {
+		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
+	}
+	return true
+}
+
 // put handles the PUT request to upload files
 func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 	if !fs.checkCSRF(w, req) {
@@ -35,18 +51,9 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Enforce .goshs ACL (recursive: walks up to webroot)
-	targetDir := filepath.Dir(savepath)
-	acl, aclErr := fs.findEffectiveACL(targetDir)
-	if aclErr != nil {
-		logger.Errorf("error reading file based access config: %+v", aclErr)
-	}
-	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+	// Enforce .goshs ACL and upload size limit
+	if !fs.prepareWrite(w, req, filepath.Dir(savepath)) {
 		return
-	}
-
-	if fs.MaxUpload > 0 {
-		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
 	}
 
 	// disable G304 (CWE-22): Potential file inclusion via variable
@@ -94,17 +101,9 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Enforce .goshs ACL (recursive: walks up to webroot)
-	acl, aclErr := fs.findEffectiveACL(targetDir)
-	if aclErr != nil {
-		logger.Errorf("error reading file based access config: %+v", aclErr)
-	}
-	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+	// Enforce .goshs ACL and upload size limit
+	if !fs.prepareWrite(w, req, targetDir) {
 		return
-	}
-
-	if fs.MaxUpload > 0 {
-		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
 	}
 
 	reader, err := req.MultipartReader()
@@ -227,6 +226,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	// Handle if no files are selected
 	if len(files) == 0 {
 		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
+		return
 	}
 
 	// Validate each path and collect absolute paths; skip any traversal attempts
