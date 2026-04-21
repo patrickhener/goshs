@@ -474,6 +474,80 @@ func TestHandleRedirect_MalformedHeader(t *testing.T) {
 
 // ─── bulkDownload tests ──────────────────────────────────────────────────────
 
+// mockWebhook captures messages sent via HandleWebhookSend for assertion in tests.
+type mockWebhook struct {
+	messages []string
+	events   []string
+}
+
+func (m *mockWebhook) Send(msg string) error          { m.messages = append(m.messages, msg); return nil }
+func (m *mockWebhook) GetEnabled() bool               { return true }
+func (m *mockWebhook) GetEvents() []string            { return []string{"all"} }
+func (m *mockWebhook) Contains(event string) bool     { return true }
+
+// ─── PUT upload-limit tests ───────────────────────────────────────────────────
+
+func TestPut_MaxUploadExceeded(t *testing.T) {
+	dir := t.TempDir()
+	fs, _ := newTestFileServer(t, dir)
+	fs.MaxUpload = 5 // only allow 5 bytes
+
+	r := httptest.NewRequest(http.MethodPut, "/file.txt", strings.NewReader("this is more than five bytes"))
+	r.Header.Set("X-CSRF-Token", "test-csrf")
+	w := httptest.NewRecorder()
+	fs.put(w, r)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+	// Partial file must not be left on disk.
+	_, err := os.Stat(filepath.Join(dir, "file.txt"))
+	require.True(t, os.IsNotExist(err), "partial file should be removed after limit exceeded")
+}
+
+func TestUpload_MaxUploadExceeded(t *testing.T) {
+	dir := t.TempDir()
+	fs, cleanup := newTestFileServer(t, dir)
+	defer cleanup()
+	fs.MaxUpload = 5 // only allow 5 bytes total body
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "big.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("this is definitely more than five bytes"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	r := httptest.NewRequest(http.MethodPost, "/upload", body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	r.Header.Set("X-CSRF-Token", "test-csrf")
+	w := httptest.NewRecorder()
+	fs.upload(w, r)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+	_, err = os.Stat(filepath.Join(dir, "big.txt"))
+	require.True(t, os.IsNotExist(err), "partial file should be removed after limit exceeded")
+}
+
+// ─── redirect webhook test ────────────────────────────────────────────────────
+
+func TestHandleRedirect_SendsWebhook(t *testing.T) {
+	dir := t.TempDir()
+	fs, _ := newTestFileServer(t, dir)
+	mock := &mockWebhook{}
+	var whi webhook.Webhook = mock
+	fs.Webhook = whi
+
+	r := httptest.NewRequest(http.MethodGet, "/?redirect&url=http://example.com", nil)
+	w := httptest.NewRecorder()
+	fs.handleRedirect(w, r)
+
+	require.Equal(t, http.StatusFound, w.Code)
+	require.Len(t, mock.messages, 1)
+	require.Contains(t, mock.messages[0], "http://example.com")
+}
+
+// ─── bulkDownload tests ──────────────────────────────────────────────────────
+
 func TestBulkDownload_UploadOnly(t *testing.T) {
 	fs, _ := newTestFileServer(t, t.TempDir())
 	fs.UploadOnly = true

@@ -53,5 +53,6 @@
   "smb_port": 445,
   "smb_domain": "",
   "smb_share": "",
-  "smb_wordlist": ""
+  "smb_wordlist": "",
+  "max_upload_size": 0
 }

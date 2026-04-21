@@ -65,6 +65,7 @@ func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard
 		Verbose:      opts.Verbose,
 		Tunnel:       opts.Tunnel,
 		Version:      goshsversion.GoshsVersion,
+		MaxUpload:    opts.MaxUploadSize,
 		Options:      opts,
 		CSRFToken:    generateCSRFToken(),
 	}

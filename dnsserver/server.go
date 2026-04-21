@@ -73,7 +73,11 @@ func (d *DNSServer) handler(w dns.ResponseWriter, r *dns.Msg) {
 				Preference: 10,
 				Mx:         "mail." + q.Name,
 			})
-			// Add TypeAAAA,TypeTXT, TypeNS, TypeCNAME if needed, for now not applicable
+		case dns.TypeTXT:
+			m.Answer = append(m.Answer, &dns.TXT{
+				Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 1},
+				Txt: []string{q.Name, "src=" + w.RemoteAddr().String()},
+			})
 		}
 	}
 

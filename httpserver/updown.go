@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"archive/zip"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -46,14 +45,9 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		logger.Errorf("unable to read PUT request body: %+v", err)
-		return
+	if fs.MaxUpload > 0 {
+		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
 	}
-	defer req.Body.Close()
-
-	reader := bytes.NewReader(body)
 
 	// disable G304 (CWE-22): Potential file inclusion via variable
 	// #nosec G304
@@ -63,17 +57,24 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, err, http.StatusInternalServerError)
 		return
 	}
-	defer osFile.Close()
 
-	if _, err := io.Copy(osFile, reader); err != nil {
-		logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
-		fs.handleError(w, req, err, http.StatusInternalServerError)
+	if _, err := io.Copy(osFile, req.Body); err != nil {
+		osFile.Close()
+		os.Remove(savepath)
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+		} else {
+			logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
+			fs.handleError(w, req, err, http.StatusInternalServerError)
+		}
 		return
 	}
+	osFile.Close()
 
 	// Log request
 	_ = fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, nil)
 }
 
 // upload handles the POST request to upload files
@@ -102,6 +103,10 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if fs.MaxUpload > 0 {
+		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
+	}
+
 	reader, err := req.MultipartReader()
 	if err != nil {
 		logger.Errorf("reading multipart request: %+v", err)
@@ -114,7 +119,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if err != nil {
-			logger.Errorf("reading multipart part: %+v", err)
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+			} else {
+				logger.Errorf("reading multipart part: %+v", err)
+			}
 			return
 		}
 		if part.FileName() == "" {
@@ -163,7 +173,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			if readErr != nil {
 				dst.Close()
 				os.Remove(tempPath)
-				logger.Errorf("reading uploaded data: %+v", readErr)
+				var maxErr *http.MaxBytesError
+				if errors.As(readErr, &maxErr) {
+					fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+				} else {
+					logger.Errorf("reading uploaded data: %+v", readErr)
+				}
 				return
 			}
 		}

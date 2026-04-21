@@ -520,6 +520,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		Clipboard:       clipEntries,
 		SharedLinks:     fileS.SharedLinks,
 		CSRFToken:       fileS.CSRFToken,
+		MaxUpload:       fileS.MaxUpload,
 	}
 
 	err := renderIndex(w, uiData)
@@ -805,6 +806,7 @@ func (fs *FileServer) handleRedirect(w http.ResponseWriter, req *http.Request) {
 
 	http.Redirect(w, req, target, status)
 
+	logger.HandleWebhookSend(fmt.Sprintf("[WEB] Redirect followed: %s → %s", req.RemoteAddr, target), "redirect", fs.Webhook)
 	body := fs.emitCollabEvent(req, status)
 	logger.LogRequest(req, status, fs.Verbose, fs.Webhook, body)
 }

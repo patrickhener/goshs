@@ -84,6 +84,7 @@ type FileServer struct {
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
 	Whitelist      *Whitelist
+	MaxUpload      int64
 	SharedLinks    map[string]SharedLink
 	Tunnel         bool
 	TunnelURL      string
