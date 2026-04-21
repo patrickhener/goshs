@@ -6,6 +6,6 @@ The tool is more or less a rolling release. I am trying to fix issues right away
 
 ## Reporting a Vulnerability
 
-Security issues are welcome to be reported in the issue section. Please be precise how to reproduce the issue including the version you use, the OS you run on and possibly the request you made or a Proof-of-Concept command line.
+Security issues are welcome to be reported in the issue section or as security advisory. Please be precise how to reproduce the issue including the version you use, the OS you run on and possibly the request you made or a Proof-of-Concept command line.
 
 I will try to assess the issues as soon as possible.
