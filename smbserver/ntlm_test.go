@@ -393,3 +393,110 @@ func buildAuthMessage(username, domain, workstation string, lmResp, ntResp, encK
 
 	return msg
 }
+
+// ─── asn1Len ──────────────────────────────────────────────────────────────────
+
+func TestAsn1Len_Short(t *testing.T) {
+	// n < 128 → single byte
+	require.Equal(t, []byte{0x00}, asn1Len(0))
+	require.Equal(t, []byte{0x7F}, asn1Len(127))
+}
+
+func TestAsn1Len_OneByte(t *testing.T) {
+	// 128 ≤ n < 256 → 0x81 length
+	require.Equal(t, []byte{0x81, 0x80}, asn1Len(128))
+	require.Equal(t, []byte{0x81, 0xFF}, asn1Len(255))
+}
+
+func TestAsn1Len_TwoBytes(t *testing.T) {
+	// n ≥ 256 → 0x82 high low
+	require.Equal(t, []byte{0x82, 0x01, 0x00}, asn1Len(256))
+	require.Equal(t, []byte{0x82, 0x02, 0x00}, asn1Len(512))
+}
+
+// ─── DeriveNTLMv2SigningKey ───────────────────────────────────────────────────
+
+func TestDeriveNTLMv2SigningKey_NoKeyExchange(t *testing.T) {
+	// Without an EncryptedRandomSessionKey the function returns the KeyExchangeKey.
+	// Two calls with the same inputs must produce the same output.
+	ntProofStr := make([]byte, 16)
+	for i := range ntProofStr {
+		ntProofStr[i] = byte(i)
+	}
+
+	key1, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, nil)
+	require.NoError(t, err)
+
+	key2, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, key1, key2)
+	require.Equal(t, 16, len(key1))
+}
+
+func TestDeriveNTLMv2SigningKey_WithKeyExchange(t *testing.T) {
+	// With a 16-byte EncryptedRandomSessionKey the function RC4-decrypts it.
+	ntProofStr := make([]byte, 16)
+	encKey := make([]byte, 16)
+	for i := range encKey {
+		encKey[i] = byte(i + 1)
+	}
+
+	key, err := DeriveNTLMv2SigningKey("password", "user", "DOMAIN", ntProofStr, encKey)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv2SigningKey_EmptyDomain(t *testing.T) {
+	ntProofStr := make([]byte, 16)
+	key, err := DeriveNTLMv2SigningKey("password", "user", "", ntProofStr, nil)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+// ─── DeriveNTLMv1SigningKey ───────────────────────────────────────────────────
+
+func TestDeriveNTLMv1SigningKey_NoKeyExchange(t *testing.T) {
+	captured := &CapturedHash{
+		Protocol: ProtoNTLMv1,
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_ESS(t *testing.T) {
+	captured := &CapturedHash{
+		Protocol:   ProtoNTLMv1ESS,
+		LMResponse: make([]byte, 8),
+	}
+	for i := range captured.LMResponse {
+		captured.LMResponse[i] = byte(i)
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_WithKeyExchange(t *testing.T) {
+	encKey := make([]byte, 16)
+	for i := range encKey {
+		encKey[i] = byte(i + 0x10)
+	}
+	captured := &CapturedHash{
+		Protocol:                  ProtoNTLMv1,
+		EncryptedRandomSessionKey: encKey,
+	}
+	key, err := DeriveNTLMv1SigningKey("password", captured)
+	require.NoError(t, err)
+	require.Equal(t, 16, len(key))
+}
+
+func TestDeriveNTLMv1SigningKey_Deterministic(t *testing.T) {
+	captured := &CapturedHash{Protocol: ProtoNTLMv1}
+	k1, err := DeriveNTLMv1SigningKey("pass", captured)
+	require.NoError(t, err)
+	k2, err := DeriveNTLMv1SigningKey("pass", captured)
+	require.NoError(t, err)
+	require.Equal(t, k1, k2)
+}
