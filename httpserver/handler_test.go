@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"goshs.de/goshs/v2/clipboard"
+	"goshs.de/goshs/v2/smtpattach"
 	"goshs.de/goshs/v2/webhook"
 	"goshs.de/goshs/v2/ws"
 	"github.com/stretchr/testify/require"
@@ -295,6 +296,129 @@ func TestDeleteShareHandler_NonexistentToken_NoError(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, w.Code)
 }
 
+// ─── deleteFile .goshs guard ──────────────────────────────────────────────────
+
+func TestDeleteFile_DotGoshsBlocked(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".goshs"), []byte(`{}`), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+
+	r := httptest.NewRequest(http.MethodDelete, "/.goshs", nil)
+	r.Header.Set("X-CSRF-Token", "test-csrf")
+	w := httptest.NewRecorder()
+
+	fs.deleteFile(w, r)
+
+	require.Equal(t, http.StatusForbidden, w.Code)
+	_, err := os.Stat(filepath.Join(root, ".goshs"))
+	require.NoError(t, err, ".goshs should not have been deleted")
+}
+
+// ─── CreateShareHandler edge cases ───────────────────────────────────────────
+
+func TestCreateShareHandler_InvalidExpiresInt(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+	fs.Pass = "secret"
+	fs.IP = "127.0.0.1"
+	fs.Port = 8000
+
+	r := httptest.NewRequest(http.MethodGet, "/f.txt?share&expires=notanint", nil)
+	w := httptest.NewRecorder()
+	fs.CreateShareHandler(w, r)
+	// Bad expires: handler writes 400 via http.Error (no early return in the code)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateShareHandler_InvalidLimitInt(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+	fs.Pass = "secret"
+	fs.IP = "127.0.0.1"
+	fs.Port = 8000
+
+	r := httptest.NewRequest(http.MethodGet, "/f.txt?share&limit=notanint", nil)
+	w := httptest.NewRecorder()
+	fs.CreateShareHandler(w, r)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateShareHandler_SSLProtocol(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+	fs.Pass = "secret"
+	fs.IP = "127.0.0.1"
+	fs.Port = 8000
+	fs.SSL = true
+
+	r := httptest.NewRequest(http.MethodGet, "/f.txt?share", nil)
+	w := httptest.NewRecorder()
+	fs.CreateShareHandler(w, r)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp map[string][]string
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.NotEmpty(t, resp["urls"])
+	require.Contains(t, resp["urls"][0], "https://")
+}
+
+func TestCreateShareHandler_Port80(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+	fs.Pass = "secret"
+	fs.IP = "127.0.0.1"
+	fs.Port = 80
+
+	r := httptest.NewRequest(http.MethodGet, "/f.txt?share", nil)
+	w := httptest.NewRecorder()
+	fs.CreateShareHandler(w, r)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp map[string][]string
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	// URL for port 80 should NOT include port number
+	require.NotContains(t, resp["urls"][0], ":80")
+}
+
+// ─── ShareHandler directory download ─────────────────────────────────────────
+
+func TestShareHandler_IsDir_BulkDownload(t *testing.T) {
+	root := t.TempDir()
+	subDir := filepath.Join(root, "mydir")
+	require.NoError(t, os.Mkdir(subDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(subDir, "a.txt"), []byte("content"), 0644))
+
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+	fs.SharedLinks["dirtoken"] = SharedLink{
+		FilePath:      "/mydir",
+		IsDir:         true,
+		Expires:       time.Now().Add(1 * time.Hour),
+		DownloadLimit: 1,
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/?token=dirtoken", nil)
+	w := httptest.NewRecorder()
+	fs.ShareHandler(w, r)
+
+	// bulkDownload sends a zip — either 200 with zip content-type or some response
+	require.NotEqual(t, http.StatusNotFound, w.Code)
+}
+
 // ─── handleSMTPAttachment ─────────────────────────────────────────────────────
 
 func TestHandleSMTPAttachment_NotFound(t *testing.T) {
@@ -321,4 +445,22 @@ func TestHandleSMTPAttachment_NoID(t *testing.T) {
 	fs.handleSMTPAttachment(w, r)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestHandleSMTPAttachment_Found(t *testing.T) {
+	root := t.TempDir()
+	fs, cleanup := newTestFileServer(t, root)
+	defer cleanup()
+
+	id := "test-attach-001"
+	smtpattach.Save(id, "report.pdf", "application/pdf", []byte("PDF content"))
+
+	r := httptest.NewRequest(http.MethodGet, "/?smtp&id="+id, nil)
+	w := httptest.NewRecorder()
+
+	fs.handleSMTPAttachment(w, r)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+	require.Equal(t, "PDF content", w.Body.String())
 }
