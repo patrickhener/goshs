@@ -39,6 +39,10 @@ type UIData struct {
 
 	// CSRF token embedded into the page for JS to read
 	CSRFToken string
+
+	// MaxUpload is the server-enforced upload limit in bytes (0 = unlimited).
+	// Embedded into the page so JS can show a human-readable error on 413.
+	MaxUpload int64
 }
 
 // BreadcrumbPart is a single segment of the path breadcrumb.

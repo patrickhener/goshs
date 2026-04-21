@@ -1,9 +1,11 @@
 package httpserver
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +29,24 @@ import (
 	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
+
+// Shutdown gracefully stops the HTTP server, waiting up to ctx's deadline for
+// in-flight requests to complete.
+func (fs *FileServer) Shutdown(ctx context.Context) error {
+	if fs.httpServer == nil {
+		return nil
+	}
+	return fs.httpServer.Shutdown(ctx)
+}
+
+// logServeResult treats http.ErrServerClosed as a clean exit (graceful
+// shutdown) and panics on any other error.
+func logServeResult(err error) {
+	if errors.Is(err, http.ErrServerClosed) {
+		return
+	}
+	logger.Panic(err)
+}
 
 func generateCSRFToken() string {
 	b := make([]byte, 32)
@@ -65,8 +86,11 @@ func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard
 		Verbose:      opts.Verbose,
 		Tunnel:       opts.Tunnel,
 		Version:      goshsversion.GoshsVersion,
+		MaxUpload:    opts.MaxUploadSize,
 		Options:      opts,
 		CSRFToken:    generateCSRFToken(),
+		authCache:    make(map[string]bool),
+		authFailures: make(map[string]*authFailEntry),
 	}
 
 	fs.Hub = hub
@@ -154,7 +178,7 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			}
 		})
 
-		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.Port)
+		addr = net.JoinHostPort(fs.IP, strconv.Itoa(fs.Port))
 	case "webdav":
 		// IP Whitelist Middleware
 		mux.Use(fs.IPWhitelistMiddleware)
@@ -184,7 +208,7 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 		} else {
 			mux.Handle("/", wdHandler)
 		}
-		addr = fmt.Sprintf("%+v:%+v", fs.IP, fs.WebdavPort)
+		addr = net.JoinHostPort(fs.IP, strconv.Itoa(fs.WebdavPort))
 	default:
 	}
 
@@ -218,7 +242,7 @@ func (fs *FileServer) StartListener(server *http.Server, what string, listener n
 			// Webhook message
 			logger.HandleWebhookSend(fmt.Sprintf("[CORE] goshs started on %s", listener.Addr()), "started", fs.Webhook)
 
-			logger.Panic(server.ServeTLS(listener, "", ""))
+			logServeResult(server.ServeTLS(listener, "", ""))
 		} else {
 			if fs.MyCert == "" || fs.MyKey == "" {
 				if fs.MyP12 == "" {
@@ -289,7 +313,7 @@ func (fs *FileServer) StartListener(server *http.Server, what string, listener n
 			// Webhook message
 			logger.HandleWebhookSend(fmt.Sprintf("[CORE] goshs started on %s", listener.Addr()), "started", fs.Webhook)
 
-			logger.Panic(server.ServeTLS(listener, "", ""))
+			logServeResult(server.ServeTLS(listener, "", ""))
 		}
 	} else {
 		fs.logStart(what)
@@ -300,7 +324,7 @@ func (fs *FileServer) StartListener(server *http.Server, what string, listener n
 		// Webhook message
 		logger.HandleWebhookSend(fmt.Sprintf("[CORE] goshs started on %s", listener.Addr()), "started", fs.Webhook)
 
-		logger.Panic(server.Serve(listener))
+		logServeResult(server.Serve(listener))
 	}
 }
 
@@ -317,19 +341,19 @@ func (fs *FileServer) Start(what string) {
 		logger.Fatalf("Error binding to listener '%s': %+v", addr, err)
 	}
 	defer func() {
-		if err := listener.Close(); err != nil {
+		if err := listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 			logger.Errorf("error closing tcp listener: %+v", err)
 		}
 	}()
 
 	// construct server
 	server := &http.Server{
-		// Addr:              addr,
 		Handler:           http.AllowQuerySemicolons(mux),
 		ReadHeaderTimeout: 10 * time.Second, // Mitigate Slow Loris Attack
 		ErrorLog:          log.New(io.Discard, "", 0),
 		// Against good practice no timeouts here, otherwise big files would be terminated when downloaded
 	}
+	fs.httpServer = server
 
 	// Print silent banner
 	if fs.Silent {
@@ -360,12 +384,14 @@ func (fs *FileServer) Start(what string) {
 		defer ticker.Stop()
 		for range ticker.C {
 			now := time.Now()
+			fs.sharedLinksMu.Lock()
 			for token, link := range fs.SharedLinks {
 				if link.Expires.Before(now) {
 					delete(fs.SharedLinks, token)
 					logger.Debugf("Expired shared link removed: %s", token)
 				}
 			}
+			fs.sharedLinksMu.Unlock()
 		}
 	}()
 

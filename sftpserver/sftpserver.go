@@ -4,7 +4,9 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/gliderlabs/ssh"
 	"github.com/pkg/sftp"
@@ -52,7 +54,7 @@ func (s *SFTPServer) Start() error {
 
 	// Define a simple password auth handler
 	sshServer := ssh.Server{
-		Addr: fmt.Sprintf("%s:%d", s.IP, s.Port),
+		Addr: net.JoinHostPort(s.IP, strconv.Itoa(s.Port)),
 		Handler: func(s ssh.Session) {
 			// Deny default ssh connections
 			_, err = io.WriteString(s, "This server only supports SFTP.\n")

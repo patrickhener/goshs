@@ -18,13 +18,21 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"strings"
 	"time"
 
 	"goshs.de/goshs/v2/logger"
-	"goshs.de/goshs/v2/utils"
 )
+
+func randomSerial() (big.Int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return *big.NewInt(0), err
+	}
+	return *n, nil
+}
 
 // Sum will give the sha256 and sha1 sum of the certificate
 func Sum(cert []byte) (sha256s, sha1s string) {
@@ -92,7 +100,7 @@ func ParseAndSum(cert string) (sha256s, sha1s string, err error) {
 
 // Setup will deliver a fully initialized CA and server cert
 func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
-	randInt, err := utils.RandomNumber()
+	randInt, err := randomSerial()
 	if err != nil {
 		logger.Errorf("when creating certificate: %+v", err)
 	}
@@ -145,7 +153,7 @@ func Setup() (serverTLSConf *tls.Config, sha256s, sha1s string, err error) {
 		logger.Errorf("encoding pem: %+v", err)
 	}
 
-	randInt, err = utils.RandomNumber()
+	randInt, err = randomSerial()
 	if err != nil {
 		logger.Errorf("when creating certificate: %+v", err)
 	}

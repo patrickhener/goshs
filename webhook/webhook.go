@@ -27,7 +27,7 @@ func postJSON(url string, payload any) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK || resp.StatusCode >= 300 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to send webhook: %s", resp.Status)
 	}
 

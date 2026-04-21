@@ -56,7 +56,10 @@ func (s *Session) Rcpt(to string, _ *smtp.RcptOptions) error {
 }
 
 func (s *Session) Data(r io.Reader) error {
-	raw, _ := io.ReadAll(r)
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
 	msg, err := mail.ReadMessage(bytes.NewReader(raw))
 	if err != nil {
 		return err

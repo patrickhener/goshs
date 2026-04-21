@@ -26,14 +26,11 @@ func basicAuthHeader(user, pass string) string {
 }
 
 func newFS(user, pass string) *FileServer {
-	// Clear the global auth cache between tests to avoid cross-test interference.
-	authCacheMutex.Lock()
-	authCache = make(map[string]bool)
-	authCacheMutex.Unlock()
 	return &FileServer{
 		User:        user,
 		Pass:        pass,
 		SharedLinks: map[string]SharedLink{},
+		authCache:   make(map[string]bool),
 	}
 }
 

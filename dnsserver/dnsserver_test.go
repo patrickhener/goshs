@@ -2,6 +2,7 @@ package dnsserver
 
 import (
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/miekg/dns"
@@ -95,11 +96,29 @@ func TestDNSHandler_MXRecord(t *testing.T) {
 	require.Equal(t, "mail.example.com.", mx.Mx)
 }
 
+func TestDNSHandler_TXTRecord(t *testing.T) {
+	s := newTestServer()
+
+	req := new(dns.Msg)
+	req.SetQuestion("callback.example.com.", dns.TypeTXT)
+
+	w := &mockResponseWriter{}
+	s.handler(w, req)
+
+	require.NotNil(t, w.written)
+	require.Len(t, w.written.Answer, 1)
+
+	txt, ok := w.written.Answer[0].(*dns.TXT)
+	require.True(t, ok, "answer should be TXT record")
+	require.Equal(t, "callback.example.com.", txt.Txt[0])
+	require.True(t, strings.HasPrefix(txt.Txt[1], "src="), "second TXT string should carry src= attribution")
+}
+
 func TestDNSHandler_UnknownType_NoAnswer(t *testing.T) {
 	s := newTestServer()
 
 	req := new(dns.Msg)
-	req.SetQuestion("example.com.", dns.TypeTXT) // TXT is not handled
+	req.SetQuestion("example.com.", dns.TypeNS) // NS is not handled
 
 	w := &mockResponseWriter{}
 	s.handler(w, req)

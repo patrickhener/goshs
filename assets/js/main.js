@@ -743,7 +743,7 @@ function renderDNS() {
     const tr = document.createElement("tr");
     tr.className = "data-row" + (i === 0 && !filter ? " new-row" : "");
     tr.innerHTML = `
-<td class="dns-ts">${esc(e.time || "")}</td>
+<td class="dns-ts">${e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : ""}</td>
 <td><span class="qtype-tag ${qtypeClass(e.qtype || "")}">${esc(e.qtype || "?")}</span></td>
 <td>${fmtQName(e.name)}</td>
 <td class="dns-source">${esc(e.source || "")}</td>`;
@@ -1437,6 +1437,16 @@ function startUpload() {
       closeModal("upload-modal");
       ST.pendingUploads = [];
       setTimeout(() => location.reload(), 600);
+    } else if (xhr.status === 413) {
+      const limitBytes = parseInt(
+        document.querySelector('meta[name="max-upload"]')?.content || "0",
+        10,
+      );
+      const msg =
+        limitBytes > 0
+          ? "Upload rejected: exceeds the " + fmtBytes(limitBytes) + " server limit"
+          : "Upload rejected: file too large";
+      toast(msg, "error");
     } else toast("Upload failed: " + xhr.statusText, "error");
   };
   xhr.onerror = () => toast("Upload failed", "error");

@@ -169,23 +169,13 @@ func LogSFTPRequestBlocked(r *sftp.Request, ip string, err error) {
 }
 
 func HandleWebhookSend(message string, event string, wh webhook.Webhook) {
-	if wh.GetEnabled() {
-		// Only send if wh.Contains(event) or if the first event is "all" but wh.Contains("verbose") is false
-		if wh.Contains("all") && event != "verbose" {
-			err := wh.Send(message)
-			if err != nil {
-				logger.Error(err)
-			}
-		} else if wh.Contains(event) {
-			err := wh.Send(message)
-			if err != nil {
-				logger.Error(err)
-			}
-		} else if wh.Contains("verbose") && event == "verbose" {
-			err := wh.Send(message)
-			if err != nil {
-				logger.Error(err)
-			}
+	if !wh.GetEnabled() {
+		return
+	}
+	send := wh.Contains(event) || (wh.Contains("all") && event != "verbose")
+	if send {
+		if err := wh.Send(message); err != nil {
+			logger.Error(err)
 		}
 	}
 }
@@ -198,6 +188,15 @@ func writeMagenta(s string) string {
 
 func writeMagentaSlice(s []string) string {
 	return fmt.Sprintf("\x1b[1;35m%s\x1b[0m", strings.Join(s, " "))
+}
+
+func PrintBanner(version string) {
+	fmt.Printf("  __ _  ___  ___| |__  ___ \n")
+	fmt.Printf(" / _` |/ _ \\/ __| '_ \\/ __|\n")
+	fmt.Printf("| (_| | (_) \\__ \\ | | \\__ \\\n")
+	fmt.Printf(" \\__, |\\___/|___/_| |_|___/\n")
+	fmt.Printf("  __/ |                    \n")
+	fmt.Printf(" |___/              %s\n\n", version)
 }
 
 func init() {

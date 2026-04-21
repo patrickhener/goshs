@@ -3,6 +3,7 @@ package options
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -72,6 +73,7 @@ type Options struct {
 	SMBDomain           string   // ""
 	SMBShare            string   // ""
 	SMBWordlist         string   // ""
+	MaxUploadSize       int64    // 0 = unlimited
 }
 
 func Parse() (*Options, bool) {
@@ -176,6 +178,8 @@ func Parse() (*Options, bool) {
 	flag.StringVar(&opts.SMBDomain, "smb-domain", "GOSHS", "SMB server domain")
 	flag.StringVar(&opts.SMBShare, "smb-share", "goshs", "SMB server share")
 	flag.StringVar(&opts.SMBWordlist, "smb-wordlist", "", "Wordlist file for SMB hash cracking")
+	flag.Int64Var(&opts.MaxUploadSize, "mu", 0, "Maximum upload size in bytes (0 = unlimited)")
+	flag.Int64Var(&opts.MaxUploadSize, "max-upload", 0, "Maximum upload size in bytes (0 = unlimited)")
 
 	// One-shot flags
 	upd := flag.Bool("update", false, "update")
@@ -218,22 +222,23 @@ goshs %s
 Usage: %s [options]
 
 Web server options:
-  -i,  --ip             IP or Interface to listen on            (default: 0.0.0.0)
-  -p,  --port           The port to listen on                   (default: 8000)
-  -d,  --dir            The web root directory                  (default: current working path)
-  -w,  --webdav         Also serve using webdav protocol        (default: false)
-  -wp, --webdav-port    The port to listen on for webdav        (default: 8001)
-  -ro, --read-only      Read only mode, no upload possible      (default: false)
-  -uo, --upload-only    Upload only mode, no download possible  (default: false)
-  -uf, --upload-folder  Specify a different upload folder       (default: current working path)
-  -nc, --no-clipboard   Disable the clipboard sharing           (default: false)
-  -nd, --no-delete      Disable the delete option               (default: false)
-  -si, --silent         Running without dir listing             (default: false)
-  -I,  --invisible      Invisible mode                          (default: false)
-  -c,  --cli            Enable cli (only with auth and tls)     (default: false)
-  -e,  --embedded       Show embedded files in UI               (default: false)
-  -o,  --output         Write output to logfile                 (default: false)
-  -t,  --tunnel         Enable tunnel                           (default: false)
+  -i,  --ip             IP or Interface to listen on              (default: 0.0.0.0)
+  -p,  --port           The port to listen on                     (default: 8000)
+  -d,  --dir            The web root directory                    (default: current working path)
+  -w,  --webdav         Also serve using webdav protocol          (default: false)
+  -wp, --webdav-port    The port to listen on for webdav          (default: 8001)
+  -ro, --read-only      Read only mode, no upload possible        (default: false)
+  -uo, --upload-only    Upload only mode, no download possible    (default: false)
+  -uf, --upload-folder  Specify a different upload folder         (default: current working path)
+  -mu, --max-upload     Maximum upload size in bytes, 0=unlimited (default: 0)
+  -nc, --no-clipboard   Disable the clipboard sharing             (default: false)
+  -nd, --no-delete      Disable the delete option                 (default: false)
+  -si, --silent         Running without dir listing               (default: false)
+  -I,  --invisible      Invisible mode                            (default: false)
+  -c,  --cli            Enable cli (only with auth and tls)       (default: false)
+  -e,  --embedded       Show embedded files in UI                 (default: false)
+  -o,  --output         Write output to logfile                   (default: false)
+  -t,  --tunnel         Enable tunnel                             (default: false)
 
 TLS options:
   -s,     --ssl           Use TLS
@@ -283,7 +288,7 @@ Webhook options:
   -Wu, --webhook-url        URL to send webhook requests to
   -We, --webhook-events     Comma separated list of events to notify
                             [all, upload, delete, download, view, webdav,
-                            sftp, smb, dns, smtp, verbose] 	  	(default: all)
+                            sftp, smb, dns, smtp, redirect, verbose]	(default: all)
   -Wp, --webhook-provider   Webhook provider
                             [Discord, Mattermost, Slack]                (default: Discord)
 
@@ -292,7 +297,7 @@ Misc options:
   -P  --print-config  Print sample config to STDOUT           (default: false)
   -u  --user          Drop privs to user (unix only)          (default: current user)
       --update        Update goshs to most recent version
-  -m  --mdns          Disable zeroconf mDNS registration      (default: false)
+  -m  --mdns          Enable zeroconf mDNS registration       (default: false)
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
@@ -320,6 +325,7 @@ func oneShotFunctions(upd, hash, hashLong, version *bool) {
 		if err != nil {
 			logger.Fatalf("Failed to update tool: %+v", err)
 		}
+		os.Exit(0)
 	}
 
 	// Check for hash flag
@@ -335,28 +341,26 @@ func oneShotFunctions(upd, hash, hashLong, version *bool) {
 	//
 	// Check for version flag
 	if *version {
-		fmt.Printf("goshs version is: %+v\n", goshsversion.GoshsVersion)
+		logger.PrintBanner(goshsversion.GoshsVersion)
 		os.Exit(0)
 	}
 
 }
 
 func resolveInterface(ip string) string {
-	// Check if interface name was provided as -i
-	// If so, resolve to ip address of interface
-	if !strings.Contains(ip, ".") {
-		addr, err := utils.GetInterfaceIpv4Addr(ip)
-		if err != nil {
-			logger.Fatal(err)
-			os.Exit(-1)
-		}
-
-		if addr == "" {
-			logger.Fatal("IP address cannot be found for provided interface")
-			os.Exit(-1)
-		}
-
-		return addr
+	// If it parses as an IP address (v4 or v6), use it directly.
+	if net.ParseIP(ip) != nil {
+		return ip
 	}
-	return ip
+	// Otherwise treat it as an interface name and resolve to its IPv4 address.
+	addr, err := utils.GetInterfaceIpv4Addr(ip)
+	if err != nil {
+		logger.Fatal(err)
+		os.Exit(-1)
+	}
+	if addr == "" {
+		logger.Fatal("IP address cannot be found for provided interface")
+		os.Exit(-1)
+	}
+	return addr
 }

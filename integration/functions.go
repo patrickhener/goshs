@@ -335,6 +335,14 @@ func testWebdavDelete(t *testing.T, path string) {
 
 	_, err = c.Read("upload_webdav_test_data.txt")
 	require.Error(t, err)
+
+	// Clean up the testfolder created during the move/copy step so subsequent
+	// runs don't see a pre-existing destination and fail with 412.
+	err = c.Remove("testfolder/upload_webdav_test_data.txt")
+	require.NoError(t, err)
+
+	err = c.Remove("testfolder")
+	require.NoError(t, err)
 }
 
 func testWebdavUnauthConnection(t *testing.T, path string) {

@@ -3,6 +3,7 @@ package httpserver
 import (
 	"html/template"
 	"net/http"
+	"sync"
 	"time"
 
 	"goshs.de/goshs/v2/clipboard"
@@ -84,11 +85,23 @@ type FileServer struct {
 	Hub            *ws.Hub
 	Clipboard      *clipboard.Clipboard
 	Whitelist      *Whitelist
+	MaxUpload      int64
 	SharedLinks    map[string]SharedLink
 	Tunnel         bool
 	TunnelURL      string
 	Options        *options.Options
 	CSRFToken      string
+	authCache      map[string]bool
+	authCacheMu    sync.RWMutex
+	authFailures   map[string]*authFailEntry
+	authFailMu     sync.Mutex
+	httpServer     *http.Server
+	sharedLinksMu  sync.RWMutex
+}
+
+type authFailEntry struct {
+	count       int
+	lockedUntil time.Time
 }
 
 type httperror struct {

@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"archive/zip"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +13,22 @@ import (
 
 	"goshs.de/goshs/v2/logger"
 )
+
+// prepareWrite enforces the ACL for dir and applies the upload size limit.
+// Returns false if the request has already been rejected.
+func (fs *FileServer) prepareWrite(w http.ResponseWriter, req *http.Request, dir string) bool {
+	acl, aclErr := fs.findEffectiveACL(dir)
+	if aclErr != nil {
+		logger.Errorf("error reading file based access config: %+v", aclErr)
+	}
+	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+		return false
+	}
+	if fs.MaxUpload > 0 {
+		req.Body = http.MaxBytesReader(w, req.Body, fs.MaxUpload)
+	}
+	return true
+}
 
 // put handles the PUT request to upload files
 func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
@@ -36,24 +51,10 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Enforce .goshs ACL (recursive: walks up to webroot)
-	targetDir := filepath.Dir(savepath)
-	acl, aclErr := fs.findEffectiveACL(targetDir)
-	if aclErr != nil {
-		logger.Errorf("error reading file based access config: %+v", aclErr)
-	}
-	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+	// Enforce .goshs ACL and upload size limit
+	if !fs.prepareWrite(w, req, filepath.Dir(savepath)) {
 		return
 	}
-
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		logger.Errorf("unable to read PUT request body: %+v", err)
-		return
-	}
-	defer req.Body.Close()
-
-	reader := bytes.NewReader(body)
 
 	// disable G304 (CWE-22): Potential file inclusion via variable
 	// #nosec G304
@@ -63,17 +64,24 @@ func (fs *FileServer) put(w http.ResponseWriter, req *http.Request) {
 		fs.handleError(w, req, err, http.StatusInternalServerError)
 		return
 	}
-	defer osFile.Close()
 
-	if _, err := io.Copy(osFile, reader); err != nil {
-		logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
-		fs.handleError(w, req, err, http.StatusInternalServerError)
+	if _, err := io.Copy(osFile, req.Body); err != nil {
+		osFile.Close()
+		os.Remove(savepath)
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+		} else {
+			logger.Errorf("Error writing file %s to disk: %+v", savepath, err)
+			fs.handleError(w, req, err, http.StatusInternalServerError)
+		}
 		return
 	}
+	osFile.Close()
 
 	// Log request
 	_ = fs.emitCollabEvent(req, http.StatusOK)
-	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, body)
+	logger.LogRequest(req, http.StatusOK, fs.Verbose, fs.Webhook, nil)
 }
 
 // upload handles the POST request to upload files
@@ -93,12 +101,8 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Enforce .goshs ACL (recursive: walks up to webroot)
-	acl, aclErr := fs.findEffectiveACL(targetDir)
-	if aclErr != nil {
-		logger.Errorf("error reading file based access config: %+v", aclErr)
-	}
-	if ok := fs.applyCustomAuth(w, req, acl); !ok {
+	// Enforce .goshs ACL and upload size limit
+	if !fs.prepareWrite(w, req, targetDir) {
 		return
 	}
 
@@ -114,7 +118,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if err != nil {
-			logger.Errorf("reading multipart part: %+v", err)
+			var maxErr *http.MaxBytesError
+			if errors.As(err, &maxErr) {
+				fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+			} else {
+				logger.Errorf("reading multipart part: %+v", err)
+			}
 			return
 		}
 		if part.FileName() == "" {
@@ -163,7 +172,12 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			if readErr != nil {
 				dst.Close()
 				os.Remove(tempPath)
-				logger.Errorf("reading uploaded data: %+v", readErr)
+				var maxErr *http.MaxBytesError
+				if errors.As(readErr, &maxErr) {
+					fs.handleError(w, req, fmt.Errorf("upload exceeds size limit (%d bytes)", fs.MaxUpload), http.StatusRequestEntityTooLarge)
+				} else {
+					logger.Errorf("reading uploaded data: %+v", readErr)
+				}
 				return
 			}
 		}
@@ -212,6 +226,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 	// Handle if no files are selected
 	if len(files) == 0 {
 		fs.handleError(w, req, errors.New("you need to select a file before you can download a zip archive"), 404)
+		return
 	}
 
 	// Validate each path and collect absolute paths; skip any traversal attempts

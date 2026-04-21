@@ -2,6 +2,7 @@ package update
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -59,12 +60,16 @@ func UpdateTool(version string) error {
 		return fmt.Errorf("failed to get latest release: %+v", err)
 	}
 
-	err = applyUpdate(assetURL)
-	if err != nil {
+	if err = applyUpdate(assetURL); err != nil {
 		return fmt.Errorf("failed to apply update: %+v", err)
 	}
 
-	logger.Info("Goshs was updated successfully")
+	logger.Infof("goshs updated successfully to %s", latestRelease.GetTagName())
+	fmt.Printf("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Printf(" Changelog for %s\n", latestRelease.GetTagName())
+	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	fmt.Println(latestRelease.GetBody())
+	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 	return nil
 }
 
@@ -136,15 +141,19 @@ func tarXVZF(response *http.Response) (io.Reader, error) {
 		if err == io.EOF {
 			break
 		}
-
 		if err != nil {
 			return nil, err
 		}
 
 		if strings.Contains(header.Name, "goshs") {
-			return io.LimitReader(tarReader, header.Size), nil
+			// Read fully before gzipReader is closed by defer
+			data, err := io.ReadAll(io.LimitReader(tarReader, header.Size))
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(data), nil
 		}
 	}
 
-	return nil, fmt.Errorf("%s", "end of function - should not happen")
+	return nil, fmt.Errorf("no goshs binary found in release archive")
 }

@@ -7,24 +7,109 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
-	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"goshs.de/goshs/v2/logger"
 )
 
-var (
-	authCache      = make(map[string]bool)
-	authCacheMutex = sync.RWMutex{}
+const (
+	authMaxFailures  = 5
+	authLockDuration = 30 * time.Second
 )
+
+// verifyCredentials checks the Authorization header against the configured
+// username/password (plaintext or bcrypt). Returns the raw header value on
+// success so it can be cached, or an empty string on failure.
+// Repeated failures from the same IP are rate-limited.
+func (fs *FileServer) verifyCredentials(r *http.Request) (authVal string, ok bool) {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Basic ") {
+		return "", false
+	}
+	authVal = auth[len("Basic "):]
+
+	// Fast path: already verified this credential in this instance
+	fs.authCacheMu.RLock()
+	cached := fs.authCache[authVal]
+	fs.authCacheMu.RUnlock()
+	if cached {
+		return authVal, true
+	}
+
+	// Rate-limit check: reject IPs that have exceeded the failure threshold
+	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if clientIP == "" {
+		clientIP = r.RemoteAddr
+	}
+	fs.authFailMu.Lock()
+	if fs.authFailures == nil {
+		fs.authFailures = make(map[string]*authFailEntry)
+	}
+	entry := fs.authFailures[clientIP]
+	if entry != nil && time.Now().Before(entry.lockedUntil) {
+		fs.authFailMu.Unlock()
+		logger.Warnf("[AUTH] %s is locked out due to repeated failures", clientIP)
+		return "", false
+	}
+	fs.authFailMu.Unlock()
+
+	username, password, authOK := r.BasicAuth()
+	if !authOK {
+		return "", false
+	}
+
+	var verified bool
+	if strings.HasPrefix(fs.Pass, "$2a$") {
+		if username == fs.User {
+			verified = bcrypt.CompareHashAndPassword([]byte(fs.Pass), []byte(password)) == nil
+		}
+	} else {
+		verified = subtle.ConstantTimeCompare([]byte(username), []byte(fs.User)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(password), []byte(fs.Pass)) == 1
+	}
+
+	if !verified {
+		fs.authFailMu.Lock()
+		if fs.authFailures == nil {
+			fs.authFailures = make(map[string]*authFailEntry)
+		}
+		if entry == nil {
+			entry = &authFailEntry{}
+			fs.authFailures[clientIP] = entry
+		}
+		entry.count++
+		if entry.count >= authMaxFailures {
+			entry.lockedUntil = time.Now().Add(authLockDuration)
+			logger.Warnf("[AUTH] %s locked out after %d failed attempts", clientIP, entry.count)
+		}
+		fs.authFailMu.Unlock()
+		return "", false
+	}
+
+	// Success: clear failure record and cache the credential
+	fs.authFailMu.Lock()
+	delete(fs.authFailures, clientIP)
+	fs.authFailMu.Unlock()
+
+	fs.authCacheMu.Lock()
+	if fs.authCache == nil {
+		fs.authCache = make(map[string]bool)
+	}
+	fs.authCache[authVal] = true
+	fs.authCacheMu.Unlock()
+
+	return authVal, true
+}
 
 // BasicAuthMiddleware is a middleware to handle the basic auth
 func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
-
 		if token != "" {
+			fs.sharedLinksMu.RLock()
 			_, ok := fs.SharedLinks[token]
+			fs.sharedLinksMu.RUnlock()
 			if ok {
 				next.ServeHTTP(w, r)
 				return
@@ -32,58 +117,10 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Basic ") {
+		if _, ok := fs.verifyCredentials(r); !ok {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
-
-		authVal := auth[len("Basic "):]
-		// Cache check
-		authCacheMutex.RLock()
-		cachedOK := authCache[authVal]
-		authCacheMutex.RUnlock()
-
-		if cachedOK {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		//Check if provided password is a bcrypt hash
-		if strings.HasPrefix(fs.Pass, "$2a$") {
-			username, password, authOK := r.BasicAuth()
-			if !authOK {
-				http.Error(w, "Not authorized", http.StatusUnauthorized)
-				return
-			}
-
-			if username != fs.User {
-				http.Error(w, "Not authorized", http.StatusUnauthorized)
-				return
-			}
-
-			if err := bcrypt.CompareHashAndPassword([]byte(fs.Pass), []byte(password)); err != nil {
-				http.Error(w, "Not authorized", http.StatusUnauthorized)
-				return
-			}
-		} else {
-			username, password, authOK := r.BasicAuth()
-			if !authOK {
-				http.Error(w, "Not authorized", http.StatusUnauthorized)
-				return
-			}
-
-			if subtle.ConstantTimeCompare([]byte(username), []byte(fs.User)) == 0 || subtle.ConstantTimeCompare([]byte(password), []byte(fs.Pass)) == 0 {
-				http.Error(w, "Not authorized", http.StatusUnauthorized)
-				return
-			}
-		}
-
-		authCacheMutex.Lock()
-		authCache[authVal] = true
-		authCacheMutex.Unlock()
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -91,57 +128,10 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 // InvisibleBasicAuthMiddleware is a middleware to handle basic auth in invisible mode
 func (fs *FileServer) InvisibleBasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Basic ") {
+		if _, ok := fs.verifyCredentials(r); !ok {
 			fs.handleInvisible(w)
 			return
 		}
-
-		authVal := auth[len("Basic "):]
-		// Cache check
-		authCacheMutex.RLock()
-		cachedOK := authCache[authVal]
-		authCacheMutex.RUnlock()
-
-		if cachedOK {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		//Check if provided password is a bcrypt hash
-		if strings.HasPrefix(fs.Pass, "$2a$") {
-			username, password, authOK := r.BasicAuth()
-			if !authOK {
-				fs.handleInvisible(w)
-				return
-			}
-
-			if username != fs.User {
-				fs.handleInvisible(w)
-				return
-			}
-
-			if err := bcrypt.CompareHashAndPassword([]byte(fs.Pass), []byte(password)); err != nil {
-				fs.handleInvisible(w)
-				return
-			}
-		} else {
-			username, password, authOK := r.BasicAuth()
-			if !authOK {
-				fs.handleInvisible(w)
-				return
-			}
-
-			if subtle.ConstantTimeCompare([]byte(username), []byte(fs.User)) == 0 || subtle.ConstantTimeCompare([]byte(password), []byte(fs.Pass)) == 0 {
-				fs.handleInvisible(w)
-				return
-			}
-		}
-
-		authCacheMutex.Lock()
-		authCache[authVal] = true
-		authCacheMutex.Unlock()
-
 		next.ServeHTTP(w, r)
 	})
 }

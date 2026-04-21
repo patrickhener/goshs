@@ -77,17 +77,28 @@ func (h *Hub) Run() {
 		case message := <-h.Broadcast:
 			// Store in the appropriate ring buffer based on the type field
 			h.classifyAndStore(message)
-			// Fan out to all clients
+			// Fan out to all clients; collect slow/closed clients under the read lock
+			var stale []*Client
 			h.mu.RLock()
 			for client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
-					close(client.send)
-					delete(h.clients, client)
+					stale = append(stale, client)
 				}
 			}
 			h.mu.RUnlock()
+			// Remove stale clients under a write lock
+			if len(stale) > 0 {
+				h.mu.Lock()
+				for _, client := range stale {
+					if _, ok := h.clients[client]; ok {
+						delete(h.clients, client)
+						close(client.send)
+					}
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
 }

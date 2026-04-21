@@ -41,7 +41,7 @@ func Check(opts *options.Options) (*options.Options, error) {
 			if err != nil {
 				return opts, err
 			}
-			file.Close()
+			defer file.Close()
 			return opts, fmt.Errorf("%s", "The config file is accessible via goshs and is writeable by the user running goshs. This is a security issue. Read the docs at https://goshs.de/en/usage/config/index.html")
 		}
 
@@ -51,15 +51,13 @@ func Check(opts *options.Options) (*options.Options, error) {
 	}
 	// Sanity check for invisible mode
 	if opts.Invisible {
-		if opts.SFTP || opts.WebDav {
-			opts.SFTP = false
-			opts.WebDav = false
-			opts.MDNS = false
-			opts.Silent = false
-			opts.DNS = false
-			opts.SMTP = false
-			logger.Warn("Invisible mode activated, disabling SFTP, WebDAV, silent mode, DNS, SMTP and mDNS support")
-		}
+		opts.SFTP = false
+		opts.WebDav = false
+		opts.MDNS = false
+		opts.Silent = false
+		opts.DNS = false
+		opts.SMTP = false
+		logger.Warn("Invisible mode activated, disabling SFTP, WebDAV, silent mode, DNS, SMTP and mDNS support")
 	}
 
 	// Sanity check for upload only vs read only

@@ -62,7 +62,7 @@ func (fs *FileServer) logStart(what string) {
 	var err error
 	if what == modeWeb {
 		if fs.IP == "0.0.0.0" {
-			interfaceAdresses, err = utils.GetAllIPAdresses()
+			interfaceAdresses, err = utils.GetAllIPAddresses()
 			if err != nil {
 				logger.Errorf("There has been an error fetching the interface addresses: %+v\n", err)
 			}
