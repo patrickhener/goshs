@@ -228,6 +228,8 @@ func deriveFilename(mimeType string) string {
 			ext = ".zip"
 		case "text/plain":
 			ext = ".txt"
+		case "video/mp4":
+			ext = ".mp4"
 		}
 		return "attachment" + ext
 	}
