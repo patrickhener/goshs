@@ -51,6 +51,7 @@ func (fs *FileServer) handleInfo(w http.ResponseWriter) {
 			"smb-domain":      fs.Options.SMBDomain,
 			"smb-share":       fs.Options.SMBShare,
 			"max-upload-size": fmt.Sprintf("%d", fs.Options.MaxUploadSize),
+			"catcher":         fmt.Sprintf("%t", fs.CatcherMgr != nil),
 		}
 
 		err := json.NewEncoder(w).Encode(info)

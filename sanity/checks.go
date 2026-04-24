@@ -72,6 +72,13 @@ func Check(opts *options.Options) (*options.Options, error) {
 		}
 	}
 
+	// Sanity check if catcher mode is combined with auth and tls
+	if opts.Catcher && (!opts.SSL || opts.BasicAuth == "") {
+		if opts.Catcher && (!opts.SSL || opts.CertAuth == "") {
+			logger.Fatal("With catcher mode you need to enable basic/cert auth and tls for security reasons.")
+		}
+	}
+
 	// Sanity check if CA mode enabled you will also need TLS enabled in some way
 	if opts.CertAuth != "" && !opts.SSL {
 		logger.Fatal("To use certificate based authentication with a CA cert you will need tls in any mode (-ss, -sk/-sc, -p12, -sl)")

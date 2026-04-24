@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"goshs.de/goshs/v2/catcher"
 	"goshs.de/goshs/v2/clipboard"
 	"goshs.de/goshs/v2/options"
 	"goshs.de/goshs/v2/webhook"
@@ -90,6 +91,7 @@ type FileServer struct {
 	Tunnel         bool
 	TunnelURL      string
 	Options        *options.Options
+	CatcherMgr     *catcher.Manager
 	CSRFToken      string
 	authCache      map[string]bool
 	authCacheMu    sync.RWMutex

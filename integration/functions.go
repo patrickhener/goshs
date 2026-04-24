@@ -361,7 +361,7 @@ func testWebdavAuthConnection(t *testing.T, path string) {
 
 func smbConnect(t *testing.T, host string, port int, user, pass string) (*smb2.Session, *smb2.Share) {
 	t.Helper()
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%+v:%+v", host, port))
 	require.NoError(t, err)
 	t.Cleanup(func() { conn.Close() })
 
@@ -460,7 +460,7 @@ func testSmbDelete(t *testing.T, host string, port int) {
 }
 
 func testSmbUnauthConnection(t *testing.T, host string, port int) {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%+v:%+v", host, port))
 	require.NoError(t, err)
 	defer conn.Close()
 

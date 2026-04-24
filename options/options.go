@@ -74,6 +74,7 @@ type Options struct {
 	SMBShare            string   // ""
 	SMBWordlist         string   // ""
 	MaxUploadSize       int64    // 0 = unlimited
+	Catcher             bool     // false
 }
 
 func Parse() (*Options, bool) {
@@ -180,6 +181,8 @@ func Parse() (*Options, bool) {
 	flag.StringVar(&opts.SMBWordlist, "smb-wordlist", "", "Wordlist file for SMB hash cracking")
 	flag.Int64Var(&opts.MaxUploadSize, "mu", 0, "Maximum upload size in bytes (0 = unlimited)")
 	flag.Int64Var(&opts.MaxUploadSize, "max-upload", 0, "Maximum upload size in bytes (0 = unlimited)")
+	flag.BoolVar(&opts.Catcher, "catcher", false, "Enable reverse shell catcher")
+	flag.BoolVar(&opts.Catcher, "rc", false, "Enable reverse shell catcher")
 
 	// One-shot flags
 	upd := flag.Bool("update", false, "update")
@@ -236,6 +239,7 @@ Web server options:
   -si, --silent         Running without dir listing               (default: false)
   -I,  --invisible      Invisible mode                            (default: false)
   -c,  --cli            Enable cli (only with auth and tls)       (default: false)
+  --catcher, -rc        Enable reverse shell catcher              (default: false)
   -e,  --embedded       Show embedded files in UI                 (default: false)
   -o,  --output         Write output to logfile                   (default: false)
   -t,  --tunnel         Enable tunnel                             (default: false)

@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 	"goshs.de/goshs/v2/clipboard"
 	"goshs.de/goshs/v2/options"
 	"goshs.de/goshs/v2/webhook"
 	"goshs.de/goshs/v2/ws"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // ─── CustomMux tests ─────────────────────────────────────────────────────────
@@ -480,10 +480,10 @@ type mockWebhook struct {
 	events   []string
 }
 
-func (m *mockWebhook) Send(msg string) error          { m.messages = append(m.messages, msg); return nil }
-func (m *mockWebhook) GetEnabled() bool               { return true }
-func (m *mockWebhook) GetEvents() []string            { return []string{"all"} }
-func (m *mockWebhook) Contains(event string) bool     { return true }
+func (m *mockWebhook) Send(msg string) error      { m.messages = append(m.messages, msg); return nil }
+func (m *mockWebhook) GetEnabled() bool           { return true }
+func (m *mockWebhook) GetEvents() []string        { return []string{"all"} }
+func (m *mockWebhook) Contains(event string) bool { return true }
 
 // ─── PUT upload-limit tests ───────────────────────────────────────────────────
 
@@ -571,7 +571,7 @@ func TestBulkDownload_Success(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("bbb"), 0644))
 
 	fs, _ := newTestFileServer(t, dir)
-	r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/?bulk&file=/a.txt&file=/b.txt"), nil)
+	r := httptest.NewRequest(http.MethodGet, "/?bulk&file=/a.txt&file=/b.txt", nil)
 	w := httptest.NewRecorder()
 	fs.bulkDownload(w, r)
 	require.Equal(t, http.StatusOK, w.Code)
@@ -860,11 +860,11 @@ func TestNewHttpServer(t *testing.T) {
 	wl, _ := NewIPWhitelist("", false, "")
 
 	opts := &options.Options{
-		IP:        "0.0.0.0",
-		Port:      8080,
-		Webroot:   "/tmp",
-		SSL:       false,
-		ReadOnly:  false,
+		IP:         "0.0.0.0",
+		Port:       8080,
+		Webroot:    "/tmp",
+		SSL:        false,
+		ReadOnly:   false,
 		UploadOnly: false,
 	}
 

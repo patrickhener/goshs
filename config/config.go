@@ -64,6 +64,7 @@ type Config struct {
 	SMBShare            string   `json:"smb_share"`
 	SMBWordlist         string   `json:"smb_wordlist"`
 	MaxUploadSize       int64    `json:"max_upload_size"`
+	Catcher             bool     `json:"catcher"`
 }
 
 func LoadConfig(opts *options.Options) (*options.Options, error) {
@@ -140,6 +141,7 @@ func LoadConfig(opts *options.Options) (*options.Options, error) {
 	opts.SMBShare = cfg.SMBShare
 	opts.SMBWordlist = cfg.SMBWordlist
 	opts.MaxUploadSize = cfg.MaxUploadSize
+	opts.Catcher = cfg.Catcher
 
 	// Default upload folder to webroot if not set in config
 	if opts.UploadFolder == "" {
@@ -205,6 +207,7 @@ func PrintExample() (string, error) {
 		SMBShare:            "",
 		SMBWordlist:         "",
 		MaxUploadSize:       0,
+		Catcher:             false,
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

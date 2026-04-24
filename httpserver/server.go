@@ -19,6 +19,7 @@ import (
 
 	"github.com/howeyc/gopass"
 	"goshs.de/goshs/v2/ca"
+	"goshs.de/goshs/v2/catcher"
 	"goshs.de/goshs/v2/clipboard"
 	"goshs.de/goshs/v2/goshsversion"
 	"goshs.de/goshs/v2/logger"
@@ -97,6 +98,7 @@ func NewHttpServer(opts *options.Options, hub *ws.Hub, clip *clipboard.Clipboard
 	fs.Clipboard = clip
 	fs.Webhook = wh
 	fs.Whitelist = wl
+	fs.CatcherMgr = catcher.NewManager(hub)
 
 	return fs
 }
@@ -128,6 +130,13 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 
 		// Define routes
 		mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
+			if action, ok := r.URL.Query()["catcher-api"]; ok {
+				if denyForTokenAccess(w, r) {
+					return
+				}
+				fs.handleCatcherAPI(w, r, action[0])
+				return
+			}
 			if strings.HasSuffix(r.URL.Path, "/upload") {
 				if denyForTokenAccess(w, r) {
 					return
@@ -153,6 +162,13 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 			fs.put(w, r)
 		})
 		mux.HandleFunc("DELETE /", func(w http.ResponseWriter, r *http.Request) {
+			if action, ok := r.URL.Query()["catcher-api"]; ok {
+				if denyForTokenAccess(w, r) {
+					return
+				}
+				fs.handleCatcherAPI(w, r, action[0])
+				return
+			}
 			if denyForTokenAccess(w, r) {
 				return
 			}

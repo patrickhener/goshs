@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"goshs.de/goshs/v2/catcher"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/smtpattach"
 	"goshs.de/goshs/v2/utils"
@@ -165,6 +166,20 @@ func (fs *FileServer) earlyBreakParameters(w http.ResponseWriter, req *http.Requ
 			return true
 		}
 		fs.socket(w, req)
+		return true
+	}
+	if _, ok := req.URL.Query()["catcher-ws"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		catcher.ServeCatcherWS(fs.CatcherMgr, w, req)
+		return true
+	}
+	if apiAction, ok := req.URL.Query()["catcher-api"]; ok {
+		if denyForTokenAccess(w, req) {
+			return true
+		}
+		fs.handleCatcherAPI(w, req, apiAction[0])
 		return true
 	}
 	if _, ok := req.URL.Query()["cbDown"]; ok {
@@ -515,6 +530,7 @@ func (fileS *FileServer) constructDefault(w http.ResponseWriter, relpath string,
 		NoDelete:        fileS.NoDelete,
 		CLI:             fileS.CLI,
 		Embedded:        fileS.Embedded,
+		Catcher:         fileS.Options != nil && fileS.Options.Catcher,
 		Items:           fileItems,
 		EmbeddedItems:   embeddedFiles,
 		Clipboard:       clipEntries,
@@ -1109,5 +1125,78 @@ func (fs *FileServer) handleSMTPAttachment(w http.ResponseWriter, r *http.Reques
 	_, err := w.Write(a.Data)
 	if err != nil {
 		logger.Error(err)
+	}
+}
+
+func (fs *FileServer) handleCatcherAPI(w http.ResponseWriter, req *http.Request, action string) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch action {
+	case "list":
+		listeners := fs.CatcherMgr.GetListeners()
+		json.NewEncoder(w).Encode(listeners)
+
+	case "start":
+		if !fs.checkCSRF(w, req) {
+			return
+		}
+		var body struct {
+			IP   string `json:"ip"`
+			Port int    `json:"port"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+		if body.IP == "" {
+			body.IP = "0.0.0.0"
+		}
+		if body.Port == 0 {
+			http.Error(w, `{"error":"port required"}`, http.StatusBadRequest)
+			return
+		}
+		info, err := fs.CatcherMgr.StartListener(body.IP, body.Port)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(info)
+
+	case "stop":
+		if !fs.checkCSRF(w, req) {
+			return
+		}
+		var body struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+		if err := fs.CatcherMgr.StopListener(body.ID); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	case "kill-session":
+		if !fs.checkCSRF(w, req) {
+			return
+		}
+		var body struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+		if err := fs.CatcherMgr.KillSession(body.ID); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, `{"error":"unknown action"}`, http.StatusBadRequest)
 	}
 }
