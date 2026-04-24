@@ -21,6 +21,7 @@ const (
 	SMB2_FLUSH           uint16 = 0x0007
 	SMB2_READ            uint16 = 0x0008
 	SMB2_WRITE           uint16 = 0x0009
+	SMB2_LOCK            uint16 = 0x000A
 	SMB2_IOCTL           uint16 = 0x000B
 	SMB2_CANCEL          uint16 = 0x000C
 	SMB2_ECHO            uint16 = 0x000D
@@ -157,8 +158,9 @@ const (
 	FileDispositionInformation uint8 = 13
 	FilePositionInformation    uint8 = 14
 	FileModeInformation        uint8 = 16
-	FileAllInformation         uint8 = 18
-	FileEndOfFileInformation   uint8 = 20
+	FileAllInformation          uint8 = 18
+	FileAllocationInformation   uint8 = 19
+	FileEndOfFileInformation    uint8 = 20
 	FileStreamInformation      uint8 = 22
 	FileNetworkOpenInformation uint8 = 34
 )
@@ -305,6 +307,21 @@ func winTime(t time.Time) uint64 {
 // putWinTime writes a Windows FILETIME at offset off.
 func putWinTime(b []byte, off int, t time.Time) {
 	putle64(b, off, winTime(t))
+}
+
+// fromWinTime converts a Windows FILETIME to time.Time. Zero means "no change".
+func fromWinTime(ft uint64) time.Time {
+	if ft == 0 {
+		return time.Time{}
+	}
+	const unixEpochAsFiletime uint64 = 116444736000000000
+	if ft < unixEpochAsFiletime {
+		return time.Time{}
+	}
+	diff := ft - unixEpochAsFiletime
+	sec := int64(diff / 10_000_000)
+	nsec := int64((diff % 10_000_000) * 100)
+	return time.Unix(sec, nsec).UTC()
 }
 
 // matchPattern does case-insensitive wildcard matching (for QueryDir).
