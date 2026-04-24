@@ -7,6 +7,9 @@
         <meta name="max-upload" content="{{.MaxUpload}}" />
         <title>goshs {{.GoshsVersion}} — {{.AbsPath}}</title>
         <link rel="stylesheet" href="/css/style.css?static" />
+        {{if .Catcher}}
+        <link rel="stylesheet" href="/css/xterm.css?static" />
+        {{end}}
     </head>
     <body>
         <!-- ═══════════ TOPBAR ═══════════ -->
@@ -184,6 +187,24 @@
                         <line x1="12" y1="19" x2="20" y2="19" />
                     </svg>
                     <span class="snav-label">CLI</span>
+                </button>
+                {{end}} {{if .Catcher}}
+                <button
+                    class="snav"
+                    id="nav-catcher"
+                    onclick="switchPanel('catcher', this)"
+                    title="Catcher"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span class="snav-label">Catcher</span>
+                    <span class="badge" id="catcher-badge"></span>
                 </button>
                 {{end}}
                 <div class="sidebar-spacer"></div>
@@ -1630,6 +1651,102 @@
                         </div>
                     </div>
                 </section>
+                {{end}} {{if .Catcher}}
+                <!-- ████ CATCHER PANEL ████ -->
+                <section class="panel" id="panel-catcher">
+                    <div class="catcher-layout">
+                        <div class="catcher-tabs" id="catcher-tabs">
+                            <div
+                                class="ctab active"
+                                onclick="switchCatcherTab('generator', this)"
+                            >
+                                Generator
+                            </div>
+                            <div
+                                class="ctab ctab-add"
+                                onclick="spawnListenerTab()"
+                                title="New listener"
+                            >
+                                +
+                            </div>
+                        </div>
+
+                        <!-- Generator sub-panel -->
+                        <div class="cpanel active" id="cpanel-generator">
+                            <div class="gen-layout">
+                                <div class="gen-row">
+                                    <label for="gen-ip">IP</label>
+                                    <input
+                                        type="text"
+                                        id="gen-ip"
+                                        value=""
+                                        oninput="updateGeneratorOutput()"
+                                    />
+                                </div>
+                                <div class="gen-row">
+                                    <label for="gen-port">Port</label>
+                                    <input
+                                        type="number"
+                                        id="gen-port"
+                                        value="4444"
+                                        oninput="updateGeneratorOutput()"
+                                    />
+                                </div>
+                                <div class="gen-row">
+                                    <label for="gen-shell">Shell</label>
+                                    <select
+                                        id="gen-shell"
+                                        onchange="updateGeneratorOutput()"
+                                    ></select>
+                                </div>
+                                <div class="gen-row">
+                                    <label for="gen-encoding">Encoding</label>
+                                    <select
+                                        id="gen-encoding"
+                                        onchange="updateGeneratorOutput()"
+                                    >
+                                        <option value="none">None</option>
+                                        <option value="url">URL Encode</option>
+                                        <option value="base64">Base64</option>
+                                    </select>
+                                </div>
+                                <div class="gen-output-wrap">
+                                    <div class="gen-output-header">
+                                        <span>Command</span>
+                                        <button
+                                            class="gen-copy-btn"
+                                            onclick="copyGeneratorOutput()"
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <pre
+                                        class="gen-output"
+                                        id="gen-output"
+                                    ></pre>
+                                </div>
+                                <div class="gen-listener-wrap">
+                                    <div class="gen-output-header">
+                                        <span>Listener</span>
+                                        <button
+                                            class="gen-copy-btn"
+                                            onclick="copyListenerCommand()"
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <pre
+                                        class="gen-output"
+                                        id="gen-listener-output"
+                                    ></pre>
+                                </div>
+                            </div>
+                            <div class="gen-credit">
+                                Payload templates inspired by <a href="https://revshells.com" target="_blank" rel="noopener">revshells.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 {{end}}
             </main>
         </div>
@@ -1986,5 +2103,10 @@
         <!-- ═══════════ JAVASCRIPT ═══════════ -->
         <script src="/js/main.min.js?static"></script>
         <script src="/js/qrious.js?static"></script>
+        {{if .Catcher}}
+        <script src="/js/xterm.min.js?static"></script>
+        <script src="/js/xterm-addon-fit.min.js?static"></script>
+        <script src="/js/xterm-addon-attach.min.js?static"></script>
+        {{end}}
     </body>
 </html>

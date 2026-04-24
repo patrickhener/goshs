@@ -353,6 +353,8 @@ func (s *SMBServer) dispatch(cs *connState, remoteAddr string, buf []byte) []byt
 		return s.handleRead(cs, h, buf)
 	case SMB2_WRITE:
 		return s.handleWrite(cs, h, buf)
+	case SMB2_LOCK:
+		return s.handleLock(cs, h, buf)
 	case SMB2_QUERY_DIRECTORY:
 		return s.handleQueryDir(cs, h, buf)
 	case SMB2_CHANGE_NOTIFY:
@@ -2120,6 +2122,38 @@ func (s *SMBServer) handleSetInfo(cs *connState, h *smb2Hdr, buf []byte) []byte 
 
 	if infoType == SMB2_0_INFO_FILE {
 		switch infoClass {
+		case FileBasicInformation:
+			// 40-byte structure: CreationTime(8), LastAccessTime(8), LastWriteTime(8),
+			// ChangeTime(8), FileAttributes(4), Reserved(4). Zero means "no change".
+			if len(infoBuf) < 40 || handle.IsDir || handle.File == nil {
+				break
+			}
+			atime := fromWinTime(le64(infoBuf, 8))
+			mtime := fromWinTime(le64(infoBuf, 16))
+			if !atime.IsZero() || !mtime.IsZero() {
+				cur, err := os.Stat(handle.Path)
+				if err != nil {
+					return errResp(h, STATUS_ACCESS_DENIED)
+				}
+				if atime.IsZero() {
+					atime = cur.ModTime()
+				}
+				if mtime.IsZero() {
+					mtime = cur.ModTime()
+				}
+				_ = os.Chtimes(handle.Path, atime, mtime)
+			}
+
+		case FileAllocationInformation:
+			// 8-byte structure: AllocationSize(8). Truncate to the requested size.
+			if len(infoBuf) < 8 || handle.File == nil {
+				return errResp(h, STATUS_INVALID_PARAMETER)
+			}
+			allocSize := int64(le64(infoBuf, 0))
+			if err := handle.File.Truncate(allocSize); err != nil {
+				return errResp(h, STATUS_ACCESS_DENIED)
+			}
+
 		case FileDispositionInformation:
 			if len(infoBuf) >= 1 && infoBuf[0] != 0 {
 				if s.UploadOnly || s.NoDelete {
@@ -2194,6 +2228,35 @@ func (s *SMBServer) handleSetInfo(cs *connState, h *smb2Hdr, buf []byte) []byte 
 	resp := make([]byte, 64+2)
 	copy(resp, buildRespHdr(SMB2_SET_INFO, STATUS_SUCCESS, h.MessageID, h.TreeID, h.SessionID))
 	copy(resp[64:], body2)
+	return resp
+}
+
+// ── SMB2 Lock ──────────────────────────────────────────────────────────────
+
+func (s *SMBServer) handleLock(cs *connState, h *smb2Hdr, buf []byte) []byte {
+	// SMB2 LOCK request body starts at offset 64.
+	// StructureSize(2) + LockCount(2) + LockSequence(4) + FileId(16) = 24 bytes minimum.
+	if len(buf) < 64+24 {
+		return errResp(h, STATUS_INVALID_PARAMETER)
+	}
+	body := buf[64:]
+	lockCount := int(le16(body, 2))
+	hID := fileIDFromBuf(body, 8)
+	handle := cs.getHandle(hID)
+	if handle == nil {
+		return errResp(h, STATUS_INVALID_PARAMETER)
+	}
+	// Each lock element is 24 bytes: Offset(8) + Length(8) + Flags(4) + Reserved(4).
+	if len(body) < 24+lockCount*24 {
+		return errResp(h, STATUS_INVALID_PARAMETER)
+	}
+	// Advisory locks only — no kernel enforcement. Always succeed.
+	logger.Debugf("SMB: LOCK fileID=%d lockCount=%d (advisory, no enforcement)", hID, lockCount)
+
+	// Response: StructureSize(2)=4, Reserved(2)=0.
+	resp := make([]byte, 64+4)
+	copy(resp, buildRespHdr(SMB2_LOCK, STATUS_SUCCESS, h.MessageID, h.TreeID, h.SessionID))
+	putle16(resp, 64, 4)
 	return resp
 }
 

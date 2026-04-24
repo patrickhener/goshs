@@ -54,5 +54,6 @@
   "smb_domain": "",
   "smb_share": "",
   "smb_wordlist": "",
-  "max_upload_size": 0
+  "max_upload_size": 0,
+  "catcher": false
 }

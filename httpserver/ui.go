@@ -27,6 +27,7 @@ type UIData struct {
 	NoDelete    bool
 	CLI         bool
 	Embedded    bool
+	Catcher     bool
 
 	// File listing
 	Items []FileItem

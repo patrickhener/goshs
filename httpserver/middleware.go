@@ -105,6 +105,12 @@ func (fs *FileServer) verifyCredentials(r *http.Request) (authVal string, ok boo
 // BasicAuthMiddleware is a middleware to handle the basic auth
 func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow unauthenticated access to ConPtyShell.ps1 for catcher upgrades
+		if r.URL.Query().Has("embedded") && r.URL.Path == "/ConPtyShell.ps1" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		token := r.URL.Query().Get("token")
 		if token != "" {
 			fs.sharedLinksMu.RLock()
@@ -128,6 +134,12 @@ func (fs *FileServer) BasicAuthMiddleware(next http.Handler) http.Handler {
 // InvisibleBasicAuthMiddleware is a middleware to handle basic auth in invisible mode
 func (fs *FileServer) InvisibleBasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow unauthenticated access to ConPtyShell.ps1 for catcher upgrades
+		if r.URL.Query().Has("embedded") && r.URL.Path == "/ConPtyShell.ps1" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if _, ok := fs.verifyCredentials(r); !ok {
 			fs.handleInvisible(w)
 			return
