@@ -33,10 +33,11 @@ type Hub struct {
 	cliEnabled bool
 
 	// Ring BUffers - capped storage survives client reconnect
-	HTTPLog *RingBuffer
-	DNSLog  *RingBuffer
-	SMTPLog *RingBuffer
-	SMBLog  *RingBuffer
+	HTTPLog  *RingBuffer
+	DNSLog   *RingBuffer
+	SMTPLog  *RingBuffer
+	SMBLog   *RingBuffer
+	LDAPLog  *RingBuffer
 }
 
 // NewHub will create a new hub
@@ -52,6 +53,7 @@ func NewHub(cb *clipboard.Clipboard, cliEnabled bool) *Hub {
 		DNSLog:     NewRingBuffer(1000),
 		SMTPLog:    NewRingBuffer(1000),
 		SMBLog:     NewRingBuffer(1000),
+		LDAPLog:    NewRingBuffer(1000),
 	}
 }
 
@@ -121,6 +123,8 @@ func (h *Hub) classifyAndStore(msg []byte) {
 		h.SMTPLog.Add(msg)
 	case "smb":
 		h.SMBLog.Add(msg)
+	case "ldap":
+		h.LDAPLog.Add(msg)
 	}
 }
 
@@ -131,6 +135,7 @@ func (h *Hub) sendCatchup(client *Client) {
 	dnsEntries := h.DNSLog.Last(200)
 	smtpEntries := h.SMTPLog.Last(200)
 	smbEntries := h.SMBLog.Last(200)
+	ldapEntries := h.LDAPLog.Last(200)
 
 	// Marshal each slice of raw JSON messages into a JSON array
 	marshal := func(entries [][]byte) json.RawMessage {
@@ -155,6 +160,7 @@ func (h *Hub) sendCatchup(client *Client) {
 		"dns":  marshal(dnsEntries),
 		"smtp": marshal(smtpEntries),
 		"smb":  marshal(smbEntries),
+		"ldap": marshal(ldapEntries),
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {

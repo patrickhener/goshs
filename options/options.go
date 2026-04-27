@@ -75,6 +75,11 @@ type Options struct {
 	SMBWordlist         string   // ""
 	MaxUploadSize       int64    // 0 = unlimited
 	Catcher             bool     // false
+	LDAP                bool     // false
+	LDAPPort            int      // 389
+	LDAPJNDIEnabled     bool     // false — when true, use search baseDN as class name
+	LDAPJNDIBase        string   // "" auto-constructs from IP/port
+	LDAPWordlist        string   // "" optional wordlist path for NTLM hash cracking
 }
 
 func Parse() (*Options, bool) {
@@ -183,6 +188,12 @@ func Parse() (*Options, bool) {
 	flag.Int64Var(&opts.MaxUploadSize, "max-upload", 0, "Maximum upload size in bytes (0 = unlimited)")
 	flag.BoolVar(&opts.Catcher, "catcher", false, "Enable reverse shell catcher")
 	flag.BoolVar(&opts.Catcher, "rc", false, "Enable reverse shell catcher")
+	flag.BoolVar(&opts.LDAP, "ldap", false, "Enable LDAP server")
+	flag.BoolVar(&opts.LDAP, "ldap-server", false, "Enable LDAP server")
+	flag.IntVar(&opts.LDAPPort, "ldap-port", 389, "LDAP server port")
+	flag.BoolVar(&opts.LDAPJNDIEnabled, "ldap-jndi", false, "Enable dynamic JNDI mode (baseDN becomes the class name)")
+	flag.StringVar(&opts.LDAPJNDIBase, "ldap-jndi-base", "", "JNDI codeBase URL override (default: auto from HTTP server)")
+	flag.StringVar(&opts.LDAPWordlist, "ldap-wordlist", "", "Wordlist file for LDAP NTLM hash cracking")
 
 	// One-shot flags
 	upd := flag.Bool("update", false, "update")
@@ -269,6 +280,14 @@ SMB server options:
   -smb-domain, --smb-domain   The domain to use for SMB authentication (default: WORKGROUP)
   -smb-share,  --smb-share    The share to use for SMB authentication  (default: goshs)
   -smb-wordlist               Wordlist file for quick hash cracking    (default: none)
+
+LDAP server options:
+  -ldap, --ldap-server         Activate LDAP credential capture server (default: false)
+  -ldap-port                   The port LDAP listens on                 (default: 389)
+  -ldap-jndi                   Enable dynamic JNDI mode — baseDN in the search becomes the
+                               factory class name, fetched from the goshs HTTP server
+  -ldap-jndi-base              Override codeBase URL for JNDI payloads  (default: auto)
+  -ldap-wordlist               Wordlist file for quick LDAP NTLM hash cracking
 
 Authentication options:
   -b,  --basic-auth     Use basic authentication (user:pass - user can be empty)

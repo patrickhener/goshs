@@ -11,7 +11,7 @@
 
 You're mid-engagement. You need to transfer a file, catch an SMB hash, or stand up a quick HTTPS server — and `python3 -m http.server` won't cut it.
 
-**goshs** is a single-binary file server built for the moments when you need more than Python's SimpleHTTPServer but don't want to configure Apache. HTTP/S, WebDAV, SFTP, SMB, basic auth, share links, DNS/SMTP callbacks, NTLM hash capture + cracking — all from one command.
+**goshs** is a single-binary file server built for the moments when you need more than Python's SimpleHTTPServer but don't want to configure Apache. HTTP/S, WebDAV, SFTP, SMB, LDAP, basic auth, share links, DNS/SMTP callbacks, NTLM hash capture + cracking — all from one command.
 
 ![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif?raw=true)
 
@@ -36,6 +36,10 @@ goshs -s -ss -b user:password
 # Capture SMB hashes
 goshs -smb -smb-domain CORP
 
+# Capture LDAP credentials and NTLM hashes (with optional wordlist cracking)
+goshs -ldap
+goshs -ldap -ldap-wordlist /usr/share/wordlists/rockyou.txt
+
 # Catch DNS callbacks and receive emails
 goshs -dns -dns-ip 1.2.3.4 -smtp -smtp-domain your-domain.com
 ```
@@ -49,11 +53,11 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 | | |
 |---|---|
 | 📁 **File Operations** | Download, upload (drag & drop, POST/PUT), delete, bulk ZIP, QR codes |
-| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB |
+| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB, LDAP |
 | 🔒 **Auth & Security** | Basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert), IP whitelist, file-based ACLs |
 | ⚙️ **Server Modes** | Read-only, upload-only, no-delete, silent, invisible, CLI command execution |
 | 🔗 **Share Links** | Token-based sharing, download limit, time limit |
-| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, redirect endpoint, Rev Shell Catcher + Payload generator |
+| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, LDAP credential capture + NTLM hash cracking (JNDI mode for Log4Shell), redirect endpoint, Rev Shell Catcher + Payload generator |
 | 🔔 **Integration** | Webhooks, tunnel via localhost.run, config file, JSON API, mDNS |
 | 🛠️ **Misc** | Dark/light themes, clipboard, self-update, log output, embed files, drop privileges |
 
