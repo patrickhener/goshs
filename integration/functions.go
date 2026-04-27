@@ -21,7 +21,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func spawnTestContainer(t *testing.T, config string, webdav bool, smb bool) (nat.Port, testcontainers.Container, error) {
+func spawnTestContainer(t *testing.T, config string, webdav bool, smb bool) nat.Port {
 	// Make sure the host-side coverage drop dir exists and is writable
 	// by the container's non-root uid (1000). 0o777 is fine for an
 	// ephemeral test artifact directory.
@@ -164,19 +164,23 @@ func spawnTestContainer(t *testing.T, config string, webdav bool, smb bool) (nat
 	})
 	require.NoError(t, err)
 
+	t.Cleanup(func() {
+		cleanupContainer(t, goshsServer)
+	})
+
 	// return the appropriate port for testing
 	if smb {
 		smbReturnPort, err := goshsServer.MappedPort(ctx, smbPortNat)
 		require.NoError(t, err)
-		return smbReturnPort, goshsServer, nil
+		return smbReturnPort
 	} else if webdav {
 		webdavReturnPort, err := goshsServer.MappedPort(ctx, webdavPortNat)
 		require.NoError(t, err)
-		return webdavReturnPort, goshsServer, nil
+		return webdavReturnPort
 	} else {
 		webReturnPort, err := goshsServer.MappedPort(ctx, testPortNat)
 		require.NoError(t, err)
-		return webReturnPort, goshsServer, nil
+		return webReturnPort
 	}
 }
 
