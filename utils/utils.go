@@ -98,7 +98,7 @@ func GenerateHashedPassword(password []byte) string {
 	return string(bytes)
 }
 
-func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int, smtp bool, smtpPort int, dns bool, dnsPort int, smb bool, smbPort int) error {
+func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sftp bool, sftpPort int, smtp bool, smtpPort int, dns bool, dnsPort int, smb bool, smbPort int, ldap bool, ldapPort int) error {
 	// Register zeroconf mDNS
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -229,6 +229,24 @@ func RegisterZeroconfMDNS(ssl bool, webPort int, webdav bool, webdavPort int, sf
 		defer zeroDav.Shutdown()
 
 		logger.Infof("mDNS service registered as smb://%s.local:%d", hostname, smbPort)
+	}
+
+	// Register ldap if enabled
+	if ldap {
+		zeroDav, err := zeroconf.Register(
+			"goshs LDAP",
+			"_ldap._tcp",
+			"local.",
+			ldapPort,
+			[]string{fmt.Sprintf("host=%s.local", hostname), fmt.Sprintf("version=%s", goshsversion.GoshsVersion)},
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("zeroconf mDNS did not register successfully: %+v", err)
+		}
+		defer zeroDav.Shutdown()
+
+		logger.Infof("mDNS service registered as ldap://%s.local:%d", hostname, ldapPort)
 	}
 
 	return nil
