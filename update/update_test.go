@@ -3,7 +3,7 @@ package update
 import (
 	"testing"
 
-	"github.com/google/go-github/v42/github"
+	"github.com/google/go-github/v85/github"
 	"goshs.de/goshs/v2/goshsversion"
 	"github.com/stretchr/testify/require"
 )
@@ -15,11 +15,13 @@ func TestCheckForUpdates(t *testing.T) {
 
 	oldVersion := "v1.0.0"
 
-	result, _ := CheckForUpdates(oldVersion)
-	require.Equal(t, result, true)
+	result, out := CheckForUpdates(oldVersion)
+	require.NotEmpty(t, out)
+	require.True(t, result)
 
-	result, _ = CheckForUpdates(goshsversion.GoshsVersion)
-	require.Equal(t, result, false)
+	result, out = CheckForUpdates(goshsversion.GoshsVersion)
+	require.Empty(t, out)
+	require.False(t, result)
 }
 
 func TestGetLatestReleaseInvalid(t *testing.T) {
