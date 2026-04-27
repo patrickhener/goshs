@@ -11,7 +11,7 @@
 
 You're mid-engagement. You need to transfer a file, catch an SMB hash, or stand up a quick HTTPS server — and `python3 -m http.server` won't cut it.
 
-**goshs** is a single-binary file server built for the moments when you need more than Python's SimpleHTTPServer but don't want to configure Apache. HTTP/S, WebDAV, SFTP, SMB, LDAP, basic auth, share links, DNS/SMTP callbacks, NTLM hash capture + cracking — all from one command.
+**goshs** is a single-binary file server built for the moments when you need more than Python's SimpleHTTPServer but don't want to configure Apache. HTTP/S, WebDAV, SFTP, SMB, LDAP/S, basic auth, share links, DNS/SMTP callbacks, NTLM hash capture + cracking — all from one command.
 
 ![intro](https://github.com/patrickhener/image-cdn/blob/main/goshs.gif?raw=true)
 
@@ -53,7 +53,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 | | |
 |---|---|
 | 📁 **File Operations** | Download, upload (drag & drop, POST/PUT), delete, bulk ZIP, QR codes |
-| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB, LDAP |
+| 🔌 **Protocols** | HTTP/S, WebDAV, SFTP, SMB, LDAP/S |
 | 🔒 **Auth & Security** | Basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert), IP whitelist, file-based ACLs |
 | ⚙️ **Server Modes** | Read-only, upload-only, no-delete, silent, invisible, CLI command execution |
 | 🔗 **Share Links** | Token-based sharing, download limit, time limit |

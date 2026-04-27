@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -30,10 +31,19 @@ func newListener(mgr *Manager, ip string, port int) (*Listener, error) {
 		return nil, fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
 
+	// Capture the OS-assigned port when port=0 was requested.
+	actualPort := port
+	if actualPort == 0 {
+		_, portStr, _ := net.SplitHostPort(ln.Addr().String())
+		if p, err := strconv.Atoi(portStr); err == nil {
+			actualPort = p
+		}
+	}
+
 	l := &Listener{
 		ID:       generateID(),
 		IP:       ip,
-		Port:     port,
+		Port:     actualPort,
 		mgr:      mgr,
 		netLn:    ln,
 		sessions: make(map[string]*Session),

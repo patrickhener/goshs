@@ -288,6 +288,7 @@ LDAP server options:
                                factory class name, fetched from the goshs HTTP server
   -ldap-jndi-base              Override codeBase URL for JNDI payloads  (default: auto)
   -ldap-wordlist               Wordlist file for quick LDAP NTLM hash cracking
+  Use -s -ss or -s -sc/-sk to enable LDAPS (TLS) on default port 636
 
 Authentication options:
   -b,  --basic-auth     Use basic authentication (user:pass - user can be empty)
