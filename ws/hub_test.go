@@ -15,6 +15,7 @@ func newTestHub() *Hub {
 		DNSLog:  NewRingBuffer(100),
 		SMTPLog: NewRingBuffer(100),
 		SMBLog:  NewRingBuffer(100),
+		LDAPLog: NewRingBuffer(100),
 	}
 }
 
@@ -48,6 +49,13 @@ func TestClassifyAndStore_SMB(t *testing.T) {
 	require.Equal(t, 1, len(h.SMBLog.Last(10)))
 }
 
+func TestClassifyAndStore_LDAP(t *testing.T) {
+	h := newTestHub()
+	msg := []byte(`{"type":"ldap","auth":"admin"}`)
+	h.classifyAndStore(msg)
+	require.Equal(t, 1, len(h.LDAPLog.Last(10)))
+}
+
 func TestClassifyAndStore_Unknown(t *testing.T) {
 	h := newTestHub()
 	msg := []byte(`{"type":"unknown","x":"y"}`)
@@ -56,6 +64,7 @@ func TestClassifyAndStore_Unknown(t *testing.T) {
 	require.Equal(t, 0, len(h.DNSLog.Last(10)))
 	require.Equal(t, 0, len(h.SMTPLog.Last(10)))
 	require.Equal(t, 0, len(h.SMBLog.Last(10)))
+	require.Equal(t, 0, len(h.LDAPLog.Last(10)))
 }
 
 func TestClassifyAndStore_InvalidJSON(t *testing.T) {
@@ -90,6 +99,7 @@ func TestSendCatchup_EmptyBuffers(t *testing.T) {
 		require.Equal(t, "[]", string(payload["dns"]))
 		require.Equal(t, "[]", string(payload["smtp"]))
 		require.Equal(t, "[]", string(payload["smb"]))
+		require.Equal(t, "[]", string(payload["ldap"]))
 	default:
 		t.Fatal("sendCatchup did not send any message")
 	}
