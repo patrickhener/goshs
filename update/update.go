@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v42/github"
+	"github.com/google/go-github/v85/github"
 	"github.com/inconshreveable/go-update"
 	"goshs.de/goshs/v2/logger"
 )

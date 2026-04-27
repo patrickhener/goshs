@@ -9,7 +9,7 @@ require (
 	github.com/emersion/go-smtp v0.24.0
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-acme/lego/v4 v4.34.0
-	github.com/google/go-github/v42 v42.0.0
+	github.com/google/go-github/v85 v85.0.0
 	github.com/google/uuid v1.6.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/hirochachacha/go-smb2 v1.1.0
