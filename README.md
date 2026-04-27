@@ -53,7 +53,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 | 🔒 **Auth & Security** | Basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert), IP whitelist, file-based ACLs |
 | ⚙️ **Server Modes** | Read-only, upload-only, no-delete, silent, invisible, CLI command execution |
 | 🔗 **Share Links** | Token-based sharing, download limit, time limit |
-| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, redirect endpoint |
+| 🎯 **Collaboration / CTF** | DNS server, SMTP server, SMB NTLM hash capture + cracking, redirect endpoint, Rev Shell Catcher + Payload generator |
 | 🔔 **Integration** | Webhooks, tunnel via localhost.run, config file, JSON API, mDNS |
 | 🛠️ **Misc** | Dark/light themes, clipboard, self-update, log output, embed files, drop privileges |
 
