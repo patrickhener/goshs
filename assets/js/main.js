@@ -4,6 +4,7 @@ const ST = {
   dnsEvents: [],
   smtpEvents: [],
   smbEvents: [],
+  ldapEvents: [],
   httpEvents: [],
   dnsCnt: { total: 0, A: 0, MX: 0, TXT: 0, other: 0 },
   httpCnt: 0,
@@ -149,6 +150,7 @@ function connectWS() {
     else if (msg.type === "smtp") onSMTP(msg);
     else if (msg.type === "http") onHTTP(msg);
     else if (msg.type === "smb") onSMB(msg);
+    else if (msg.type === "ldap") onLDAP(msg);
     else if (msg.type === "refreshClipboard") onClipboardUpdate(msg);
     else if (msg.type === "reload") location.reload();
     else if (msg.type === "catchup") onCatchup(msg);
@@ -206,12 +208,21 @@ function onCatchup(msg) {
     document.getElementById("smb-badge").textContent = ST.smbEvents.length;
   }
 
+  const ldap = msg.ldap || [];
+  if (ldap.length) {
+    for (let i = ldap.length - 1; i >= 0; i--) {
+      ST.ldapEvents.push(ldap[i]);
+    }
+    document.getElementById("ldap-badge").textContent = ST.ldapEvents.length;
+  }
+
   // ── Update the combined collab badge ──
   const total =
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   if (total > 0) {
     const badge = document.getElementById("collab-badge");
     badge.classList.add("show");
@@ -223,6 +234,7 @@ function onCatchup(msg) {
   if (dns.length) renderDNS();
   if (smtp.length) renderSMTP();
   if (smb.length) renderSMB();
+  if (ldap.length) renderLDAP();
 }
 
 // ══ HTTP LOG ══
@@ -236,7 +248,8 @@ function onHTTP(e) {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   renderHTTP();
 }
 
@@ -679,7 +692,8 @@ function clearHTTP() {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderHTTP();
 }
@@ -704,7 +718,8 @@ function onDNS(e) {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   renderDNS();
 }
 function qtypeClass(t) {
@@ -767,7 +782,8 @@ function clearDNS() {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderDNS();
 }
@@ -783,7 +799,8 @@ function onSMB(e) {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   renderSMB();
 }
 
@@ -913,9 +930,202 @@ function clearSMB() {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderSMB();
+}
+
+// ══ LDAP Log ══
+function onLDAP(e) {
+  ST.ldapEvents.unshift(e);
+  document.getElementById("ldap-badge").textContent = ST.ldapEvents.length;
+  const badge = document.getElementById("collab-badge");
+  badge.classList.add("show");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
+  renderLDAP();
+}
+
+function renderLDAP() {
+  const filter = (document.getElementById("ldap-search").value || "").toLowerCase();
+  const inbox = document.getElementById("ldap-inbox");
+  const empty = document.getElementById("ldap-empty");
+
+  const vis = ST.ldapEvents.filter(
+    (e) =>
+      !filter ||
+      (e.dn || "").toLowerCase().includes(filter) ||
+      (e.password || "").toLowerCase().includes(filter) ||
+      (e.username || "").toLowerCase().includes(filter) ||
+      (e.domain || "").toLowerCase().includes(filter) ||
+      (e.hash || "").toLowerCase().includes(filter) ||
+      (e.crackedPassword || "").toLowerCase().includes(filter) ||
+      (e.source || "").toLowerCase().includes(filter),
+  );
+
+  empty.style.display = vis.length ? "none" : "flex";
+  inbox.querySelectorAll(".ldap-card").forEach((c) => c.remove());
+
+  vis.slice(0, 500).forEach((e, i) => {
+    const card = document.createElement("div");
+    const isNew = i === 0 && !filter;
+    card.className = "smb-card ldap-card" + (isNew ? " new-card" : "") + (e.crackedPassword ? " cracked-card" : "");
+
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : "";
+    const isBind = e.operation === "bind";
+    const opColor = isBind ? "var(--green)" : "var(--purple)";
+
+    const header = document.createElement("div");
+    header.className = "smb-card-header";
+    header.innerHTML = `
+      <span class="smb-badge-type" style="background:${opColor}">${esc(e.operation || "—")}</span>
+      <div class="smb-header-meta">
+        <span class="smb-user-summary">${esc(e.dn || "anonymous")}</span>
+        <span class="smb-source">${esc(e.source || "—")}</span>
+      </div>
+      <span class="smb-time">${esc(ts)}</span>
+      <span class="smb-chevron">▾</span>
+    `;
+
+    const isNTLM = e.operation === "ntlm";
+    const pwId   = "ldap-pw-"   + Math.random().toString(36).slice(2);
+    const dnId   = "ldap-dn-"   + Math.random().toString(36).slice(2);
+    const hashId = "ldap-hash-" + Math.random().toString(36).slice(2);
+
+    // NTLM cards get a different header summary
+    if (isNTLM) {
+      header.innerHTML = `
+        <span class="smb-badge-type" style="background:var(--warn)">${esc(e.hashType || "NTLM")}</span>
+        ${e.crackedPassword ? `<span class="smb-badge-cracked">cracked</span>` : ""}
+        <div class="smb-header-meta">
+          <span class="smb-user-summary">${esc([e.username, e.domain].filter(Boolean).join("@") || "unknown")}</span>
+          <span class="smb-source">${esc(e.source || "—")}</span>
+        </div>
+        <span class="smb-time">${esc(ts)}</span>
+        <span class="smb-chevron">▾</span>
+      `;
+    }
+
+    const body = document.createElement("div");
+    body.className = "smb-card-body";
+    body.innerHTML = isNTLM ? `
+      <div class="smb-meta-grid">
+        <span class="smb-label">User</span>
+        <span class="smb-val">${esc(e.username || "—")}</span>
+        <span class="smb-label">Domain</span>
+        <span class="smb-val">${esc(e.domain || "—")}</span>
+        <span class="smb-label">Hash Type</span>
+        <span class="smb-val">${esc(e.hashType || "—")}</span>
+        <span class="smb-label">Hashcat Mode</span>
+        <span class="smb-val">hashcat -m ${esc(e.hashcatMode || "—")}</span>
+        <span class="smb-label">Source</span>
+        <span class="smb-val smb-mono">${esc(e.source || "—")}</span>
+        ${e.crackedPassword ? `
+        <span class="smb-label smb-label-cracked">Cracked</span>
+        <span class="smb-val smb-val-cracked smb-mono">${esc(e.crackedPassword)}</span>` : ""}
+      </div>
+      ${e.hash ? `
+      <div class="smb-hash-wrap">
+        <div class="smb-hash-label">Hashcat line</div>
+        <div class="smb-hash-box">
+          <code id="${hashId}">${esc(e.hash)}</code>
+          <button class="btn btn-sm smb-copy-btn ldap-copy-hash" title="Copy hash">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>` : ""}
+    ` : `
+      <div class="smb-meta-grid">
+        <span class="smb-label">Operation</span>
+        <span class="smb-val">${esc(e.operation || "—")}</span>
+        <span class="smb-label">Source</span>
+        <span class="smb-val smb-mono">${esc(e.source || "—")}</span>
+      </div>
+      ${!isBind ? `
+      <div class="smb-hash-wrap">
+        <div class="smb-hash-label">Base DN (JNDI trigger)</div>
+        <div class="smb-hash-box">
+          <code id="${dnId}">${esc(e.dn || "—")}</code>
+          <button class="btn btn-sm smb-copy-btn ldap-copy-dn" title="Copy DN">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>` : ""}
+      ${isBind && e.dn ? `
+      <div class="smb-hash-wrap">
+        <div class="smb-hash-label">Bind DN</div>
+        <div class="smb-hash-box">
+          <code id="${dnId}">${esc(e.dn)}</code>
+          <button class="btn btn-sm smb-copy-btn ldap-copy-dn" title="Copy DN">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>` : ""}
+      ${isBind && e.password ? `
+      <div class="smb-hash-wrap">
+        <div class="smb-hash-label">Password</div>
+        <div class="smb-hash-box">
+          <code id="${pwId}">${esc(e.password)}</code>
+          <button class="btn btn-sm smb-copy-btn ldap-copy-pw" title="Copy password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>` : ""}
+    `;  // end non-NTLM branch
+
+    body.querySelector(".ldap-copy-hash")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      navigator.clipboard.writeText(document.getElementById(hashId)?.textContent || "")
+        .then(() => toast("Hash copied!", "ok"));
+    });
+    body.querySelector(".ldap-copy-dn")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      navigator.clipboard.writeText(document.getElementById(dnId)?.textContent || "")
+        .then(() => toast("DN copied!", "ok"));
+    });
+    body.querySelector(".ldap-copy-pw")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      navigator.clipboard.writeText(document.getElementById(pwId)?.textContent || "")
+        .then(() => toast("Password copied!", "ok"));
+    });
+
+    header.onclick = () => card.classList.toggle("open");
+    card.appendChild(header);
+    card.appendChild(body);
+    inbox.appendChild(card);
+  });
+}
+
+function clearLDAP() {
+  ST.ldapEvents = [];
+  document.getElementById("ldap-badge").textContent = "0";
+  ST.ws.send(JSON.stringify({ type: "clearLDAP" }));
+  const badge = document.getElementById("collab-badge");
+  badge.textContent =
+    ST.httpCnt +
+    ST.dnsEvents.length +
+    ST.smtpEvents.length +
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
+  if (badge.textContent === "0") badge.classList.remove("show");
+  renderLDAP();
 }
 
 // ══ SMTP ══
@@ -928,7 +1138,8 @@ function onSMTP(e) {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   renderSMTP();
 }
 function attachIcon(contentType) {
@@ -1215,7 +1426,8 @@ function clearSMTP() {
     ST.httpCnt +
     ST.dnsEvents.length +
     ST.smtpEvents.length +
-    ST.smbEvents.length;
+    ST.smbEvents.length +
+    ST.ldapEvents.length;
   if (badge.textContent === "0") badge.classList.remove("show");
   renderSMTP();
 }

@@ -65,6 +65,11 @@ type Config struct {
 	SMBWordlist         string   `json:"smb_wordlist"`
 	MaxUploadSize       int64    `json:"max_upload_size"`
 	Catcher             bool     `json:"catcher"`
+	LDAP                bool     `json:"ldap"`
+	LDAPPort            int      `json:"ldap_port"`
+	LDAPJNDIEnabled     bool     `json:"ldap_jndi"`
+	LDAPJNDIBase        string   `json:"ldap_jndi_base"`
+	LDAPWordlist        string   `json:"ldap_wordlist"`
 }
 
 func LoadConfig(opts *options.Options) (*options.Options, error) {
@@ -142,6 +147,10 @@ func LoadConfig(opts *options.Options) (*options.Options, error) {
 	opts.SMBWordlist = cfg.SMBWordlist
 	opts.MaxUploadSize = cfg.MaxUploadSize
 	opts.Catcher = cfg.Catcher
+	opts.LDAP = cfg.LDAP
+	opts.LDAPPort = cfg.LDAPPort
+	opts.LDAPJNDIEnabled = cfg.LDAPJNDIEnabled
+	opts.LDAPJNDIBase = cfg.LDAPJNDIBase
 
 	// Default upload folder to webroot if not set in config
 	if opts.UploadFolder == "" {
@@ -208,6 +217,10 @@ func PrintExample() (string, error) {
 		SMBWordlist:         "",
 		MaxUploadSize:       0,
 		Catcher:             false,
+		LDAP:                false,
+		LDAPPort:            389,
+		LDAPJNDIEnabled:     false,
+		LDAPJNDIBase:        "",
 	}
 
 	b, err := json.MarshalIndent(defaultConfig, "", "  ")

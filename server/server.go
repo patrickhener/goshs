@@ -6,6 +6,7 @@ import (
 	"goshs.de/goshs/v2/clipboard"
 	"goshs.de/goshs/v2/dnsserver"
 	"goshs.de/goshs/v2/httpserver"
+	"goshs.de/goshs/v2/ldapserver"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/options"
 	"goshs.de/goshs/v2/sftpserver"
@@ -55,6 +56,11 @@ func StartAll(opts *options.Options) func(context.Context) {
 	if opts.SMB {
 		smbServer := smbserver.NewSMBServer(opts, hub, wh)
 		go smbServer.Start()
+	}
+
+	if opts.LDAP {
+		ldapSrv := ldapserver.NewLDAPServer(opts, hub, wh)
+		go ldapSrv.Start()
 	}
 
 	// Zeroconf mDNS

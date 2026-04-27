@@ -55,5 +55,10 @@
   "smb_share": "",
   "smb_wordlist": "",
   "max_upload_size": 0,
-  "catcher": false
+  "catcher": false,
+  "ldap": false,
+  "ldap_port": 389,
+  "ldap_jndi_enabled": false,
+  "ldap_jndi_base": "",
+  "ldap_wordlist": ""
 }

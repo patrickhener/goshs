@@ -44,6 +44,22 @@ type HTTPEvent struct {
 	Timestamp  time.Time         `json:"timestamp"`
 }
 
+type LDAPEvent struct {
+	Type      string    `json:"type"`      // "ldap"
+	Operation string    `json:"operation"` // "bind", "search", or "ntlm"
+	DN        string    `json:"dn"`        // bind DN or search baseDN
+	Password  string    `json:"password"`  // cleartext for simple bind; "[SASL: mech]" for SASL
+	// NTLM capture fields — only set when Operation == "ntlm"
+	Username        string `json:"username,omitempty"`
+	Domain          string `json:"domain,omitempty"`
+	Hash            string `json:"hash,omitempty"`
+	HashType        string `json:"hashType,omitempty"`
+	HashcatMode     string `json:"hashcatMode,omitempty"`
+	CrackedPassword string `json:"crackedPassword,omitempty"`
+	Source    string    `json:"source"`    // client IP:port
+	Timestamp time.Time `json:"timestamp"`
+}
+
 type NTLMEvent struct {
 	Type            string    `json:"type"`            // "ntlm"
 	Username        string    `json:"username"`        // username
