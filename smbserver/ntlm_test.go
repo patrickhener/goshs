@@ -542,7 +542,7 @@ func TestParseAuthMessage_NTLMv1ESS(t *testing.T) {
 	ntResp := make([]byte, 24)
 	// ESS: lmResp[0:8] = client nonce, lmResp[8:24] = all zeros
 	lmResp := make([]byte, 24)
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		lmResp[i] = byte(i + 1) // client nonce
 	}
 	// lmResp[8:24] stays zero

@@ -119,11 +119,9 @@ func TestSession_WriteRead(t *testing.T) {
 
 	// Write from server side
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		s.Write([]byte("hello"))
-	}()
+	})
 
 	client.SetReadDeadline(time.Now().Add(time.Second))
 	buf := make([]byte, 10)
@@ -158,12 +156,8 @@ func TestSession_ConcurrentClose(t *testing.T) {
 	s := newSession("s1", "l1", "addr", server)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			s.Close()
-		}()
+	for range 10 {
+		wg.Go(func() { s.Close() })
 	}
 	wg.Wait()
 	require.True(t, s.IsClosed())
@@ -173,7 +167,7 @@ func TestSession_ConcurrentClose(t *testing.T) {
 
 func TestGenerateID_Unique(t *testing.T) {
 	ids := make(map[string]bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		id := generateID()
 		require.NotEmpty(t, id)
 		require.False(t, ids[id], "generateID produced duplicate: %s", id)
@@ -340,7 +334,7 @@ func TestListener_StopClosesListener(t *testing.T) {
 	info, err := mgr.StartListener("127.0.0.1", 0)
 	require.NoError(t, err)
 
-	addr := fmt.Sprintf("%s:%d", info.IP, info.Port)
+	addr := fmt.Sprintf("%+v:%+v", info.IP, info.Port)
 
 	// Stop the listener
 	require.NoError(t, mgr.StopListener(info.ID))
@@ -359,7 +353,7 @@ func TestListener_MultipleConnections(t *testing.T) {
 	defer mgr.StopListener(info.ID)
 
 	var conns []net.Conn
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", info.IP, info.Port), 2*time.Second)
 		require.NoError(t, err)
 		conns = append(conns, conn)

@@ -76,7 +76,7 @@ func TestClassifyAndStore_InvalidJSON(t *testing.T) {
 
 func TestClassifyAndStore_MultipleEntries(t *testing.T) {
 	h := newTestHub()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		h.classifyAndStore([]byte(`{"type":"http"}`))
 	}
 	require.Equal(t, 5, len(h.HTTPLog.Last(10)))

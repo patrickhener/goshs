@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"goshs.de/goshs/v2/ws"
 	"github.com/stretchr/testify/require"
+	"goshs.de/goshs/v2/ws"
 )
 
 // ─── Rcpt / domain filtering ──────────────────────────────────────────────────
@@ -171,7 +171,7 @@ func makeHeader(contentType string) textproto.MIMEHeader {
 
 func TestWalkPart_PlainText(t *testing.T) {
 	var plain, html string
-	var attachments []interface{}
+	var attachments []any
 
 	header := makeHeader("text/plain")
 	body := strings.NewReader("Hello, world!")

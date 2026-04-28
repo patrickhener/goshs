@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -1021,9 +1022,7 @@ func (fs *FileServer) ShareHandler(w http.ResponseWriter, r *http.Request) {
 func (fs *FileServer) snapshotSharedLinks() map[string]SharedLink {
 	fs.sharedLinksMu.RLock()
 	snapshot := make(map[string]SharedLink, len(fs.SharedLinks))
-	for k, v := range fs.SharedLinks {
-		snapshot[k] = v
-	}
+	maps.Copy(snapshot, fs.SharedLinks)
 	fs.sharedLinksMu.RUnlock()
 	return snapshot
 }

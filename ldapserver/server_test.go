@@ -33,12 +33,12 @@ func newTestHub() *ws.Hub {
 	}
 }
 
-func drainBroadcast(hub *ws.Hub) []map[string]interface{} {
-	var msgs []map[string]interface{}
+func drainBroadcast(hub *ws.Hub) []map[string]any {
+	var msgs []map[string]any
 	for {
 		select {
 		case raw := <-hub.Broadcast:
-			var m map[string]interface{}
+			var m map[string]any
 			if err := json.Unmarshal(raw, &m); err == nil {
 				msgs = append(msgs, m)
 			}
@@ -134,8 +134,8 @@ func buildBindRequest(msgID int, dn, password string) []byte {
 	return berSeq(
 		berInt(msgID),
 		tlv(tagBindReq, cat(
-			berInt(3),       // LDAP version
-			berStr(dn),      // DN
+			berInt(3),                          // LDAP version
+			berStr(dn),                         // DN
 			tlv(tagCtxPrim0, []byte(password)), // simple auth
 		)),
 	)
@@ -146,12 +146,12 @@ func buildSearchRequest(msgID int, baseDN string) []byte {
 	return berSeq(
 		berInt(msgID),
 		tlv(tagSearchReq, cat(
-			berStr(baseDN),    // baseObject
-			berEnum(0),        // scope: baseObject
-			berEnum(0),        // derefAliases: never
-			berInt(0),         // sizeLimit
-			berInt(0),         // timeLimit
-			berEnum(0),        // typesOnly: false
+			berStr(baseDN), // baseObject
+			berEnum(0),     // scope: baseObject
+			berEnum(0),     // derefAliases: never
+			berInt(0),      // sizeLimit
+			berInt(0),      // timeLimit
+			berEnum(0),     // typesOnly: false
 			tlv(tagOctetString, []byte("(objectClass=*)")), // filter (present)
 		)),
 	)
