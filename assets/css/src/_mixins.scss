@@ -1,0 +1,46 @@
+/* ═══════════════════════════════════════════════
+   Mixins — reusable patterns
+   ═══════════════════════════════════════════════ */
+
+@mixin card-base {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    transition: border-color var(--transition-normal);
+    &:hover {
+        border-color: var(--border-hover);
+    }
+}
+
+@mixin table-header {
+    padding: 7px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg1);
+    z-index: 5;
+    white-space: nowrap;
+}
+
+@mixin input-base {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    color: var(--text0);
+    outline: none;
+    transition: border-color var(--transition-normal);
+    &:focus {
+        border-color: var(--accent);
+    }
+}
+
+@mixin panel-scroll {
+    flex: 1;
+    overflow-y: auto;
+}

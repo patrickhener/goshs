@@ -1,0 +1,101 @@
+/* ═══════════════════════════════════════════════
+   Variables — fonts, colors, theme, tokens
+   ═══════════════════════════════════════════════ */
+
+@font-face {
+    font-family: "Fira Code VF";
+    src:
+        url("../fonts/FiraCode-VF.woff2?static") format("woff2-variations"),
+        url("../fonts/FiraCode-VF.woff?static") format("woff-variations");
+    font-weight: 300 700;
+    font-style: normal;
+}
+
+:root {
+    /* Polar Night */
+    --bg0: #2e3440;
+    --bg1: #3b4252;
+    --bg2: #434c5e;
+    --bg3: #4c566a;
+    --bg4: #596275;
+
+    --border: rgba(216, 222, 233, 0.08);
+    --border-hover: rgba(216, 222, 233, 0.18);
+
+    /* Snow Storm (text) */
+    --text0: #eceff4;
+    --text1: #d8dee9;
+    --text2: #aeb6c2;
+
+    /* Frost (primary accent) */
+    --accent: #88c0d0;
+    --accent-hover: #81a1c1;
+    --accent-dim: rgba(136, 192, 208, 0.12);
+
+    /* Aurora */
+    --danger: #bf616a;
+    --danger-dim: rgba(191, 97, 106, 0.12);
+
+    --warn: #d08770;
+    --warn-dim: rgba(208, 135, 112, 0.12);
+
+    --info: #5e81ac;
+    --info-dim: rgba(94, 129, 172, 0.12);
+
+    --purple: #b48ead;
+    --purple-dim: rgba(180, 142, 173, 0.12);
+
+    --green: #a3be8c;
+
+    --mono:
+        "Fira Code VF", "JetBrains Mono", "Cascadia Code", "Fira Code",
+        "Consolas", monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --r: 6px;
+    --r-lg: 10px;
+    --sidebar-w: 52px;
+    --topbar-h: 44px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+
+    /* Transition durations */
+    --transition-fast: 0.1s;
+    --transition-normal: 0.15s;
+    --transition-slow: 0.2s;
+}
+
+[data-theme="light"] {
+    /* Snow Storm */
+    --bg0: #eceff4;
+    --bg1: #e5e9f0;
+    --bg2: #d8dee9;
+    --bg3: #cfd6e3;
+    --bg4: #c0c8d8;
+
+    --border: rgba(46, 52, 64, 0.08);
+    --border-hover: rgba(46, 52, 64, 0.18);
+
+    /* Polar Night (text) */
+    --text0: #2e3440;
+    --text1: #3b4252;
+    --text2: #4c566a;
+
+    /* Frost */
+    --accent: #5e81ac;
+    --accent-hover: #81a1c1;
+    --accent-dim: rgba(94, 129, 172, 0.12);
+
+    /* Aurora */
+    --danger: #bf616a;
+    --danger-dim: rgba(191, 97, 106, 0.1);
+
+    --warn: #d08770;
+    --warn-dim: rgba(208, 135, 112, 0.1);
+
+    --info: #5e81ac;
+    --info-dim: rgba(94, 129, 172, 0.1);
+
+    --purple: #b48ead;
+    --purple-dim: rgba(180, 142, 173, 0.1);
+
+    --green: #a3be8c;
+}

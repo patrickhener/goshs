@@ -1,0 +1,174 @@
+@use 'mixins' as *;
+
+/* ── topbar ── */
+.topbar {
+    height: var(--topbar-h);
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 50;
+}
+.topbar-brand {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.topbar-brand .slash {
+    color: var(--text2);
+    font-weight: 400;
+}
+.topbar-path {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.topbar-path .path-seg {
+    color: var(--text1);
+}
+.topbar-path .path-sep {
+    color: var(--text2);
+    margin: 0 2px;
+}
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* ── icon button ── */
+.ibtn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        color var(--transition-normal),
+        background var(--transition-normal),
+        border-color var(--transition-normal);
+}
+.ibtn:hover {
+    color: var(--text0);
+    background: var(--bg3);
+    border-color: var(--border-hover);
+}
+.ibtn svg {
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+}
+
+/* ── main layout ── */
+.layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ── sidebar ── */
+.sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg1);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.snav {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r);
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    cursor: pointer;
+    position: relative;
+    transition:
+        color var(--transition-normal),
+        background var(--transition-normal);
+}
+.snav svg {
+    width: 17px;
+    height: 17px;
+    pointer-events: none;
+}
+.snav .snav-label {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+.snav:hover {
+    color: var(--text0);
+    background: var(--bg3);
+}
+.snav.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+.snav .badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+.snav .badge.show {
+    display: flex;
+}
+.sidebar-spacer {
+    flex: 1;
+}
+
+/* ── main content ── */
+.main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.panel {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+.panel.active {
+    display: flex;
+}

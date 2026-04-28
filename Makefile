@@ -1,11 +1,12 @@
 .PHONY: build-all
 
-# uglify-js and sass needed
+# esbuild and sass needed
 generate:
-	@echo "[*] Minifying js and compiling scss"
-	@uglifyjs -o httpserver/static/js/main.min.js assets/js/main.js
-	@sass --no-source-map -s compressed assets/css/style.scss httpserver/static/css/style.css
-	@echo "[OK] Done minifying and compiling things"
+	@echo "[*] Bundling JS with esbuild"
+	@esbuild assets/js/src/main.js --bundle --minify --outfile=httpserver/static/js/main.min.js
+	@echo "[*] Compiling SCSS"
+	@sass --no-source-map -s compressed assets/css/src/main.scss httpserver/static/css/style.css
+	@echo "[OK] Done bundling and compiling things"
 	@echo "[*] Copying embedded files to target location"
 	@rm -rf httpserver/embedded
 	@cp -r embedded httpserver/

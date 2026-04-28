@@ -1,0 +1,203 @@
+/* ══════════════════════════════════
+   PREVIEW PANEL — Markdown, code, CSV, syntax highlighting
+   ══════════════════════════════════ */
+
+// Markdown preview
+.md-body {
+    color: var(--text);
+    line-height: 1.6;
+    word-wrap: break-word;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin-top: 1.2em;
+        margin-bottom: 0.4em;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    h1 {
+        font-size: 1.6em;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3em;
+    }
+    h2 {
+        font-size: 1.4em;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.25em;
+    }
+    h3 {
+        font-size: 1.2em;
+    }
+    h4 {
+        font-size: 1.05em;
+    }
+
+    p {
+        margin: 0.6em 0;
+    }
+
+    a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+
+    code {
+        font-family: var(--mono);
+        font-size: 0.88em;
+        padding: 0.15em 0.4em;
+        background: var(--bg2);
+        border-radius: 3px;
+    }
+    pre {
+        margin: 0.8em 0;
+        padding: 1em;
+        background: var(--bg2);
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+    pre code {
+        padding: 0;
+        background: none;
+    }
+
+    blockquote {
+        margin: 0.8em 0;
+        padding: 0.4em 1em;
+        border-left: 3px solid var(--accent);
+        color: var(--text2);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0.8em 0;
+    }
+    th,
+    td {
+        padding: 0.4em 0.8em;
+        border: 1px solid var(--border);
+        text-align: left;
+    }
+    th {
+        background: var(--bg2);
+        font-weight: 600;
+    }
+
+    ul,
+    ol {
+        padding-left: 1.8em;
+        margin: 0.5em 0;
+    }
+    li {
+        margin: 0.2em 0;
+    }
+
+    hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 1.2em 0;
+    }
+
+    img {
+        max-width: 100%;
+        border-radius: 4px;
+    }
+}
+
+// File preview: text/code
+.preview-code {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 1em;
+    background: var(--bg2);
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--text);
+    max-height: calc(90vh - 120px);
+}
+
+// File preview: CSV table
+.preview-csv {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+
+    th,
+    td {
+        padding: 0.4em 0.8em;
+        border: 1px solid var(--border);
+        text-align: left;
+        font-size: 13px;
+    }
+    th {
+        background: var(--bg2);
+        font-weight: 600;
+    }
+}
+
+// Syntax highlighting (highlight.js) using goshs Nord palette
+.hljs {
+    color: var(--text1);
+    background: transparent;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+    color: var(--accent);
+}
+.hljs-type,
+.hljs-title,
+.hljs-title.class_ {
+    color: var(--accent-hover);
+}
+.hljs-string,
+.hljs-attr,
+.hljs-symbol,
+.hljs-bullet {
+    color: var(--green);
+}
+.hljs-number,
+.hljs-literal {
+    color: var(--purple);
+}
+.hljs-comment,
+.hljs-doctag {
+    color: var(--text2);
+    font-style: italic;
+}
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+    color: var(--warn);
+}
+.hljs-function {
+    color: var(--info);
+}
+.hljs-variable,
+.hljs-template-variable {
+    color: var(--danger);
+}
+.hljs-regexp,
+.hljs-addition {
+    color: #a3be8c;
+}
+.hljs-deletion {
+    color: var(--danger);
+}
+.hljs-params {
+    color: var(--text1);
+}
+.hljs-section {
+    color: var(--accent);
+    font-weight: 600;
+}

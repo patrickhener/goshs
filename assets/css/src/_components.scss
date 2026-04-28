@@ -1,0 +1,182 @@
+/* ══════════════════════════════════
+   COMPONENTS — Modal, Toast, Context menu, Misc
+   ══════════════════════════════════ */
+
+/* ── modal system ── */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+}
+.modal-backdrop.open {
+    display: flex;
+}
+.modal {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    min-width: 400px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: var(--shadow);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text0);
+}
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+.modal-close:hover {
+    color: var(--text0);
+}
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+/* ── toast notifications ── */
+.toast-container {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.toast {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text0);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    animation: slideIn 0.25s ease-out;
+    max-width: 320px;
+}
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+.toast.success {
+    border-color: var(--accent);
+}
+.toast.error {
+    border-color: var(--danger);
+}
+.toast.warn {
+    border-color: var(--warn);
+}
+.toast-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.toast.success .toast-icon {
+    color: var(--accent);
+}
+.toast.error .toast-icon {
+    color: var(--danger);
+}
+.toast.warn .toast-icon {
+    color: var(--warn);
+}
+
+/* ── context menu ── */
+.ctx-menu {
+    position: fixed;
+    z-index: 300;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 4px 0;
+    box-shadow: var(--shadow);
+    min-width: 160px;
+    display: none;
+}
+.ctx-menu.open {
+    display: block;
+}
+.ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: var(--text1);
+    cursor: pointer;
+    transition:
+        background var(--transition-fast),
+        color var(--transition-fast);
+}
+.ctx-item:hover {
+    background: var(--bg3);
+    color: var(--text0);
+}
+.ctx-item.danger:hover {
+    background: var(--danger-dim);
+    color: var(--danger);
+}
+.ctx-item svg {
+    width: 14px;
+    height: 14px;
+}
+.ctx-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 3px 0;
+}
+
+/* ── misc ── */
+.divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+.tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+}
+.monospace {
+    font-family: var(--mono);
+}

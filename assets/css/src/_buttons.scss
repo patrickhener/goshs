@@ -1,0 +1,57 @@
+/* ── buttons ── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--r);
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text0);
+    font-size: 13px;
+    white-space: nowrap;
+    transition:
+        background var(--transition-normal),
+        border-color var(--transition-normal),
+        color var(--transition-normal);
+}
+.btn:hover {
+    background: var(--bg3);
+    border-color: var(--border-hover);
+}
+.btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+.btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0d1117;
+    font-weight: 600;
+}
+.btn-accent:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+.btn-danger {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: transparent;
+}
+.btn-danger:hover {
+    background: var(--danger-dim);
+}
+.btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text2);
+}
+.btn-ghost:hover {
+    color: var(--text0);
+    background: var(--bg3);
+}
+.btn-sm {
+    padding: 3px 8px;
+    font-size: 12px;
+}
