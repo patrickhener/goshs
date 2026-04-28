@@ -2051,6 +2051,24 @@
             </div>
         </div>
 
+        <!-- Markdown preview modal -->
+        <div class="modal-backdrop" id="md-modal">
+            <div class="modal" style="max-width: 900px; max-height: 90vh">
+                <div class="modal-header">
+                    <span class="modal-title" id="md-title"></span>
+                    <button class="modal-close" onclick="closeModal('md-modal')">
+                        ✕
+                    </button>
+                </div>
+                <div
+                    class="modal-body"
+                    style="overflow-y: auto; max-height: calc(90vh - 60px)"
+                >
+                    <div id="md-content" class="md-body"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Context menu -->
         <div class="ctx-menu" id="ctx-menu">
             <div class="ctx-item" id="ctx-open">
@@ -2077,6 +2095,17 @@
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" /></svg
                 >Download
+            </div>
+            <div class="ctx-item" id="ctx-preview" style="display:none">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/></svg
+                >Preview
             </div>
             <div class="ctx-item" id="ctx-share">
                 <svg
@@ -2205,6 +2234,8 @@
 
         <!-- ═══════════ JAVASCRIPT ═══════════ -->
         <script src="/js/main.min.js?static"></script>
+        <script src="/js/marked.min.js?static"></script>
+        <script src="/js/purify.min.js?static"></script>
         <script src="/js/qrious.js?static"></script>
         {{if .Catcher}}
         <script src="/js/xterm.min.js?static"></script>

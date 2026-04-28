@@ -1985,6 +1985,40 @@ function closeModal(id) {
     location.reload();
   }
 }
+
+// ══ MARKDOWN PREVIEW ══
+function previewMarkdown(name) {
+  fetch(name)
+    .then((r) => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.text();
+    })
+    .then((text) => {
+      const html = marked.parse(text);
+      document.getElementById("md-title").textContent = name;
+      document.getElementById("md-content").innerHTML =
+        DOMPurify.sanitize(html);
+      openModal("md-modal");
+    })
+    .catch(() => toast("Failed to load markdown", "error"));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const tbody = document.getElementById("file-tbody");
+  if (tbody) {
+    tbody.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey || e.button !== 0) return;
+      const a = e.target.closest('a[href]');
+      if (!a || a.hasAttribute("download")) return;
+      const href = a.getAttribute("href") || "";
+      if (href.toLowerCase().endsWith(".md")) {
+        e.preventDefault();
+        previewMarkdown(href);
+      }
+    });
+  }
+});
+
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) closeModal(e.target.id);
 });
@@ -2006,9 +2040,19 @@ function initContextMenu() {
     e.preventDefault();
     const name = tr.dataset.name;
     const isDir = tr.dataset.isdir === "true";
+    const isMd = !isDir && name.toLowerCase().endsWith(".md");
     document.getElementById("ctx-download").style.display = isDir ? "none" : "";
+    document.getElementById("ctx-preview").style.display = isMd ? "" : "none";
+    document.getElementById("ctx-preview").onclick = () => {
+      previewMarkdown(name);
+      closeCtx();
+    };
     document.getElementById("ctx-open").onclick = () => {
-      window.location.href = name + (isDir ? "/" : "");
+      if (isMd) {
+        previewMarkdown(name);
+      } else {
+        window.location.href = name + (isDir ? "/" : "");
+      }
       closeCtx();
     };
     document.getElementById("ctx-download").onclick = () => {
