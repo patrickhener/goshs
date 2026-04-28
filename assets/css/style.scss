@@ -2812,3 +2812,67 @@ input[type="number"]:focus {
         border-radius: 4px;
     }
 }
+
+// File preview: text/code
+.preview-code {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 1em;
+    background: var(--bg2);
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--text);
+    max-height: calc(90vh - 120px);
+}
+
+// File preview: CSV table
+.preview-csv {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+
+    th, td {
+        padding: 0.4em 0.8em;
+        border: 1px solid var(--border);
+        text-align: left;
+        font-size: 13px;
+    }
+    th {
+        background: var(--bg2);
+        font-weight: 600;
+    }
+}
+
+// Syntax highlighting (highlight.js) using goshs Nord palette
+.hljs {
+    color: var(--text1);
+    background: transparent;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in { color: var(--accent); }
+.hljs-type,
+.hljs-title,
+.hljs-title.class_ { color: var(--accent-hover); }
+.hljs-string,
+.hljs-attr,
+.hljs-symbol,
+.hljs-bullet { color: var(--green); }
+.hljs-number,
+.hljs-literal { color: var(--purple); }
+.hljs-comment,
+.hljs-doctag { color: var(--text2); font-style: italic; }
+.hljs-meta,
+.hljs-meta .hljs-keyword { color: var(--warn); }
+.hljs-function { color: var(--info); }
+.hljs-variable,
+.hljs-template-variable { color: var(--danger); }
+.hljs-regexp,
+.hljs-addition { color: #a3be8c; }
+.hljs-deletion { color: var(--danger); }
+.hljs-params { color: var(--text1); }
+.hljs-section { color: var(--accent); font-weight: 600; }
