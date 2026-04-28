@@ -678,6 +678,50 @@ function fmtHeaders(headers) {
     .join("\n");
 }
 
+// ══ LOG EXPORT ══
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportHTTP() {
+  downloadJSON(ST.httpEvents, "goshs-http-log.json");
+}
+function exportDNS() {
+  downloadJSON(ST.dnsEvents, "goshs-dns-log.json");
+}
+function exportSMTP() {
+  downloadJSON(ST.smtpEvents, "goshs-smtp-log.json");
+}
+function exportSMB() {
+  downloadJSON(ST.smbEvents, "goshs-smb-log.json");
+}
+function exportLDAP() {
+  downloadJSON(ST.ldapEvents, "goshs-ldap-log.json");
+}
+function exportAllLogs() {
+  downloadJSON(
+    {
+      generatedAt: new Date().toISOString(),
+      http: ST.httpEvents,
+      dns: ST.dnsEvents,
+      smtp: ST.smtpEvents,
+      smb: ST.smbEvents,
+      ldap: ST.ldapEvents,
+    },
+    "goshs-all-logs.json"
+  );
+}
+
 function filterHTTP() {
   renderHTTP();
 }

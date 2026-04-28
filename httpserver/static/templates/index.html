@@ -877,6 +877,13 @@
                                     padding: 0 4px;
                                 "
                             >
+                                <button
+                                    class="btn btn-sm"
+                                    onclick="exportAllLogs()"
+                                    title="Export all logs as JSON"
+                                >
+                                    Download All
+                                </button>
                                 <div class="live-dot" id="collab-dot"></div>
                                 <span class="status-text" id="collab-status"
                                     >connecting…</span
@@ -912,6 +919,12 @@
                                         gap: 6px;
                                     "
                                 >
+                                    <button
+                                        class="btn btn-sm"
+                                        onclick="exportHTTP()"
+                                    >
+                                        Export
+                                    </button>
                                     <button
                                         class="btn btn-sm btn-danger"
                                         onclick="clearHTTP()"
@@ -1045,6 +1058,12 @@
                                         />
                                     </div>
                                     <button
+                                        class="btn btn-sm"
+                                        onclick="exportDNS()"
+                                    >
+                                        Export
+                                    </button>
+                                    <button
                                         class="btn btn-sm btn-danger"
                                         onclick="clearDNS()"
                                     >
@@ -1113,7 +1132,13 @@
                                         oninput="renderSMTP()"
                                     />
                                 </div>
-                                <div style="margin-left: auto">
+                                <div style="margin-left: auto; display: flex; gap: 6px;">
+                                    <button
+                                        class="btn btn-sm"
+                                        onclick="exportSMTP()"
+                                    >
+                                        Export
+                                    </button>
                                     <button
                                         class="btn btn-sm btn-danger"
                                         onclick="clearSMTP()"
@@ -1161,7 +1186,13 @@
                                         oninput="renderSMB()"
                                     />
                                 </div>
-                                <div style="margin-left: auto">
+                                <div style="margin-left: auto; display: flex; gap: 6px;">
+                                    <button
+                                        class="btn btn-sm"
+                                        onclick="exportSMB()"
+                                    >
+                                        Export
+                                    </button>
                                     <button
                                         class="btn btn-sm btn-danger"
                                         onclick="clearSMB()"
@@ -1210,7 +1241,13 @@
                                         oninput="renderLDAP()"
                                     />
                                 </div>
-                                <div style="margin-left: auto">
+                                <div style="margin-left: auto; display: flex; gap: 6px;">
+                                    <button
+                                        class="btn btn-sm"
+                                        onclick="exportLDAP()"
+                                    >
+                                        Export
+                                    </button>
                                     <button
                                         class="btn btn-sm btn-danger"
                                         onclick="clearLDAP()"
