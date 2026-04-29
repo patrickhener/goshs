@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/howeyc/gopass"
+	"golang.org/x/net/webdav"
 	"goshs.de/goshs/v2/ca"
 	"goshs.de/goshs/v2/catcher"
 	"goshs.de/goshs/v2/clipboard"
@@ -27,7 +28,6 @@ import (
 	"goshs.de/goshs/v2/tunnel"
 	"goshs.de/goshs/v2/webhook"
 	"goshs.de/goshs/v2/ws"
-	"golang.org/x/net/webdav"
 	"software.sslmate.com/src/go-pkcs12"
 )
 
@@ -167,6 +167,13 @@ func (fs *FileServer) SetupMux(mux *CustomMux, what string) string {
 					return
 				}
 				fs.handleCatcherAPI(w, r, action[0])
+				return
+			}
+			if _, ok := r.URL.Query()["token"]; ok {
+				if !fs.checkCSRF(w, r) {
+					return
+				}
+				fs.DeleteShareHandler(w, r)
 				return
 			}
 			if denyForTokenAccess(w, r) {

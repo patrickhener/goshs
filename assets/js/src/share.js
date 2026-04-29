@@ -133,18 +133,16 @@ export function copyShareUrl(token) {
 }
 
 export function deleteShareLink(token, path) {
-  let ok;
-  ok = confirm("Do you really want to delete the shared link?");
+  if (!confirm("Do you really want to delete the shared link?")) return;
 
-  if (ok) {
-    var url = "";
-    location.protocol !== "https:"
-      ? (url = "http://" + window.location.host + "/" + "?token=" + token)
-      : (url = "https://" + window.location.host + "/" + "?token=" + token);
+  const proto = location.protocol === "https:" ? "https://" : "http://";
+  const url = proto + window.location.host + "/?token=" + token;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
-    fetch(url, { method: "DELETE", headers: { "X-CSRF-Token": csrf } });
-    sessionStorage.setItem("activeTab", "nav-share");
-    location.reload();
-  }
+  fetch(url, { method: "DELETE", headers: { "X-CSRF-Token": csrf } })
+    .then(() => {
+      sessionStorage.setItem("activeTab", "nav-share");
+      location.reload();
+    })
+    .catch(() => toast("Delete failed", "error"));
 }

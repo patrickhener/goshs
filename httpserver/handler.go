@@ -1045,8 +1045,8 @@ func (fs *FileServer) DeleteShareHandler(w http.ResponseWriter, r *http.Request)
 	delete(fs.SharedLinks, token)
 	fs.sharedLinksMu.Unlock()
 
-	body := fs.emitCollabEvent(r, http.StatusNoContent)
-	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, body)
+	fs.emitCollabEvent(r, http.StatusNoContent)
+	logger.LogRequest(r, http.StatusNoContent, fs.Verbose, fs.Webhook, nil)
 
 	w.WriteHeader(204)
 	_, err := w.Write([]byte("shared link deleted successfully"))
