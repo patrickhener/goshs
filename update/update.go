@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/google/go-github/v85/github"
 	"github.com/inconshreveable/go-update"
 	"goshs.de/goshs/v2/logger"
@@ -65,12 +66,23 @@ func UpdateTool(version string) error {
 	}
 
 	logger.Infof("goshs updated successfully to %s", latestRelease.GetTagName())
-	fmt.Printf("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Printf(" Changelog for %s\n", latestRelease.GetTagName())
-	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
-	fmt.Println(latestRelease.GetBody())
-	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+
+	changelogs, err := getChangelogsBetweenVersions(version, latestRelease.GetTagName())
+	if err != nil {
+		// Fallback to just showing the latest release changelog
+		renderChangelog(version, latestRelease.GetTagName(), []releaseNotes{
+			{tag: latestRelease.GetTagName(), body: latestRelease.GetBody()},
+		})
+	} else {
+		renderChangelog(version, latestRelease.GetTagName(), changelogs)
+	}
+
 	return nil
+}
+
+type releaseNotes struct {
+	tag  string
+	body string
 }
 
 func getLatestRelease(owner string, repo string) (*github.RepositoryRelease, error) {
@@ -83,6 +95,115 @@ func getLatestRelease(owner string, repo string) (*github.RepositoryRelease, err
 		return nil, err
 	}
 	return release, nil
+}
+
+func getReleases(owner string, repo string) ([]*github.RepositoryRelease, error) {
+	client := github.NewClient(nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var allReleases []*github.RepositoryRelease
+	opts := &github.ListOptions{PerPage: 50}
+
+	for {
+		releases, resp, err := client.Repositories.ListReleases(ctx, owner, repo, opts)
+		if err != nil {
+			return nil, err
+		}
+		allReleases = append(allReleases, releases...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return allReleases, nil
+}
+
+func getChangelogsBetweenVersions(currentVersion, targetVersion string) ([]releaseNotes, error) {
+	releases, err := getReleases(owner, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	var notes []releaseNotes
+	for _, r := range releases {
+		tag := r.GetTagName()
+		if isVersionBetween(tag, currentVersion, targetVersion) {
+			notes = append(notes, releaseNotes{tag: tag, body: r.GetBody()})
+		}
+	}
+
+	return notes, nil
+}
+
+func isVersionBetween(tag, current, target string) bool {
+	cv := parseSemver(current)
+	tv := parseSemver(target)
+	v := parseSemver(tag)
+
+	if cv == nil || tv == nil || v == nil {
+		return false
+	}
+
+	// Include target, exclude current
+	if compareSemver(v, cv) <= 0 {
+		return false
+	}
+	if compareSemver(v, tv) > 0 {
+		return false
+	}
+	return true
+}
+
+type semver struct {
+	major, minor, patch int
+}
+
+func parseSemver(s string) *semver {
+	s = strings.TrimPrefix(s, "v")
+	parts := strings.SplitN(s, ".", 3)
+	if len(parts) != 3 {
+		return nil
+	}
+	sv := &semver{}
+	if _, err := fmt.Sscanf(parts[0], "%d", &sv.major); err != nil {
+		return nil
+	}
+	if _, err := fmt.Sscanf(parts[1], "%d", &sv.minor); err != nil {
+		return nil
+	}
+	if _, err := fmt.Sscanf(parts[2], "%d", &sv.patch); err != nil {
+		return nil
+	}
+	return sv
+}
+
+func compareSemver(a, b *semver) int {
+	if a.major != b.major {
+		return a.major - b.major
+	}
+	if a.minor != b.minor {
+		return a.minor - b.minor
+	}
+	return a.patch - b.patch
+}
+
+func renderChangelog(currentVersion, targetVersion string, notes []releaseNotes) {
+	var md strings.Builder
+	md.WriteString(fmt.Sprintf("# Changelog %s → %s\n\n", currentVersion, targetVersion))
+
+	for i := len(notes) - 1; i >= 0; i-- {
+		n := notes[i]
+		md.WriteString(fmt.Sprintf("## %s\n\n%s\n\n", n.tag, n.body))
+	}
+
+	rendered, err := glamour.Render(md.String(), "dark")
+	if err != nil {
+		// Fallback to raw markdown
+		fmt.Printf("\n%s\n", md.String())
+		return
+	}
+	fmt.Print(rendered)
 }
 
 func getAssetURL(release *github.RepositoryRelease) (string, error) {
