@@ -73,7 +73,7 @@ For a detailed documentation go to [goshs.de](https://goshs.de)
 <details>
 <summary>🔧 Build yourself</summary>
 
-Building requirements are [uglify-js](https://www.npmjs.com/package/uglify-js) and [sass](https://sass-lang.com/install). After installing these packages run:
+Building requirements are [esbuild](https://github.com/evanw/esbuild) and [sass](https://sass-lang.com/install). After installing these packages run:
 
 ```bash
 git clone https://github.com/patrickhener/goshs.git
