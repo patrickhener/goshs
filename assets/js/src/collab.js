@@ -69,8 +69,9 @@ function decodeStringLeaf(s) {
 
 function tryBase64(s) {
   if (!s || s.length < 8) return null;
-  // Strip any whitespace/newlines that might wrap multiline base64
-  const clean = s.replace(/[\r\n\s]/g, "");
+  // Strip only line endings that wrap multiline base64 — NOT spaces,
+  // since a real base64 value in an HTTP field should never contain spaces.
+  const clean = s.replace(/[\r\n]/g, "");
   // Two separate checks — standard (+/) and URL-safe (-_)
   const isStd = /^[A-Za-z0-9+/]+=*$/.test(clean);
   const isUrlSafe = /^[A-Za-z0-9\-_]+=*$/.test(clean);
@@ -85,7 +86,7 @@ function tryBase64(s) {
     let bad = 0;
     for (let i = 0; i < decoded.length; i++) {
       const c = decoded.charCodeAt(i);
-      if (c < 9 || (c > 13 && c < 32) || c === 127) bad++;
+      if (c < 9 || (c > 13 && c < 32) || c >= 127) bad++;
     }
     if (decoded.length > 0 && bad / decoded.length > 0.1) return null;
     return decoded;

