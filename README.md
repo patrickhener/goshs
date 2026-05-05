@@ -20,6 +20,8 @@ You're mid-engagement. You need to transfer a file, catch an SMB hash, or stand 
 
 ### Demo
 
+**Try it out yourself: [demo.goshs.de](https://demo.goshs.de)**
+
 ![goshs-demo](https://github.com/patrickhener/image-cdn/blob/main/goshs-demo.gif?raw=true)
 
 # Quick Start
