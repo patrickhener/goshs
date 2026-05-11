@@ -61,7 +61,7 @@ func TestGetAssetURLErr(t *testing.T) {
 		},
 	}
 
-	_, err := getAssetURL(release)
+	_, _, err := getAssetURL(release)
 	require.Error(t, err)
 }
 
@@ -70,9 +70,9 @@ func TestInvalidApplyUpdate(t *testing.T) {
 		t.Skip("skipping network-dependent test in short mode")
 	}
 
-	err := applyUpdate("http://invalid")
+	err := applyUpdate("http://invalid", nil)
 	require.Error(t, err)
 
-	err = applyUpdate("https://hesec.de")
+	err = applyUpdate("https://hesec.de", nil)
 	require.Error(t, err)
 }
