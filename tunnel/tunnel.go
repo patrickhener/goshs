@@ -2,16 +2,35 @@ package tunnel
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"goshs.de/goshs/v2/logger"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
+
+// HostKeyMismatchError is returned by Start when the server presents a host
+// key that differs from the pinned key in known_hosts. Callers should treat
+// this as a fatal condition (possible MITM attack).
+type HostKeyMismatchError struct {
+	Hostname       string
+	KnownHostsFile string
+}
+
+func (e *HostKeyMismatchError) Error() string {
+	return fmt.Sprintf(
+		"ssh: host key mismatch for %s — possible MITM attack. "+
+			"If localhost.run legitimately rotated its key, delete %s and reconnect",
+		e.Hostname, e.KnownHostsFile,
+	)
+}
 
 type Tunnel struct {
 	PublicURL string
@@ -24,11 +43,16 @@ type closeWriter interface {
 	CloseWrite() error
 }
 
-func Start(localIP string, localPort int) (*Tunnel, error) {
+func Start(localIP string, localPort int, knownHostsFile string) (*Tunnel, error) {
+	hostKeyCb, err := buildTOFUCallback(knownHostsFile)
+	if err != nil {
+		return nil, fmt.Errorf("setting up host key verification: %w", err)
+	}
+
 	config := &ssh.ClientConfig{
 		User:            "nokey",
 		Auth:            []ssh.AuthMethod{ssh.Password("")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCb,
 		Timeout:         10 * time.Second,
 		BannerCallback:  func(banner string) error { return nil },
 	}
@@ -146,6 +170,54 @@ func (t *Tunnel) accept(chanCh <-chan ssh.NewChannel, localIP string, localPort 
 			go proxy(ch, localIP, localPort)
 		}
 	}
+}
+
+func buildTOFUCallback(knownHostsFile string) (ssh.HostKeyCallback, error) {
+	// Create the file if it does not exist yet.
+	f, err := os.OpenFile(knownHostsFile, os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s: %w", knownHostsFile, err)
+	}
+	f.Close()
+
+	cb, err := knownhosts.New(knownHostsFile)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s: %w", knownHostsFile, err)
+	}
+
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		err := cb(hostname, remote, key)
+		if err == nil {
+			return nil
+		}
+
+		var keyErr *knownhosts.KeyError
+		if !errors.As(err, &keyErr) {
+			return err
+		}
+
+		if len(keyErr.Want) > 0 {
+			// Host is known but presented a different key — abort.
+			return &HostKeyMismatchError{Hostname: hostname, KnownHostsFile: knownHostsFile}
+		}
+
+		// Unknown host — TOFU: pin the key and warn.
+		f, err := os.OpenFile(knownHostsFile, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			return fmt.Errorf("writing to %s: %w", knownHostsFile, err)
+		}
+		defer f.Close()
+
+		line := knownhosts.Line([]string{hostname}, key)
+		if _, err := fmt.Fprintln(f, line); err != nil {
+			return fmt.Errorf("writing to %s: %w", knownHostsFile, err)
+		}
+
+		fingerprint := ssh.FingerprintSHA256(key)
+		logger.Warnf("tunnel: pinned new host key for %s (%s) in %s", hostname, fingerprint, knownHostsFile)
+		logger.Warnf("tunnel: verify with: ssh-keyscan localhost.run 2>/dev/null | ssh-keygen -l -f -")
+		return nil
+	}, nil
 }
 
 func (t *Tunnel) Close() {

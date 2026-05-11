@@ -40,6 +40,11 @@ func main() {
 		}
 	}
 
+	// Ensure ~/.config/goshs exists
+	if _, err = config.Dir(); err != nil {
+		logger.Warnf("Could not create config directory: %+v", err)
+	}
+
 	// Sanitize webroot and check sanity
 	opts, err = sanity.Sanitize(opts)
 	if err != nil {

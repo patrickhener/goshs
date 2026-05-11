@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"goshs.de/goshs/v2/ca"
 	"goshs.de/goshs/v2/catcher"
 	"goshs.de/goshs/v2/clipboard"
+	"goshs.de/goshs/v2/config"
 	"goshs.de/goshs/v2/goshsversion"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/options"
@@ -388,13 +390,23 @@ func (fs *FileServer) Start(what string) {
 
 	// Start tunnel if enabled
 	if fs.Tunnel {
-		t, err := tunnel.Start(fs.IP, fs.Port)
+		configDir, err := config.Dir()
 		if err != nil {
-			logger.Errorf("error starting tunnel: %+v", err)
+			logger.Errorf("tunnel: cannot resolve config directory: %+v", err)
 		} else {
-			defer t.Close()
-			logger.Infof("Public tunnel URL: %s", t.PublicURL)
-			fs.TunnelURL = t.PublicURL
+			knownHostsFile := filepath.Join(configDir, "known_hosts")
+			t, err := tunnel.Start(fs.IP, fs.Port, knownHostsFile)
+			if err != nil {
+				var mismatch *tunnel.HostKeyMismatchError
+				if errors.As(err, &mismatch) {
+					logger.Fatalf("tunnel: %v", mismatch)
+				}
+				logger.Errorf("error starting tunnel: %+v", err)
+			} else {
+				defer t.Close()
+				logger.Infof("Public tunnel URL: %s", t.PublicURL)
+				fs.TunnelURL = t.PublicURL
+			}
 		}
 	}
 

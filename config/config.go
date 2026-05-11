@@ -2,12 +2,26 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/options"
 )
+
+// Dir returns the path to ~/.config/goshs and creates it if it does not exist.
+func Dir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("finding home directory: %w", err)
+	}
+	dir := filepath.Join(home, ".config", "goshs")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", fmt.Errorf("creating config directory %s: %w", dir, err)
+	}
+	return dir, nil
+}
 
 type Config struct {
 	Interface           string   `json:"interface"`
