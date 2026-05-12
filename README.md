@@ -66,7 +66,10 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 | Method | |
 |---|---|
 | 🦫 **Go** | `go install goshs.de/goshs/v2@latest` |
-| 🐉 **Kali** | `sudo apt install goshs` |
+| 🐉 **Kali & Parrot OS** | `sudo apt install goshs` |
+| 🎗️ **Arch Linux (AUR)** | `yay -S goshs-bin` |
+| 🦎 **openSUSE** | `sudo zypper install goshs` |
+| ❄️ **Nix / NixOS** | `nix-env -iA nixpkgs.goshs` |
 | 🍺 **Homebrew** | `brew install goshs` |
 | 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
 | 🐳 **Docker** | `docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd` |
