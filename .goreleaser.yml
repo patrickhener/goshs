@@ -26,27 +26,59 @@ builds:
       - "7"
 
 archives:
-  # Linux /macOS / BSD -> .tar.gz
-  - id: unix
+  - id: default
     formats:
       - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
     name_template: >-
       {{ .ProjectName }}_
-      {{- .Version }}_
+      v{{- .Version }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-  # Windows -> .zip
-  - id: windows
+nfpms:
+  - package_name: goshs
+    vendor: Patrick Hener
+    homepage: https://goshs.de
+    description: >-
+      A single-binary file server for pentesters and sysadmins.
+      Supports HTTP/S, WebDAV, SFTP, SMB, LDAP, basic auth, share links,
+      DNS/SMTP callbacks, and NTLM hash capture — all from one command.
+    license: MIT
+    maintainer: Patrick Hener <patrickgoll87@gmail.com>
     formats:
-      - zip
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- .Version }}_
-      windows_
-      {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
+      - deb
+      - rpm
+    bindir: /usr/bin
+    rpm:
+      group: Applications/Internet
+      summary: Single-binary file server for pentesters and sysadmins
+
+winget:
+  - publisher: PatrickHener
+    short_description: Single-binary file server for pentesters and sysadmins
+    license: MIT
+    publisher_url: https://goshs.de
+    publisher_support_url: https://github.com/patrickhener/goshs/issues
+    package_identifier: PatrickHener.Goshs
+    url_template: "https://github.com/patrickhener/goshs/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    skip_upload: auto
+    repository:
+      owner: patrickhener
+      name: winget-pkgs
+      branch: "goshs-{{ .Version }}"
+      token: "{{ .Env.WINGET_PKGS_TOKEN }}"
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
 
 checksum:
   name_template: "checksums.txt"
