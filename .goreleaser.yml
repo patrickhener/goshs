@@ -35,7 +35,7 @@ archives:
           - zip
     name_template: >-
       {{ .ProjectName }}_
-      v{{- .Version }}_
+      {{- print "v" .Version }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
