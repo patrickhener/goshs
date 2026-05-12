@@ -2,6 +2,7 @@ package update
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -21,17 +22,9 @@ import (
 )
 
 const (
-	owner             = "patrickhener"
-	repo              = "goshs"
-	GOSHS_CHECKSUMS   = "checksums.txt"
-	GOSHS_WINDOWS_64  = "goshs_windows_x86_64.tar.gz"
-	GOSHS_WINDOWS_32  = "goshs_windows_386.tar.gz"
-	GOSHS_WINDOWS_ARM = "goshs_windows_arm64.tar.gz"
-	GOSHS_LINUX_64    = "goshs_linux_x86_64.tar.gz"
-	GOSHS_LINUX_32    = "goshs_linux_386.tar.gz"
-	GOSHS_LINUX_ARM   = "goshs_linux_arm64.tar.gz"
-	GOSHS_DARWIN_64   = "goshs_darwin_x86_64.tar.gz"
-	GOSHS_DARWIN_ARM  = "goshs_darwin_arm64.tar.gz"
+	owner           = "patrickhener"
+	repo            = "goshs"
+	GOSHS_CHECKSUMS = "checksums.txt"
 )
 
 func CheckForUpdates(version string) (bool, string) {
@@ -280,7 +273,12 @@ func applyUpdate(assetURL string, expectedSum []byte) error {
 	}
 	logger.Infof("update archive checksum verified: %x", sum)
 
-	goshsReader, err := tarXVZFFromBytes(archiveData)
+	var goshsReader io.Reader
+	if strings.HasSuffix(assetURL, ".zip") {
+		goshsReader, err = zipFromBytes(archiveData)
+	} else {
+		goshsReader, err = tarXVZFFromBytes(archiveData)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to decompress the downloaded file: %+v", err)
 	}
@@ -293,14 +291,18 @@ func applyUpdate(assetURL string, expectedSum []byte) error {
 }
 
 func assetMatchesOSAndArch(assetName string) bool {
-	return (runtime.GOOS == "windows" && runtime.GOARCH == "amd64" && assetName == GOSHS_WINDOWS_64) ||
-		(runtime.GOOS == "windows" && runtime.GOARCH == "386" && assetName == GOSHS_WINDOWS_32) ||
-		(runtime.GOOS == "windows" && runtime.GOARCH == "arm64" && assetName == GOSHS_WINDOWS_ARM) ||
-		(runtime.GOOS == "linux" && runtime.GOARCH == "amd64" && assetName == GOSHS_LINUX_64) ||
-		(runtime.GOOS == "linux" && runtime.GOARCH == "386" && assetName == GOSHS_LINUX_32) ||
-		(runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && assetName == GOSHS_LINUX_ARM) ||
-		(runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" && assetName == GOSHS_DARWIN_64) ||
-		(runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && assetName == GOSHS_DARWIN_ARM)
+	archStr := runtime.GOARCH
+	if runtime.GOARCH == "amd64" {
+		archStr = "x86_64"
+	}
+
+	ext := ".tar.gz"
+	if runtime.GOOS == "windows" {
+		ext = ".zip"
+	}
+
+	suffix := fmt.Sprintf("_%s_%s%s", runtime.GOOS, archStr, ext)
+	return strings.HasPrefix(assetName, "goshs_") && strings.HasSuffix(assetName, suffix)
 }
 
 func tarXVZFFromBytes(archiveData []byte) (io.Reader, error) {
@@ -331,4 +333,28 @@ func tarXVZFFromBytes(archiveData []byte) (io.Reader, error) {
 	}
 
 	return nil, fmt.Errorf("no goshs binary found in release archive")
+}
+
+func zipFromBytes(archiveData []byte) (io.Reader, error) {
+	r, err := zip.NewReader(bytes.NewReader(archiveData), int64(len(archiveData)))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range r.File {
+		if strings.Contains(f.Name, "goshs") && !strings.HasSuffix(f.Name, "/") {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer rc.Close()
+			data, err := io.ReadAll(io.LimitReader(rc, int64(f.UncompressedSize64)))
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(data), nil
+		}
+	}
+
+	return nil, fmt.Errorf("no goshs binary found in zip archive")
 }
