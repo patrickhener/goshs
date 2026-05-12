@@ -46,7 +46,7 @@ goshs -dns -dns-ip 1.2.3.4 -smtp -smtp-domain your-domain.com
 
 # Documentation
 
-For a detailed documentation go to [goshs.de](https://goshs.de)
+For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 
 # Features
 
