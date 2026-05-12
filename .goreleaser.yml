@@ -26,14 +26,30 @@ builds:
       - "7"
 
 archives:
-  - name_template: >-
+  # Linux /macOS / BSD -> .tar.gz
+  - id: unix
+    formats:
+      - tar.gz
+    name_template: >-
       {{ .ProjectName }}_
+      {{- .Version }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+  # Windows -> .zip
+  - id: windows
+    formats:
+      - zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      windows_
+      {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 snapshot:
   version_template: "{{ .Tag }}-next"
@@ -42,5 +58,5 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
