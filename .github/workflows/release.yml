@@ -43,13 +43,15 @@ jobs:
     needs: goreleaser
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    continue-on-error: true
     steps:
       - name: Trigger COPR build
         env:
           COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
           COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
         run: |
-          curl -sf -X POST \
+          curl -sf --retry 5 --retry-delay 10 --retry-all-errors \
+            -X POST \
             --user "${COPR_LOGIN}:${COPR_TOKEN}" \
             -F "ownername=patrickhener" \
             -F "projectname=goshs" \
@@ -58,4 +60,4 @@ jobs:
             -F "committish=${{ github.ref_name }}" \
             -F "spec=packaging/rpm/goshs.spec" \
             -F "srpm_build_method=rpkg" \
-            "https://copr.fedorainfrastructure.org/api_3/build/create/scm"
+            "https://copr.fedorainfracloud.org/api_3/build/create/scm"
