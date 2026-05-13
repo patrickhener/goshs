@@ -45,12 +45,18 @@ jobs:
           pattern: snap-*
           merge-multiple: true
 
+      - name: Resolve snap filenames
+        id: snaps
+        run: |
+          echo "amd64=$(ls goshs_*_amd64.snap)" >> "$GITHUB_OUTPUT"
+          echo "arm64=$(ls goshs_*_arm64.snap)" >> "$GITHUB_OUTPUT"
+
       - name: Publish amd64 to Snap Store
         uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: goshs_*_amd64.snap
+          snap: ${{ steps.snaps.outputs.amd64 }}
           release: stable
 
       - name: Publish arm64 to Snap Store
@@ -58,5 +64,5 @@ jobs:
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: goshs_*_arm64.snap
+          snap: ${{ steps.snaps.outputs.arm64 }}
           release: stable
