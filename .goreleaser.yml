@@ -58,6 +58,41 @@ nfpms:
       group: Applications/Internet
       summary: Single-binary file server for pentesters and sysadmins
 
+chocolateys:
+  - name: goshs
+    owners: patrickhener
+    title: goshs
+    authors: Patrick Hener
+    project_url: https://goshs.de
+    icon_url: https://goshs.de/img/favicon.png
+    copyright: Patrick Hener
+    license_url: https://github.com/patrickhener/goshs/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/patrickhener/goshs
+    docs_url: https://docs.goshs.de
+    bug_tracker_url: https://github.com/patrickhener/goshs/issues
+    tags: "goshs http server file-sharing pentesting security ctf sysadmin"
+    summary: "Beyond Python's http.server — single-binary file server for pentesters"
+    description: |
+      goshs is a single-binary file server for pentesters, CTF players, and sysadmins.
+
+      HTTP/S, WebDAV, SFTP, SMB, LDAP/S, NTLM hash capture, DNS/SMTP callbacks — all
+      from one command, zero dependencies.
+
+      ## Features
+
+      - File sharing: upload/download, drag and drop, QR codes, bulk ZIP, share links
+      - Protocols: HTTP/S, WebDAV, SFTP, SMB, LDAP/S
+      - Auth: basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom cert)
+      - Red team: SMB/LDAP NTLM hash capture and cracking, JNDI/Log4Shell mode,
+        DNS/SMTP out-of-band callbacks, reverse shell catcher, redirect endpoint
+      - Tunnel via localhost.run, webhooks, mDNS, IP allowlist, shell completion
+      - Self-update: goshs --update
+    release_notes: "https://github.com/patrickhener/goshs/releases/tag/{{ .Tag }}"
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    source_repo: "https://push.chocolatey.org/"
+    skip_upload: auto
+
 winget:
   - publisher: PatrickHener
     short_description: Single-binary file server for pentesters and sysadmins

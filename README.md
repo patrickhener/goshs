@@ -77,6 +77,7 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 | 🍺 **Homebrew** | `brew install goshs` |
 | 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
 | 🪟 **winget** | `winget install PatrickHener.Goshs` |
+| 🍫 **Chocolatey** | `choco install goshs` |
 | 🐳 **Docker** | `docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd` |
 | 📦 **Release** | [Download from GitHub Releases](https://github.com/patrickhener/goshs/releases) |
 
