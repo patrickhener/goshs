@@ -7,7 +7,7 @@ License:        MIT
 URL:            https://github.com/patrickhener/goshs
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
-BuildRequires:  golang >= 1.26
+BuildRequires:  golang
 
 %description
 A single-binary file server for pentesters, CTF players, and sysadmins.
@@ -40,7 +40,7 @@ install -Dm 0755 %{name} %{buildroot}%{_bindir}/%{name}
 %{_bindir}/%{name}
 
 %changelog
-* Tue May 13 2026 Patrick Hener <patrickhener@gmx.de> - 2.0.8-1
+* Wed May 13 2026 Patrick Hener <patrickhener@gmx.de> - 2.0.8-1
 - Add more packaging
-* Tue May 13 2026 Patrick Hener <patrickhener@gmx.de> - 2.0.7-1
+* Wed May 13 2026 Patrick Hener <patrickhener@gmx.de> - 2.0.7-1
 - Initial COPR package
