@@ -1,5 +1,5 @@
 Name:           goshs
-Version:        v2.0.8
+Version:        2.0.8
 Release:        1%{?dist}
 Summary:        Beyond Python's http.server — single-binary file server for pentesters
 

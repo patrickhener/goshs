@@ -101,10 +101,11 @@ endif
 	@echo "Updating version to $(VERSION)..."
 	@sed -i 's/var GoshsVersion = "v[^"]*"/var GoshsVersion = "$(VERSION)"/' goshsversion/version.go
 	@sed -i 's|https://img.shields.io/badge/Version-v[^-]*-green|https://img.shields.io/badge/Version-$(VERSION)-green|' README.md
-	@sed -i 's|Version: [^ ]*|Version: $(VERSION)|' packaging/rpm/goshs.spec
-	@echo "* $(VERSION) - " >> packaging/rpm/goshs.spec
-	@echo "  - " >> packaging/rpm/goshs.spec
-	@git add goshsversion/version.go README.md
+	@SPECVER=$$(echo "$(VERSION)" | sed 's/^v//'); \
+	DATE=$$(date '+%a %b %d %Y'); \
+	sed -i "s|^Version:.*|Version:        $$SPECVER|" packaging/rpm/goshs.spec; \
+	sed -i "/^%changelog/a * $$DATE Patrick Hener <patrickhener@gmx.de> - $$SPECVER-1\n- Add new version $(VERSION)" packaging/rpm/goshs.spec
+	@git add goshsversion/version.go README.md packaging/rpm/goshs.spec
 	@git commit -m "New version $(VERSION)"
 	@git push
 	@git tag $(VERSION)
