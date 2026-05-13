@@ -1,0 +1,86 @@
+#!/bin/bash
+# Linux shim for GoReleaser's chocolatey pipe — no Mono/choco.exe required.
+# Handles: choco pack <nuspec> --out <dir>
+#          choco push <nupkg>  --source <url> --api-key <key>
+set -e
+
+cmd="${1:-}"; shift || true
+
+case "$cmd" in
+  pack)
+    nuspec=""; outdir="."
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --out|--outputdirectory) outdir="$2"; shift 2 ;;
+        *.nuspec)                nuspec="$1"; shift   ;;
+        *)                                   shift   ;;
+      esac
+    done
+    [[ -z "$nuspec" ]] && { echo "choco pack: no nuspec specified" >&2; exit 1; }
+
+    pkg=$(grep -oP '(?<=<id>)[^<]+' "$nuspec" | head -1 | tr -d '[:space:]')
+    ver=$(grep -oP '(?<=<version>)[^<]+' "$nuspec" | head -1 | tr -d '[:space:]')
+    nupkg="${outdir}/${pkg}.${ver}.nupkg"
+    basedir=$(dirname "$nuspec")
+    nuspecname=$(basename "$nuspec")
+
+    python3 - "$basedir" "$nuspecname" "$nupkg" <<'PYEOF'
+import sys, zipfile, os
+
+basedir, nuspecname, nupkg = sys.argv[1], sys.argv[2], sys.argv[3]
+
+ct = b'''<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels"   ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="nuspec" ContentType="application/octet"/>
+  <Default Extension="ps1"    ContentType="application/octet"/>
+  <Default Extension="txt"    ContentType="application/octet"/>
+</Types>'''
+
+rl = (b'''<?xml version="1.0" encoding="utf-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest"
+    Target="/''' + nuspecname.encode() + b'''" Id="R1"/>
+</Relationships>''')
+
+with zipfile.ZipFile(nupkg, 'w', zipfile.ZIP_DEFLATED) as zf:
+    zf.writestr('[Content_Types].xml', ct)
+    zf.writestr('_rels/.rels', rl)
+    for root, _, files in os.walk(basedir):
+        for f in files:
+            fp = os.path.join(root, f)
+            zf.write(fp, os.path.relpath(fp, basedir))
+
+print(f'Successfully created package "{nupkg}".')
+PYEOF
+    ;;
+
+  push)
+    nupkg=""; apikey=""; source="https://push.chocolatey.org/"
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --api-key|-k)                    apikey="$2"; shift 2 ;;
+        --source|-s)                     source="$2"; shift 2 ;;
+        --timeout)                       shift 2 ;;
+        --non-interactive|--no-progress) shift ;;
+        *.nupkg)                         nupkg="$1"; shift ;;
+        *)                               shift ;;
+      esac
+    done
+    [[ -z "$nupkg"  ]] && { echo "choco push: no nupkg specified"  >&2; exit 1; }
+    [[ -z "$apikey" ]] && { echo "choco push: no api-key specified" >&2; exit 1; }
+
+    curl -f -X PUT \
+      -H "X-NuGet-ApiKey: ${apikey}" \
+      -H "Content-Type: application/octet-stream" \
+      --data-binary "@${nupkg}" \
+      "${source%/}/api/v2/package"
+    echo "Successfully pushed '${nupkg}'."
+    ;;
+
+  --version|-v|version)
+    echo "choco-linux 1.0.0 (CI shim)" ;;
+
+  *)
+    echo "choco-linux: unknown command '${cmd}'" >&2; exit 1 ;;
+esac
