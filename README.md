@@ -70,6 +70,8 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 | 🐉 **Kali & Parrot OS** | `sudo apt install goshs` |
 | 🎗️ **Arch Linux (AUR)** | `yay -S goshs-bin` |
 | 🏔️ **Alpine Linux (edge)** | `apk add goshs` |
+| 🫙 **Snap** | `snap install goshs` |
+| 🎩 **Fedora / RHEL (COPR)** | `dnf copr enable patrickhener/goshs && dnf install goshs` |
 | 🦎 **openSUSE** | `sudo zypper install goshs` |
 | ❄️ **Nix / NixOS** | `nix-env -iA nixpkgs.goshs` |
 | 🍺 **Homebrew** | `brew install goshs` |

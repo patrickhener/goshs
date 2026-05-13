@@ -101,6 +101,9 @@ endif
 	@echo "Updating version to $(VERSION)..."
 	@sed -i 's/var GoshsVersion = "v[^"]*"/var GoshsVersion = "$(VERSION)"/' goshsversion/version.go
 	@sed -i 's|https://img.shields.io/badge/Version-v[^-]*-green|https://img.shields.io/badge/Version-$(VERSION)-green|' README.md
+	@sed -i 's|Version: [^ ]*|Version: $(VERSION)|' packaging/rpm/goshs.spec
+	@echo "* $(VERSION) - " >> packaging/rpm/goshs.spec
+	@echo "  - " >> packaging/rpm/goshs.spec
 	@git add goshsversion/version.go README.md
 	@git commit -m "New version $(VERSION)"
 	@git push
