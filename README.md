@@ -69,6 +69,7 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 | 🦫 **Go** | `go install goshs.de/goshs/v2@latest` |
 | 🐉 **Kali & Parrot OS** | `sudo apt install goshs` |
 | 🎗️ **Arch Linux (AUR)** | `yay -S goshs-bin` |
+| 🖤 **BlackArch** | `pacman -S goshs` |
 | 🏔️ **Alpine Linux (edge)** | `apk add goshs` |
 | 🫙 **Snap** | `snap install goshs` |
 | 🎩 **Fedora / RHEL (COPR)** | `dnf copr enable patrickhener/goshs && dnf install goshs` |
