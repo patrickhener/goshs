@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/howeyc/gopass"
+	"goshs.de/goshs/v2/completion"
 	"goshs.de/goshs/v2/goshsversion"
 	"goshs.de/goshs/v2/logger"
 	"goshs.de/goshs/v2/update"
@@ -202,13 +203,14 @@ func Parse() (*Options, bool) {
 	hash := flag.Bool("H", false, "hash")
 	hashLong := flag.Bool("hash", false, "hash")
 	version := flag.Bool("v", false, "goshs version")
+	comp := flag.String("completion", "", "shell for completion (bash, fish, zsh)")
 
 	flag.Usage = usage()
 
 	flag.Parse()
 
 	// Check and execute one-shot functions and execute -> early exit
-	oneShotFunctions(upd, hash, hashLong, version)
+	oneShotFunctions(upd, hash, hashLong, version, comp)
 
 	// Check for print config flag
 	if *printConfig || *printConfigLong {
@@ -325,6 +327,8 @@ Misc options:
   -V  --verbose       Activate verbose log output             (default: false)
   -v                  Print the current goshs version
 
+      --completion    Install shell tab completion (bash|fish|zsh)
+
 Usage examples:
   Start with default values:    	./goshs
   Start with config file:    	        ./goshs -C /path/to/config.yaml
@@ -342,7 +346,7 @@ Usage examples:
 	}
 }
 
-func oneShotFunctions(upd, hash, hashLong, version *bool) {
+func oneShotFunctions(upd, hash, hashLong, version *bool, comp *string) {
 	// Check for update flag
 	if *upd {
 		err := update.UpdateTool(goshsversion.GoshsVersion)
@@ -362,13 +366,20 @@ func oneShotFunctions(upd, hash, hashLong, version *bool) {
 		utils.GenerateHashedPassword(password)
 		os.Exit(0)
 	}
-	//
+
 	// Check for version flag
 	if *version {
 		logger.PrintBanner(goshsversion.GoshsVersion)
 		os.Exit(0)
 	}
 
+	// Check for completion flag
+	if *comp != "" {
+		if err := completion.Install(*comp); err != nil {
+			logger.Fatalf("completion install failed: %+v", err)
+		}
+		os.Exit(0)
+	}
 }
 
 func resolveInterface(ip string) string {

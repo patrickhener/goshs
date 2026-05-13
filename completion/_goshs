@@ -1,0 +1,84 @@
+#compdef goshs
+
+_goshs() {
+    local state
+
+    _arguments -C \
+        '--completion[Install shell tab completion]:shell:(bash fish zsh)' \
+        '(-i --ip)'{-i,--ip}'[IP or interface to listen on]:ip address' \
+        '(-p --port)'{-p,--port}'[Port to listen on]:port number' \
+        '(-d --dir)'{-d,--dir}'[Web root directory]:directory:_files -/' \
+        '(-w --webdav)'{-w,--webdav}'[Also serve using WebDAV protocol]' \
+        '-wp[WebDAV port]:port number' \
+        '--webdav-port[WebDAV port]:port number' \
+        '(-ro --read-only)'{-ro,--read-only}'[Read only mode]' \
+        '(-uo --upload-only)'{-uo,--upload-only}'[Upload only mode]' \
+        '(-uf --upload-folder)'{-uf,--upload-folder}'[Upload folder]:directory:_files -/' \
+        '(-mu --max-upload)'{-mu,--max-upload}'[Max upload size in bytes (0=unlimited)]:bytes' \
+        '(-nc --no-clipboard)'{-nc,--no-clipboard}'[Disable clipboard sharing]' \
+        '(-nd --no-delete)'{-nd,--no-delete}'[Disable delete option]' \
+        '(-si --silent)'{-si,--silent}'[Run without directory listing]' \
+        '(-I --invisible)'{-I,--invisible}'[Invisible mode]' \
+        '(-c --cli)'{-c,--cli}'[Enable CLI (requires auth and TLS)]' \
+        '--catcher[Enable reverse shell catcher]' \
+        '(-e --embedded)'{-e,--embedded}'[Show embedded files in UI]' \
+        '(-o --output)'{-o,--output}'[Write output to logfile]:file:_files' \
+        '(-t --tunnel)'{-t,--tunnel}'[Enable tunnel]' \
+        '(-s --ssl)'{-s,--ssl}'[Use TLS]' \
+        '(-ss --self-signed)'{-ss,--self-signed}'[Use a self-signed certificate]' \
+        '(-sk --server-key)'{-sk,--server-key}'[Path to server key]:file:_files' \
+        '(-sc --server-cert)'{-sc,--server-cert}'[Path to server certificate]:file:_files' \
+        '(-p12 --pkcs12)'{-p12,--pkcs12}'[Path to server p12]:file:_files' \
+        '-p12np[Server p12 has empty password]' \
+        '--p12-no-pass[Server p12 has empty password]' \
+        '(-sl --lets-encrypt)'{-sl,--lets-encrypt}'[Use Let'\''s Encrypt]' \
+        '(-sld --le-domains)'{-sld,--le-domains}'[Domains for Let'\''s Encrypt]:domains' \
+        '(-sle --le-email)'{-sle,--le-email}'[Email for Let'\''s Encrypt]:email' \
+        '(-slh --le-http)'{-slh,--le-http}'[Port for Let'\''s Encrypt HTTP challenge]:port' \
+        '(-slt --le-tls)'{-slt,--le-tls}'[Port for Let'\''s Encrypt TLS ALPN challenge]:port' \
+        '-sftp[Activate SFTP server]' \
+        '(-sp --sftp-port)'{-sp,--sftp-port}'[SFTP port (default: 2022)]:port' \
+        '(-skf --sftp-keyfile)'{-skf,--sftp-keyfile}'[Authorized_keys file]:file:_files' \
+        '(-shk --sftp-host-keyfile)'{-shk,--sftp-host-keyfile}'[SSH host key file]:file:_files' \
+        '-smb[Activate SMB server]' \
+        '-smb-port[SMB port (default: 445)]:port' \
+        '--smb-port[SMB port]:port' \
+        '-smb-domain[SMB domain]:domain' \
+        '--smb-domain[SMB domain]:domain' \
+        '-smb-share[SMB share name]:share' \
+        '--smb-share[SMB share name]:share' \
+        '-smb-wordlist[Wordlist for hash cracking]:file:_files' \
+        '(-ldap --ldap-server)'{-ldap,--ldap-server}'[Activate LDAP credential capture server]' \
+        '-ldap-port[LDAP port (default: 389)]:port' \
+        '-ldap-jndi[Enable JNDI mode for Log4Shell]' \
+        '-ldap-jndi-base[Override codeBase URL for JNDI payloads]:url' \
+        '-ldap-wordlist[Wordlist for LDAP NTLM hash cracking]:file:_files' \
+        '(-b --basic-auth)'{-b,--basic-auth}'[Basic auth (user:pass)]:credentials' \
+        '(-ca --cert-auth)'{-ca,--cert-auth}'[Certificate based auth]:file:_files' \
+        '(-H --hash)'{-H,--hash}'[Hash a password for file based ACLs]' \
+        '(-ipw --ip-whitelist)'{-ipw,--ip-whitelist}'[Comma separated IPs to whitelist]:ips' \
+        '(-tpw --trusted-proxy-whitelist)'{-tpw,--trusted-proxy-whitelist}'[Comma separated trusted proxies]:ips' \
+        '(-dns --dns-server)'{-dns,--dns-server}'[Enable DNS server]' \
+        '-dns-port[DNS server port (default: 8053)]:port' \
+        '--dns-port[DNS server port]:port' \
+        '-dns-ip[DNS server reply IP]:ip' \
+        '--dns-ip[DNS server reply IP]:ip' \
+        '(-smtp --smtp-server)'{-smtp,--smtp-server}'[Enable SMTP server]' \
+        '-smtp-port[SMTP server port (default: 2525)]:port' \
+        '--smtp-port[SMTP server port]:port' \
+        '-smtp-domain[SMTP server domain]:domain' \
+        '--smtp-domain[SMTP server domain]:domain' \
+        '(-W --webhook)'{-W,--webhook}'[Enable webhook support]' \
+        '(-Wu --webhook-url)'{-Wu,--webhook-url}'[Webhook URL]:url' \
+        '(-We --webhook-events)'{-We,--webhook-events}'[Events to notify]:events' \
+        '(-Wp --webhook-provider)'{-Wp,--webhook-provider}'[Webhook provider]:provider:(Discord Mattermost Slack)' \
+        '(-C --config)'{-C,--config}'[Config file path]:file:_files' \
+        '(-P --print-config)'{-P,--print-config}'[Print sample config to STDOUT]' \
+        '(-u --user)'{-u,--user}'[Drop privs to user (unix only)]:user:_users' \
+        '--update[Update goshs to most recent version]' \
+        '(-m --mdns)'{-m,--mdns}'[Enable mDNS registration]' \
+        '(-V --verbose)'{-V,--verbose}'[Verbose log output]' \
+        '-v[Print current goshs version]'
+}
+
+_goshs "$@"

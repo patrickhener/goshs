@@ -79,6 +79,26 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 | 📦 **Release** | [Download from GitHub Releases](https://github.com/patrickhener/goshs/releases) |
 
 <details>
+<summary>🐚 Shell completion</summary>
+
+goshs can install tab completion for bash, fish, and zsh:
+
+```bash
+goshs --completion bash
+goshs --completion fish
+goshs --completion zsh
+```
+
+On macOS with Homebrew the correct Homebrew path is used automatically.
+After installation the command prints an exact activation instruction, e.g.:
+
+```
+source ~/.local/share/bash-completion/completions/goshs
+```
+
+</details>
+
+<details>
 <summary>🔧 Build yourself</summary>
 
 Building requirements are [esbuild](https://github.com/evanw/esbuild) and [sass](https://sass-lang.com/install). After installing these packages run:
