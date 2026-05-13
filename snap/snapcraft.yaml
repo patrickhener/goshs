@@ -1,0 +1,43 @@
+name: goshs
+base: core24
+version: git
+summary: Beyond Python's http.server — single-binary file server for pentesters
+description: |
+  goshs is a single-binary file server for pentesters, CTF players, and
+  sysadmins. HTTP/S, WebDAV, SFTP, SMB, LDAP/S, NTLM hash capture,
+  DNS/SMTP callbacks — all from one command, zero dependencies.
+
+  Key features:
+  - File sharing: upload/download, drag & drop, QR codes, bulk ZIP, share links
+  - Protocols: HTTP/S, WebDAV, SFTP, SMB, LDAP/S
+  - Auth: basic auth, certificate auth, TLS (self-signed, Let's Encrypt, custom)
+  - Red team: SMB/LDAP NTLM hash capture + cracking, JNDI/Log4Shell mode,
+    DNS/SMTP out-of-band callbacks, reverse shell catcher, redirect endpoint
+  - Tunnel via localhost.run, webhooks, mDNS, IP allowlist, shell completion
+  - Self-update: goshs --update
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+  armhf:
+
+parts:
+  goshs:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.26/stable
+    override-build: |
+      go build -trimpath -ldflags="-s -w" -o "${CRAFT_PART_INSTALL}/bin/goshs" .
+
+apps:
+  goshs:
+    command: bin/goshs
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
