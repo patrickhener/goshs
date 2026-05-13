@@ -65,13 +65,16 @@ For a detailed documentation go to [docs.goshs.de](https://docs.goshs.de)
 
 | Method | |
 |---|---|
+| 🐧 **curl \| sh** | `curl -sSfL https://goshs.de/install.sh \| sh` |
 | 🦫 **Go** | `go install goshs.de/goshs/v2@latest` |
 | 🐉 **Kali & Parrot OS** | `sudo apt install goshs` |
 | 🎗️ **Arch Linux (AUR)** | `yay -S goshs-bin` |
+| 🏔️ **Alpine Linux (edge)** | `apk add goshs` |
 | 🦎 **openSUSE** | `sudo zypper install goshs` |
 | ❄️ **Nix / NixOS** | `nix-env -iA nixpkgs.goshs` |
 | 🍺 **Homebrew** | `brew install goshs` |
 | 🪟 **Scoop** | `scoop bucket add extras && scoop install extras/goshs` |
+| 🪟 **winget** | `winget install PatrickHener.Goshs` |
 | 🐳 **Docker** | `docker run --rm -it -p 8000:8000 -v "$PWD:/pwd" patrickhener/goshs:latest -d /pwd` |
 | 📦 **Release** | [Download from GitHub Releases](https://github.com/patrickhener/goshs/releases) |
 
