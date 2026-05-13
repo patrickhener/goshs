@@ -25,12 +25,13 @@ jobs:
           go-version: 1.26
       - name: Install Chocolatey
         run: |
+          sudo apt-get install -y mono-complete
           CHOCO_VER=$(curl -sL https://api.github.com/repos/chocolatey/choco/releases/latest \
             | grep '"tag_name"' | sed 's/.*"\([^"]*\)".*/\1/')
           sudo mkdir -p /opt/chocolatey
           curl -sL "https://github.com/chocolatey/choco/releases/download/${CHOCO_VER}/chocolatey.v${CHOCO_VER}.tar.gz" \
             | sudo tar xz -C /opt/chocolatey
-          printf '#!/bin/sh\nexec dotnet /opt/chocolatey/choco.exe "$@"\n' \
+          printf '#!/bin/sh\nexec mono /opt/chocolatey/choco.exe "$@"\n' \
             | sudo tee /usr/local/bin/choco
           sudo chmod +x /usr/local/bin/choco
           choco --version
