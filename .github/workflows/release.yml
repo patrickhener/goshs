@@ -9,8 +9,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  # packages: write
-  # issues: write
 
 jobs:
   goreleaser:
@@ -35,3 +33,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WINGET_PKGS_TOKEN: ${{ secrets.WINGET_PKGS_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  copr:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Trigger COPR build
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            --user "${COPR_LOGIN}:${COPR_TOKEN}" \
+            -F "ownername=patrickhener" \
+            -F "projectname=goshs" \
+            -F "scmtype=git" \
+            -F "clone_url=https://github.com/patrickhener/goshs" \
+            -F "committish=${{ github.ref_name }}" \
+            -F "spec=packaging/rpm/goshs.spec" \
+            -F "srpm_build_method=rpkg" \
+            "https://copr.fedorainfrastructure.org/api_3/build/create/scm"
