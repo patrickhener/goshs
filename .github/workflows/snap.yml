@@ -29,7 +29,7 @@ jobs:
         id: build
 
       - name: Upload snap artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: snap-${{ matrix.arch }}
           path: ${{ steps.build.outputs.snap }}
