@@ -311,7 +311,7 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 			if ok := fs.applyCustomAuth(w, req, acl); !ok {
 				return
 			}
-			if blockListed(acl.Block, filepath.Base(absPath)) {
+			if blockListedPath(acl.Block, absPath) {
 				fs.handleError(w, req, fmt.Errorf("requested file is blocked"), http.StatusNotFound)
 				return
 			}
@@ -343,7 +343,9 @@ func (fs *FileServer) bulkDownload(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Never include the ACL config file itself — it contains credential hashes.
-		if strings.EqualFold(filepath.Base(walkPath), ".goshs") {
+		// walkPath comes from filepath.Walk (canonical names), but normalize for
+		// consistency with the rest of the block/ACL enforcement.
+		if isACLFileName(filepath.Base(walkPath)) {
 			return nil
 		}
 		// Skip the chat's on-disk sink (uploads + persisted log); it is hidden

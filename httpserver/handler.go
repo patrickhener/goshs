@@ -144,8 +144,11 @@ func (fs *FileServer) doDir(file *os.File, w http.ResponseWriter, req *http.Requ
 		logger.Errorf("error reading file based access config: %+v", err)
 	}
 
-	// Get foldername
-	_, foldername := filepath.Split(file.Name())
+	// Get foldername. Resolve the canonical on-disk name so a Windows 8.3
+	// short-name alias of a block-listed directory is still caught; the
+	// trailing-dot/space alias is handled by blockListed's normalization
+	// (GHSA-wh5w-m4vw-7mjm).
+	foldername := canonicalBaseName(file.Name())
 
 	if blockListed(parentConfig.Block, fmt.Sprintf("%s/", foldername)) {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
@@ -805,22 +808,26 @@ func (fs *FileServer) sendFile(w http.ResponseWriter, req *http.Request, file *o
 		return
 	}
 
-	// Derive the served filename from the actually opened file, not from the raw
-	// request path. A trailing slash (e.g. /dir/.goshs/) leaves req.URL.Path with
-	// an empty final segment, while sanitizePath's filepath.Clean strips it and
-	// opens the real file — so basing the checks below on req.URL.Path defeats
-	// both guards. stat.Name() cannot disagree with the file that gets served.
-	filename := stat.Name()
+	// Enforce the .goshs and block-list guards against the actually opened file,
+	// not the raw request path. A trailing slash (e.g. /dir/.goshs/) leaves
+	// req.URL.Path with an empty final segment, while sanitizePath's
+	// filepath.Clean strips it and opens the real file — so basing the checks on
+	// req.URL.Path defeats both guards. file.Name() is the opened path, and
+	// isACLFilePath / blockListedPath additionally resolve a Windows trailing-dot
+	// or 8.3 short-name alias to its canonical on-disk name, so an aliased
+	// spelling cannot leak the credential hashes or slip a hidden file past the
+	// block list (GHSA-wh5w-m4vw-7mjm; stat.Name() reflects the alias and would
+	// miss).
 
-	// Never serve .goshs file and return same error message if it was not there
-	// This way it is also not possible to enumerate
-	if strings.EqualFold(filename, ".goshs") {
+	// Never serve the .goshs file, returning the same error as if it were not
+	// there so it is also not possible to enumerate.
+	if isACLFilePath(file.Name()) {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
 		return
 	}
 
-	// Check if file is in block list and discard
-	if blockListed(acl.Block, filename) {
+	// Check if file is in block list and discard.
+	if blockListedPath(acl.Block, file.Name()) {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", file.Name()), 404)
 		return
 	}
@@ -910,7 +917,7 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// Enforce the .goshs block list: a block-listed file is treated as
 	// non-existent everywhere else (read, share, bulk, WebDAV), so deleting it
 	// must be refused too. Mirrors the read path's 404 response.
-	if blockListed(acl.Block, filepath.Base(deletePath)) {
+	if blockListedPath(acl.Block, deletePath) {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", deletePath), http.StatusNotFound)
 		return
 	}
@@ -1050,7 +1057,7 @@ func (fs *FileServer) CreateShareHandler(w http.ResponseWriter, r *http.Request)
 		if ok := fs.applyCustomAuth(w, r, acl); !ok {
 			return
 		}
-		if blockListed(acl.Block, filepath.Base(fpath)) {
+		if blockListedPath(acl.Block, fpath) {
 			fs.handleError(w, r, fmt.Errorf("requested file is blocked"), http.StatusNotFound)
 			return
 		}
