@@ -394,3 +394,129 @@ func TestUpload_NoDelete_AllowsNewFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "NEW", string(got))
 }
+
+// ─── GHSA-wh5w-m4vw-7mjm: Windows name-alias block-list bypass ──────────────
+//
+// On Windows (NTFS) a trailing-dot/space segment (".env." → ".env", any name)
+// and an 8.3 short name ("LONGSE~1.TXT" → "longsecret.txt") open the same file
+// as the canonical name, but the block check compared the attacker's spelling.
+// EqualFold (the GHSA-3x28 fix) only folds case, so both aliases slipped a
+// blocked file past the guard. On Linux a symlink makes each alias reproducible
+// (os.Stat follows it to the real file, so canonicalBaseName's os.SameFile scan
+// matches the real sibling entry), exactly as the GHSA-3x28 casing tests do.
+
+// blockListed must treat trailing-dot and trailing-space spellings as the base
+// name, for files and (with the "/" folder convention) directories.
+func TestBlockListed_TrailingDotSpace(t *testing.T) {
+	block := []string{".env", "secret.txt"}
+	require.True(t, blockListed(block, ".env."))
+	require.True(t, blockListed(block, ".env "))
+	require.True(t, blockListed(block, ".env. ."))
+	require.True(t, blockListed(block, "secret.txt."))
+	require.False(t, blockListed(block, "other.txt"))
+	require.False(t, blockListed(block, "env")) // not an alias of ".env"
+
+	dirBlock := []string{"secretdir/"}
+	require.True(t, blockListed(dirBlock, "secretdir/"))
+	require.True(t, blockListed(dirBlock, "secretdir./"))
+	require.True(t, blockListed(dirBlock, "secretdir /"))
+}
+
+// isACLFileName must recognise aliased spellings of .goshs so the credential
+// hashes cannot be served or listed.
+func TestIsACLFileName_Aliases(t *testing.T) {
+	require.True(t, isACLFileName(".goshs"))
+	require.True(t, isACLFileName(".GOSHS"))
+	require.True(t, isACLFileName(".goshs."))
+	require.True(t, isACLFileName(".goshs "))
+	require.False(t, isACLFileName("goshs"))
+	require.False(t, isACLFileName(".goshs.bak"))
+}
+
+// canonicalBaseName resolves an alias back to the real on-disk entry (via
+// os.SameFile) and falls back to the lexical base when the path is absent.
+func TestCanonicalBaseName(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "longsecret.txt"), []byte("LS"), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, "longsecret.txt"), filepath.Join(dir, "LONGSE~1.TXT")))
+
+	require.Equal(t, "longsecret.txt", canonicalBaseName(filepath.Join(dir, "LONGSE~1.TXT")))
+	require.Equal(t, "longsecret.txt", canonicalBaseName(filepath.Join(dir, "longsecret.txt")))
+	require.Equal(t, "missing.txt", canonicalBaseName(filepath.Join(dir, "missing.txt")))
+}
+
+// A blocked file must stay blocked when requested by its trailing-dot alias.
+func TestSendFile_BlockedByACL_TrailingDot(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".env"), []byte("SECRET=topsecret"), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, ".env"), filepath.Join(dir, ".env.")))
+	fs, cleanup := newTestFileServer(t, dir)
+	defer cleanup()
+
+	f, err := os.Open(filepath.Join(dir, ".env."))
+	require.NoError(t, err)
+	defer f.Close()
+
+	r := httptest.NewRequest(http.MethodGet, "/.env.", nil)
+	w := httptest.NewRecorder()
+	fs.sendFile(w, r, f, configFile{Block: []string{".env"}})
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.NotContains(t, w.Body.String(), "topsecret")
+}
+
+// A blocked file must stay blocked when requested by its 8.3 short name.
+func TestSendFile_BlockedByACL_ShortName(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "longsecret.txt"), []byte("LONGSECRET"), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, "longsecret.txt"), filepath.Join(dir, "LONGSE~1.TXT")))
+	fs, cleanup := newTestFileServer(t, dir)
+	defer cleanup()
+
+	f, err := os.Open(filepath.Join(dir, "LONGSE~1.TXT"))
+	require.NoError(t, err)
+	defer f.Close()
+
+	r := httptest.NewRequest(http.MethodGet, "/LONGSE~1.TXT", nil)
+	w := httptest.NewRecorder()
+	fs.sendFile(w, r, f, configFile{Block: []string{"longsecret.txt"}})
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.NotContains(t, w.Body.String(), "LONGSECRET")
+}
+
+// The .goshs ACL file must never be served via a trailing-dot alias.
+func TestSendFile_GoshsACLFile_TrailingDot(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".goshs"), []byte(`{"block":["secret.txt"]}`), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, ".goshs"), filepath.Join(dir, ".goshs.")))
+	fs, cleanup := newTestFileServer(t, dir)
+	defer cleanup()
+
+	f, err := os.Open(filepath.Join(dir, ".goshs."))
+	require.NoError(t, err)
+	defer f.Close()
+
+	r := httptest.NewRequest(http.MethodGet, "/.goshs.", nil)
+	w := httptest.NewRecorder()
+	fs.sendFile(w, r, f, configFile{})
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.NotContains(t, w.Body.String(), `"block":[`)
+}
+
+// ProtocolACL (SFTP/FTP/TFTP/SMB) must deny aliased spellings of a blocked file
+// and of the .goshs config.
+func TestProtocolACL_Allowed_Aliases(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "longsecret.txt"), []byte("LS"), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, "longsecret.txt"), filepath.Join(dir, "LONGSE~1.TXT")))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".goshs"), []byte(`{"block":["longsecret.txt"]}`), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(dir, ".goshs"), filepath.Join(dir, ".goshs.")))
+
+	p := NewProtocolACL(dir)
+	require.False(t, p.Allowed(filepath.Join(dir, "longsecret.txt")), "canonical blocked name")
+	require.False(t, p.Allowed(filepath.Join(dir, "longsecret.txt.")), "trailing-dot alias")
+	require.False(t, p.Allowed(filepath.Join(dir, "LONGSE~1.TXT")), "8.3 short-name alias")
+	require.False(t, p.Allowed(filepath.Join(dir, ".goshs.")), "trailing-dot alias of .goshs")
+}

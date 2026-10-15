@@ -24,14 +24,116 @@ type ProtocolACL struct {
 	fs *FileServer
 }
 
-// blockListed reports whether name appears in the block list using
-// case-insensitive comparison, so that alternate-case spellings (e.g.
-// SECRET.TXT for an on-disk secret.txt) are caught on case-insensitive
-// filesystems (Windows NTFS, macOS APFS/HFS+) — GHSA-3x28-6v7h-gg87.
+// aclFileName is the fixed basename of the per-directory ACL config file. It
+// holds the bcrypt auth hashes, so it must never be served or listed.
+const aclFileName = ".goshs"
+
+// normalizeName folds the *syntactic* on-disk name aliases of a single path
+// component so a request spelling matches the configured name. Windows (NTFS)
+// resolves a trailing-dot or trailing-space segment to the un-suffixed name
+// (".env." and ".env " both open ".env"), for any name; filepath.Clean and
+// os.File.Stat().Name() keep the attacker's spelling, so a raw compare misses.
+// We therefore strip trailing dots and spaces. A single trailing "/" (the
+// folder block-list convention, e.g. "secret/") is preserved.
+//
+// Like the unconditional case-folding added for GHSA-3x28-6v7h-gg87, this runs
+// on every platform: it is a denylist *widening* (it can only hide more), so on
+// a case-sensitive, dot-significant filesystem a file genuinely named ".env."
+// is hidden when ".env" is blocked — an acceptable, fail-closed trade for
+// closing the Windows alias bypass. 8.3 short names are not syntactic and are
+// resolved against the filesystem separately (canonicalBaseName).
+func normalizeName(name string) string {
+	slash := strings.HasSuffix(name, "/")
+	trimmed := strings.TrimRight(strings.TrimSuffix(name, "/"), ". ")
+	if slash {
+		trimmed += "/"
+	}
+	return trimmed
+}
+
+// blockListed reports whether name appears in the block list. The comparison is
+// case-insensitive (alternate-case spellings such as SECRET.TXT for an on-disk
+// secret.txt — GHSA-3x28-6v7h-gg87) and alias-normalized (trailing dot/space —
+// GHSA-wh5w-m4vw-7mjm), on both the request spelling and the configured entry.
 func blockListed(block []string, name string) bool {
+	n := normalizeName(name)
 	return slices.ContainsFunc(block, func(s string) bool {
-		return strings.EqualFold(s, name)
+		return strings.EqualFold(normalizeName(s), n)
 	})
+}
+
+// isACLFileName reports whether a single path component (possibly an alias)
+// names the .goshs config file, using the same normalization as blockListed so
+// ".goshs." / case variants cannot expose the credential hashes.
+func isACLFileName(name string) bool {
+	return strings.EqualFold(normalizeName(name), aclFileName)
+}
+
+// needsCanonical reports whether base might be a Windows 8.3 short name
+// ("LONGSE~1.TXT"), which always contains a tilde. Trailing-dot/space aliases
+// are handled syntactically by normalizeName and need no filesystem lookup, so
+// gating the (relatively costly) canonical resolution on a tilde keeps the
+// common download/list path free of extra stat/ReadDir work.
+func needsCanonical(base string) bool {
+	return strings.Contains(base, "~")
+}
+
+// canonicalBaseName returns the real on-disk base name of absPath. A Windows 8.3
+// short name opens the same file as the long name, but filepath.Base and
+// os.File.Stat().Name() still report the short spelling, so neither the block
+// list nor the .goshs guard would match it. We recover the true directory-entry
+// name by finding the sibling that is the same file: os.SameFile compares the
+// volume + file index, so every alias of one file maps to its single real
+// entry. Falls back to the lexical base when the path does not exist or its
+// directory cannot be read.
+func canonicalBaseName(absPath string) string {
+	target, err := os.Stat(absPath)
+	if err != nil {
+		return filepath.Base(absPath)
+	}
+	entries, err := os.ReadDir(filepath.Dir(absPath))
+	if err != nil {
+		return filepath.Base(absPath)
+	}
+	for _, e := range entries {
+		info, infoErr := e.Info()
+		if infoErr != nil {
+			continue
+		}
+		if os.SameFile(target, info) {
+			return e.Name()
+		}
+	}
+	return filepath.Base(absPath)
+}
+
+// blockListedPath reports whether absPath is block-listed, testing both the
+// request spelling and — only when it could be an 8.3 alias — the canonical
+// on-disk name. This closes the GHSA-wh5w-m4vw-7mjm 8.3 short-name bypass while
+// leaving the common path (no tilde, or no block list) free of extra I/O.
+func blockListedPath(block []string, absPath string) bool {
+	base := filepath.Base(absPath)
+	if blockListed(block, base) {
+		return true
+	}
+	if len(block) == 0 || !needsCanonical(base) {
+		return false
+	}
+	return blockListed(block, canonicalBaseName(absPath))
+}
+
+// isACLFilePath is isACLFileName for an absolute path, additionally resolving an
+// 8.3 alias of .goshs (e.g. GOSHS~1) to its canonical name so the credential
+// file cannot be served via a short-name spelling (GHSA-wh5w-m4vw-7mjm).
+func isACLFilePath(absPath string) bool {
+	base := filepath.Base(absPath)
+	if isACLFileName(base) {
+		return true
+	}
+	if !needsCanonical(base) {
+		return false
+	}
+	return isACLFileName(canonicalBaseName(absPath))
 }
 
 // NewProtocolACL builds a ProtocolACL bound to webroot. Only the webroot is
@@ -50,7 +152,7 @@ func (p *ProtocolACL) Allowed(absPath string) bool {
 	// Never expose the ACL config file itself — it holds the bcrypt hashes —
 	// and never touch a path beneath a .goshs-named directory, which could only
 	// exist to mask an ACL file (GHSA-mhxc-hfx2-7w79).
-	if strings.EqualFold(filepath.Base(absPath), ".goshs") {
+	if isACLFilePath(absPath) {
 		return false
 	}
 	if rel, err := filepath.Rel(p.fs.Webroot, absPath); err == nil && containsACLName(rel) {
@@ -67,7 +169,7 @@ func (p *ProtocolACL) Allowed(absPath string) bool {
 	if acl.Auth != "" {
 		return false
 	}
-	if blockListed(acl.Block, filepath.Base(absPath)) {
+	if blockListedPath(acl.Block, absPath) {
 		return false
 	}
 	return true
@@ -103,7 +205,7 @@ func (p *ProtocolACL) FilterDirEntries(dir string, entries []os.DirEntry) []os.D
 // visible reports whether entry name of dir (whose effective ACL is acl) may be
 // shown to a credential-less protocol client.
 func (p *ProtocolACL) visible(dir string, acl configFile, name string, isDir bool) bool {
-	if strings.EqualFold(name, ".goshs") {
+	if isACLFileName(name) {
 		return false
 	}
 	if blockListed(acl.Block, name) {

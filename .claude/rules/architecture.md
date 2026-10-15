@@ -281,6 +281,26 @@ matching update.
   check and update let concurrent bursts bypass the lockout — **GHSA-8f9w-966j-qhq9**;
   tests in `httpserver/middleware_test.go`), `sanitizePath` (path traversal; deliberately
   does **not** double-URL-decode, to preserve literal `%`/`+` in filenames).
+- **The `.goshs` `block` list and the `.goshs` config-file guard match on a
+  *filename*, so every on-disk name alias that resolves to the same file must be
+  normalized before the compare, or the hide/deny is bypassed.** This is an
+  incomplete-fix chain: trailing-slash (CVE-2026-66064) → case (`EqualFold`,
+  GHSA-3x28-6v7h-gg87) → **Windows trailing-dot/space + 8.3 short name**
+  (**GHSA-wh5w-m4vw-7mjm**). The single source of truth is `httpserver/acl_protocol.go`:
+  `normalizeName` strips a trailing `/` marker then trailing dots/spaces (syntactic,
+  runs on every OS — a denylist *widening*, fail-closed); `blockListed`/`isACLFileName`
+  compare through it; and `canonicalBaseName` resolves an 8.3 short name to the real
+  entry via `os.SameFile` (gated by `needsCanonical`, i.e. only when the base contains
+  `~`, so normal downloads do no extra I/O). Call sites that have a real absolute path
+  use the path-aware `blockListedPath`/`isACLFilePath` (sendFile uses `file.Name()`, not
+  `stat.Name()` — the latter reflects the alias on Windows): `sendFile`, DELETE, bulk
+  share token (`handler.go`), bulk download top-level selection (`updown.go`),
+  `webdavEnforceACL`/`aclError` (`webdav_acl.go`), and `ProtocolACL.Allowed`
+  (SFTP/FTP/TFTP/SMB). Listing/walk sites (`visible`, `aclFile.Readdir`, the bulk
+  walker) see canonical names already, so they use the normalized `blockListed`/
+  `isACLFileName` directly. Regression tests (symlink-reproduced on Linux):
+  `httpserver/security_bypass_test.go`. When adding a new block/`.goshs` check, route it
+  through these helpers.
 - **The `.goshs` per-folder ACL must be enforced on *every* protocol that serves the
   webroot, not just HTTP.** HTTP uses `applyCustomAuth`/`aclSatisfied`; WebDAV uses
   `webdavEnforceACL`/`aclFile.Readdir`. Credential-less transfer protocols (SFTP)

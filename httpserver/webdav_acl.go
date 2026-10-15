@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"golang.org/x/net/webdav"
 )
@@ -156,7 +155,9 @@ func (fs *FileServer) webdavEnforceACL(w http.ResponseWriter, r *http.Request) b
 		return false
 	}
 	// Never expose the ACL config file itself — it holds the bcrypt hashes.
-	if strings.EqualFold(filepath.Base(abs), ".goshs") {
+	// isACLFilePath also resolves a Windows trailing-dot/8.3 alias
+	// (GHSA-wh5w-m4vw-7mjm).
+	if isACLFilePath(abs) {
 		http.NotFound(w, r)
 		return false
 	}
@@ -169,7 +170,7 @@ func (fs *FileServer) webdavEnforceACL(w http.ResponseWriter, r *http.Request) b
 	if !fs.applyCustomAuth(w, r, acl) {
 		return false
 	}
-	if blockListed(acl.Block, filepath.Base(abs)) {
+	if blockListedPath(acl.Block, abs) {
 		http.NotFound(w, r)
 		return false
 	}
@@ -191,11 +192,17 @@ type webdavACLFileSystem struct {
 //
 // It returns nil when access to name is permitted.
 func (a webdavACLFileSystem) aclError(ctx context.Context, name string) error {
-	if strings.EqualFold(path.Base(name), ".goshs") {
+	if isACLFileName(path.Base(name)) {
 		return os.ErrNotExist
 	}
 	abs, err := sanitizePath(a.srv.Webroot, name)
 	if err != nil {
+		return os.ErrNotExist
+	}
+	// Resolve a Windows trailing-dot/8.3 alias of .goshs to its canonical name
+	// so the credential file cannot be reached by an aliased spelling
+	// (GHSA-wh5w-m4vw-7mjm).
+	if isACLFilePath(abs) {
 		return os.ErrNotExist
 	}
 	governing := abs
@@ -206,7 +213,7 @@ func (a webdavACLFileSystem) aclError(ctx context.Context, name string) error {
 	if acl.Auth != "" && !aclSatisfied(reqFromContext(ctx), acl) {
 		return os.ErrPermission
 	}
-	if blockListed(acl.Block, path.Base(name)) {
+	if blockListedPath(acl.Block, abs) {
 		return os.ErrNotExist
 	}
 	return nil
@@ -276,7 +283,7 @@ func (f aclFile) Readdir(count int) ([]os.FileInfo, error) {
 	filtered := infos[:0]
 	for _, fi := range infos {
 		name := fi.Name()
-		if strings.EqualFold(name, ".goshs") {
+		if isACLFileName(name) {
 			continue
 		}
 		if blockListed(acl.Block, name) {
