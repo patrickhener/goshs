@@ -1,5 +1,5 @@
 // ══ CATCHER / REV SHELL GENERATOR ══
-import { esc, fmtBytes } from './state.js';
+import { esc, fmtBytes, copyText } from './state.js';
 import { toast } from './modals.js';
 
 // SHELL_DB is mirrored in tui/generator.go (var shellDB) so the TUI generator
@@ -112,17 +112,13 @@ export function updateGeneratorOutput() {
 
 export function copyGeneratorOutput() {
   const text = document.getElementById("gen-output")?.textContent || "";
-  navigator.clipboard
-    .writeText(text)
-    .then(() => toast("Copied to clipboard", "ok"));
+  copyText(text).then(() => toast("Copied to clipboard", "ok"));
 }
 
 export function copyListenerCommand() {
   const text =
     document.getElementById("gen-listener-output")?.textContent || "";
-  navigator.clipboard
-    .writeText(text)
-    .then(() => toast("Copied to clipboard", "ok"));
+  copyText(text).then(() => toast("Copied to clipboard", "ok"));
 }
 
 // ── Catcher Listeners ──

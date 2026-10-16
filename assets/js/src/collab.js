@@ -1,5 +1,5 @@
 // ══ COLLABORATOR TABS (HTTP, DNS, SMB, LDAP, SMTP) ══
-import { ST, esc, updateCollabBadge, updateBadge, downloadJSON, fmtBytes } from './state.js';
+import { ST, esc, updateCollabBadge, updateBadge, downloadJSON, fmtBytes, copyText } from './state.js';
 import { toast } from './modals.js';
 
 // ══ SMART CONTENT DETECTION ══
@@ -681,9 +681,7 @@ export function renderSMB() {
       copyBtn.onclick = (ev) => {
         ev.stopPropagation();
         const text = document.getElementById(hashId)?.textContent || "";
-        navigator.clipboard
-          .writeText(text)
-          .then(() => toast("Hash copied!", "ok"));
+        copyText(text).then(() => toast("Hash copied!", "ok"));
       };
     }
 
@@ -694,11 +692,6 @@ export function renderSMB() {
     card.appendChild(body);
     inbox.appendChild(card);
   });
-}
-
-function copyText(elementId) {
-  const text = document.getElementById(elementId)?.textContent || "";
-  navigator.clipboard.writeText(text).then(() => toast("Copied!", "ok"));
 }
 
 export function clearSMB() {
@@ -859,17 +852,17 @@ export function renderLDAP() {
 
     body.querySelector(".ldap-copy-hash")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
-      navigator.clipboard.writeText(document.getElementById(hashId)?.textContent || "")
+      copyText(document.getElementById(hashId)?.textContent || "")
         .then(() => toast("Hash copied!", "ok"));
     });
     body.querySelector(".ldap-copy-dn")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
-      navigator.clipboard.writeText(document.getElementById(dnId)?.textContent || "")
+      copyText(document.getElementById(dnId)?.textContent || "")
         .then(() => toast("DN copied!", "ok"));
     });
     body.querySelector(".ldap-copy-pw")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
-      navigator.clipboard.writeText(document.getElementById(pwId)?.textContent || "")
+      copyText(document.getElementById(pwId)?.textContent || "")
         .then(() => toast("Password copied!", "ok"));
     });
 

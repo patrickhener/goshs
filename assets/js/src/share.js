@@ -1,6 +1,7 @@
 // ══ SHARE / QR ══
 import { toast } from './modals.js';
 import { openModal } from './modals.js';
+import { copyText } from './state.js';
 
 let _shareTarget = "";
 export function shareFile(name) {
@@ -126,8 +127,7 @@ export function showShareQR(token) {
 export function copyShareUrl(token) {
   const urlEl = document.getElementById("share-url-" + token);
   if (!urlEl) return;
-  navigator.clipboard
-    .writeText(urlEl.textContent.trim())
+  copyText(urlEl.textContent.trim())
     .then(() => toast("URL copied", "success"))
     .catch(() => toast("Copy failed", "error"));
 }

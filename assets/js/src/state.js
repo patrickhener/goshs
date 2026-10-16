@@ -62,6 +62,35 @@ export function fmtBytes(b) {
   return (b / 1073741824).toFixed(2) + " GB";
 }
 
+// Copy text to the clipboard, working in non-secure contexts too.
+// navigator.clipboard is only exposed over HTTPS or on localhost; over plain
+// HTTP to a remote host (the common case for goshs) it is undefined, so fall
+// back to a hidden textarea + execCommand("copy"). Returns a Promise.
+export function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise(function (resolve, reject) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "0";
+      ta.style.left = "0";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error("execCommand copy failed"));
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 export function tickTTL() {
   var meta = document.querySelector('meta[name="ttl-deadline"]');
   var deadline = meta ? parseInt(meta.content, 10) : 0;

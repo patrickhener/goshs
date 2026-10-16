@@ -4,7 +4,7 @@
 // messages arrive as concrete ws events and are appended without a page reload.
 // Supports in-place edit of your own messages (↑ in the composer) and emoji
 // reactions.
-import { ST, esc } from './state.js';
+import { ST, esc, copyText } from './state.js';
 import { toast } from './modals.js';
 import { openLightbox } from './collab.js';
 
@@ -849,8 +849,7 @@ export function sendChat() {
 export function copyMessage(id) {
   const body = document.querySelector("#msg-" + id + " .chat-msg-body");
   if (!body) return;
-  navigator.clipboard
-    .writeText(body.dataset.raw || body.textContent)
+  copyText(body.dataset.raw || body.textContent)
     .then(() => toast("Copied!", "success"))
     .catch(() => toast("Copy failed", "error"));
 }
