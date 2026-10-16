@@ -231,21 +231,52 @@ func GetClientIP(r *http.Request, whitelist *Whitelist) string {
 		return r.RemoteAddr
 	}
 
-	if whitelist != nil && whitelist.IsTrustedProxy(host) {
-		// Check X-Forwarded-For header first (for proxies)
-		xff := r.Header.Get("X-Forwarded-For")
-		if xff != "" {
-			// Take the first IP in case of multiple
-			ips := strings.Split(xff, ",")
-			return strings.TrimSpace(ips[0])
-		}
+	if whitelist == nil || !whitelist.IsTrustedProxy(host) {
+		return host
+	}
 
-		// Check X-Real-IP header
-		xri := r.Header.Get("X-Real-IP")
-		if xri != "" {
-			return xri
+	// Check X-Forwarded-For first. Proxies append the peer they saw, so only
+	// the entries a trusted proxy wrote are trustworthy: walk right-to-left
+	// past trusted hops and take the first untrusted one. Everything left of
+	// it is client-controlled — taking the leftmost entry let a spoofed IP
+	// pass the whitelist (GHSA-6vcx-pgmj-8c8g). Repeated headers are joined
+	// in order, as RFC 7230 treats them as one comma-separated list.
+	if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+		ips := strings.Split(strings.Join(xff, ","), ",")
+		for i := len(ips) - 1; i >= 0; i-- {
+			ip := parseForwardedIP(ips[i])
+			if ip == "" {
+				// Unparseable hop: stop trusting the chain and fall back
+				// to the last address we could verify (fail closed).
+				return host
+			}
+			if i == 0 || !whitelist.IsTrustedProxy(ip) {
+				return ip
+			}
+			host = ip
 		}
 	}
 
+	// Check X-Real-IP header (only meaningful if the proxy overwrites it)
+	if xri := parseForwardedIP(r.Header.Get("X-Real-IP")); xri != "" {
+		return xri
+	}
+
 	return host
+}
+
+// parseForwardedIP normalises a single forwarded-header entry to a bare IP,
+// tolerating an optional port and IPv6 brackets. It returns "" if the entry
+// is not an IP address.
+func parseForwardedIP(s string) string {
+	s = strings.TrimSpace(s)
+	if h, _, err := net.SplitHostPort(s); err == nil {
+		s = h
+	}
+	s = strings.TrimSuffix(strings.TrimPrefix(s, "["), "]")
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
 }

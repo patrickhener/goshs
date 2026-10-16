@@ -172,6 +172,7 @@ These are the awesome contributors that made `goshs` even more secure :heart:
 <tr>
   <td align="center"><a href="https://github.com/Hama1cco"><img src="https://github.com/Hama1cco.png?size=50" width="50" height="50"></a></td>
   <td align="center"><a href="https://github.com/FrogApprentice"><img src="https://github.com/FrogApprentice.png?size=50" width="50" height="50"></a></td>
+  <td align="center"><a href="https://github.com/xherogasm"><img src="https://github.com/xherogasm.png?size=50" width="50" height="50"></a></td>
 </tr></table>
 
 # Community

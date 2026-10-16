@@ -279,7 +279,13 @@ matching update.
   same critical section as the lockout check, *before* the bcrypt compare, and the
   failure path re-reads the map instead of reusing the entry pointer. Splitting
   check and update let concurrent bursts bypass the lockout — **GHSA-8f9w-966j-qhq9**;
-  tests in `httpserver/middleware_test.go`), `sanitizePath` (path traversal; deliberately
+  tests in `httpserver/middleware_test.go`), `GetClientIP` (feeds both the IP
+  whitelist and the lockout key; forwarded headers are read only when the TCP peer is
+  a `--trusted-proxy-whitelist` entry, and XFF is walked **right-to-left**, skipping
+  trusted hops, returning the first untrusted entry — the leftmost entry is
+  client-controlled behind an appending proxy, which was **GHSA-6vcx-pgmj-8c8g**;
+  unparseable hops fail closed to the last verified address; tests in
+  `httpserver/whitelist_test.go`), `sanitizePath` (path traversal; deliberately
   does **not** double-URL-decode, to preserve literal `%`/`+` in filenames).
 - **The `.goshs` `block` list and the `.goshs` config-file guard match on a
   *filename*, so every on-disk name alias that resolves to the same file must be
