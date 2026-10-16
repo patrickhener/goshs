@@ -1,5 +1,5 @@
 // ══ THEME ══
-import { ST } from './state.js';
+import { ST, copyText } from './state.js';
 import { toast } from './modals.js';
 
 export function initTheme() {
@@ -68,8 +68,7 @@ export function copyEmbLink(name) {
     location.origin +
     encodeURIComponent(name).replace("%2F", "/") +
     "?embedded";
-  navigator.clipboard
-    .writeText(url)
+  copyText(url)
     .then(() => toast("Link copied!", "success"))
     .catch(() => toast("Copy failed", "error"));
 }
