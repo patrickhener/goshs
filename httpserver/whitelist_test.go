@@ -144,3 +144,80 @@ func TestGetClientIP_UntrustedProxy_IgnoresHeaders(t *testing.T) {
 	ip := GetClientIP(r, wl)
 	require.Equal(t, "10.0.0.1", ip)
 }
+
+// GHSA-6vcx-pgmj-8c8g: behind an appending proxy (nginx
+// $proxy_add_x_forwarded_for) the leftmost X-Forwarded-For entry is
+// client-controlled. The resolver must take the rightmost entry that is not a
+// trusted proxy, so a spoofed allow-listed IP cannot pass the whitelist.
+func TestGetClientIP_XForwardedFor_SpoofedLeftmostIgnored(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1")
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Forwarded-For", "203.0.113.10, 198.51.100.7")
+	ip := GetClientIP(r, wl)
+	require.Equal(t, "198.51.100.7", ip)
+	require.False(t, wl.IsAllowed(ip))
+}
+
+func TestGetClientIP_XForwardedFor_ProxyChain(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1,10.0.0.0/8")
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Forwarded-For", "203.0.113.10, 198.51.100.7, 10.1.2.3")
+	require.Equal(t, "198.51.100.7", GetClientIP(r, wl))
+}
+
+func TestGetClientIP_XForwardedFor_MultipleHeaders(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1")
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Add("X-Forwarded-For", "203.0.113.10")
+	r.Header.Add("X-Forwarded-For", "198.51.100.7")
+	require.Equal(t, "198.51.100.7", GetClientIP(r, wl))
+}
+
+func TestGetClientIP_XForwardedFor_InvalidEntryFailsClosed(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1")
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Forwarded-For", "203.0.113.10, garbage")
+	ip := GetClientIP(r, wl)
+	require.Equal(t, "127.0.0.1", ip)
+	require.False(t, wl.IsAllowed(ip))
+}
+
+func TestGetClientIP_XRealIP_InvalidIgnored(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1")
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Real-IP", "not-an-ip")
+	require.Equal(t, "127.0.0.1", GetClientIP(r, wl))
+}
+
+func TestIPWhitelistMiddleware_SpoofedXFFDenied(t *testing.T) {
+	wl, err := NewIPWhitelist("203.0.113.0/24", true, "127.0.0.1")
+	require.NoError(t, err)
+	fs := &FileServer{Whitelist: wl}
+	h := fs.IPWhitelistMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Forwarded-For", "203.0.113.10, 198.51.100.7")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	r.Header.Set("X-Forwarded-For", "198.51.100.7, 203.0.113.10")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	require.Equal(t, http.StatusOK, rec.Code)
+}
