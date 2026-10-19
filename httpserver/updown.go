@@ -123,6 +123,11 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Folder uploads can place parts in subdirectories of targetDir, each of
+	// which may carry its own .goshs auth. Cache the per-directory verdict so a
+	// large folder does not pay a bcrypt compare per file.
+	nestedACLOK := map[string]bool{}
+
 	for {
 		part, err := reader.NextPart()
 		if err == io.EOF {
@@ -183,6 +188,27 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 		if containsACLName(rel) {
 			logger.Warnf("blocked attempt to upload path containing .goshs: %q", rawName)
 			continue
+		}
+
+		// prepareWrite only evaluated targetDir's ACL, and findEffectiveACL walks
+		// upwards, so a .goshs in a subdirectory the part lands in was never
+		// consulted (GHSA-625w-3rc8-3c3h). Evaluate the real destination; a
+		// not-yet-existing nested dir inherits its nearest existing ancestor.
+		destDir := filepath.Dir(finalPath)
+		if destDir != filepath.Clean(targetDir) {
+			ok, seen := nestedACLOK[destDir]
+			if !seen {
+				acl, aclErr := fs.findEffectiveACL(destDir)
+				if aclErr != nil {
+					logger.Errorf("error reading file based access config: %+v", aclErr)
+				}
+				ok = aclErr == nil && aclSatisfied(req, acl)
+				nestedACLOK[destDir] = ok
+			}
+			if !ok {
+				logger.Warnf("blocked nested upload into ACL-protected directory: %q", rawName)
+				continue
+			}
 		}
 
 		tempPath := finalPath + "~"

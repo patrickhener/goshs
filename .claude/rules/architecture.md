@@ -336,6 +336,14 @@ matching update.
   for the subtree — **GHSA-mhxc-hfx2-7w79**. `handleMkdir` now refuses any `.goshs`
   component (`containsACLName`, shared with the upload guard). Tests:
   `httpserver/goshs_dir_acl_test.go`.
+- **Multipart `POST …/upload` evaluates the ACL per part, not just for the URL dir.**
+  Folder uploads (#278) keep the raw `Content-Disposition` filename's sub-path, so a
+  part can land in a descendant directory with its own `.goshs`; `prepareWrite` only
+  checks `targetDir` and `findEffectiveACL` walks *upwards*, so that descendant ACL was
+  never consulted — unauthenticated create/overwrite into protected subdirs,
+  **GHSA-625w-3rc8-3c3h** (v2.1.7). `upload()` now runs `findEffectiveACL(filepath.Dir(
+  finalPath))` + `aclSatisfied` for every nested part (cached per dir per request;
+  denied parts are skipped). Tests: `httpserver/nested_upload_acl_test.go`.
 - **Bulk download** zip walker enforces per-file ACL and excludes `.goshs` during the
   recursive walk (regression-tested in `httpserver/bulk_acl_test.go`) — a prior bug let
   parent-dir bulk selection bypass nested `.goshs` auth/block.
