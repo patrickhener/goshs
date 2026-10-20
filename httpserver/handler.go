@@ -904,8 +904,12 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Enforce .goshs ACL (recursive: walks up to webroot)
-	aclDir := filepath.Dir(deletePath)
+	// Enforce .goshs ACL (recursive: walks up to webroot). A directory is
+	// governed by its own .goshs, a file by its parent's.
+	aclDir := deletePath
+	if info, statErr := os.Lstat(deletePath); statErr != nil || !info.IsDir() {
+		aclDir = filepath.Dir(deletePath)
+	}
 	acl, aclErr := fs.findEffectiveACL(aclDir)
 	if aclErr != nil {
 		logger.Errorf("error reading file based access config: %+v", aclErr)
@@ -919,6 +923,14 @@ func (fs *FileServer) deleteFile(w http.ResponseWriter, req *http.Request) {
 	// must be refused too. Mirrors the read path's 404 response.
 	if blockListedPath(acl.Block, deletePath) {
 		fs.handleError(w, req, fmt.Errorf("open %s: no such file or directory", deletePath), http.StatusNotFound)
+		return
+	}
+
+	// RemoveAll deletes downwards, but the ACL above was resolved upwards, so a
+	// .goshs (auth or block list) deeper in the subtree was never consulted
+	// (GHSA-rf62-vgq5-ggq5). Refuse unless the whole subtree is accessible.
+	if !fs.subtreeRemovable(deletePath, func(a configFile) bool { return aclSatisfied(req, a) }) {
+		fs.handleError(w, req, fmt.Errorf("cannot delete %s: subtree contains protected content", deletePath), http.StatusForbidden)
 		return
 	}
 

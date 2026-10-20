@@ -344,6 +344,17 @@ matching update.
   **GHSA-625w-3rc8-3c3h** (v2.1.7). `upload()` now runs `findEffectiveACL(filepath.Dir(
   finalPath))` + `aclSatisfied` for every nested part (cached per dir per request;
   denied parts are skipped). Tests: `httpserver/nested_upload_acl_test.go`.
+- **Recursive deletes check the whole subtree, not just the addressed path.**
+  `findEffectiveACL` only walks *up*, but `os.RemoveAll` deletes *down*, so DELETE of
+  an unprotected ancestor destroyed nested auth-protected/block-listed subtrees (and
+  `DELETE /` the webroot) — **GHSA-rf62-vgq5-ggq5**. `FileServer.subtreeRemovable`
+  (`acl_protocol.go`) walks the subtree (no symlink follow), requires every dir's
+  effective ACL to be satisfied, refuses any block-listed entry (incl. `name/`) and the
+  webroot itself. Wired into HTTP `deleteFile` (which now also uses a dir's *own* ACL),
+  WebDAV `RemoveAll`, FTP `aclFs.RemoveAll` and SFTP `Rmdir` (via
+  `ProtocolACL.SubtreeAllowed`). SMB only uses non-recursive `os.Remove`. Tests:
+  `httpserver/delete_acl_test.go`, `{ftpserver,sftpserver}/acl_test.go`. Any new
+  recursive delete must go through it.
 - **Bulk download** zip walker enforces per-file ACL and excludes `.goshs` during the
   recursive walk (regression-tested in `httpserver/bulk_acl_test.go`) — a prior bug let
   parent-dir bulk selection bypass nested `.goshs` auth/block.
@@ -359,7 +370,11 @@ matching update.
   dispositions + `Truncate` (`handleCreate`/`handleSetInfo`), and `FileRenameInformation`
   — through `SMBServer.protectExisting(localPath)`, which returns true only when a flag
   is set **and** the path is not in `newlyCreatedPaths` (so the operator's own
-  create→write→rename upload flow keeps working). When adding a new write path to any
+  create→write→rename upload flow keeps working). The multipart `upload()` stages into
+  a unique `os.CreateTemp` file (not the former fixed `<name>~`, which truncated and
+  consumed a pre-existing `name~` — **GHSA-5q79-f559-j56x**) and, under the flags,
+  finalizes with `finalizeNoClobber` (`os.Link`, `O_EXCL` copy fallback) so a target
+  that appears after the pre-stream Stat is never replaced. When adding a new write path to any
   protocol, wire this guard or you reopen the GHSA-966r/275v/jx6h/ppvh/2q29/vw29 class.
   Regression tests: `smbserver/nodelete_test.go`, `tftpserver/tftpserver_test.go`,
   `httpserver/webdav_modeflags_test.go`, `httpserver/handler_test.go`.

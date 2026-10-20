@@ -211,8 +211,6 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		tempPath := finalPath + "~"
-
 		// The final os.Rename clobbers any existing same-named file, destroying
 		// its contents. Skip such overwrites under --no-delete / --upload-only,
 		// matching the WebDAV PUT/COPY overwrite guard; new files still upload.
@@ -231,12 +229,18 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// Create temp file
-		dst, err := os.Create(tempPath)
+		// Stage into a unique temp file. The former fixed finalPath+"~" was
+		// truncated by os.Create and consumed by the rename, destroying an
+		// unrelated pre-existing "<name>~" even under --no-delete
+		// (GHSA-5q79-f559-j56x), and let concurrent uploads collide.
+		dst, err := os.CreateTemp(filepath.Dir(finalPath), "."+filepath.Base(finalPath)+".*.tmp")
 		if err != nil {
 			logger.Errorf("creating temp file: %+v", err)
 			return
 		}
+		tempPath := dst.Name()
+		// CreateTemp uses 0600; keep the previous upload permissions.
+		_ = dst.Chmod(0644)
 
 		// Write in chunks
 		buf := make([]byte, chunkSize)
@@ -282,8 +286,16 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// Atomically rename to final path
-		if err := os.Rename(tempPath, finalPath); err != nil {
+		// Move into place. Under --no-delete / --upload-only the target must
+		// not be clobbered even if it appeared after the Stat check above
+		// (concurrent upload), so finalize without replacing.
+		if fs.UploadOnly || fs.NoDelete {
+			if err := finalizeNoClobber(tempPath, finalPath); err != nil {
+				logger.Warnf("not storing upload %q: %+v", finalPath, err)
+				continue
+			}
+		} else if err := os.Rename(tempPath, finalPath); err != nil {
+			os.Remove(tempPath)
 			logger.Errorf("renaming file: %+v", err)
 			return
 		}
@@ -298,6 +310,40 @@ func (fs *FileServer) upload(w http.ResponseWriter, req *http.Request) {
 
 	// Redirect back from where we came from
 	http.Redirect(w, req, upathDir, http.StatusSeeOther)
+}
+
+// finalizeNoClobber moves tempPath to finalPath, failing (and discarding the
+// temp file) if finalPath already exists. os.Link is atomic and fails with
+// EEXIST instead of replacing; on filesystems without hard links (FAT, some
+// network shares) it falls back to an O_EXCL create plus copy.
+func finalizeNoClobber(tempPath, finalPath string) error {
+	defer os.Remove(tempPath)
+	err := os.Link(tempPath, finalPath)
+	if err == nil || os.IsExist(err) {
+		return err
+	}
+	// disable G304 (CWE-22): Potential file inclusion via variable
+	// #nosec G304
+	src, err := os.Open(tempPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	// #nosec G302 G304
+	dst, err := os.OpenFile(finalPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		os.Remove(finalPath)
+		return err
+	}
+	if err := dst.Close(); err != nil {
+		os.Remove(finalPath)
+		return err
+	}
+	return nil
 }
 
 // bulkDownload will provide zip archived download bundle of multiple selected files

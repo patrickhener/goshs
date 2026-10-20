@@ -69,3 +69,18 @@ func TestACLFs_ReadDirFiltersListing(t *testing.T) {
 	}
 	require.Equal(t, []string{"public.txt"}, names)
 }
+
+// GHSA-rf62-vgq5-ggq5: RemoveAll of the webroot (an unprotected ancestor of
+// secret/) must not destroy the auth-protected subtree.
+func TestACLFs_RemoveAllAncestorOfProtectedDenied(t *testing.T) {
+	fs, root := newACLFs(t)
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "a"), 0755))
+	require.NoError(t, os.Rename(filepath.Join(root, "secret"), filepath.Join(root, "a", "secret")))
+
+	require.ErrorIs(t, fs.RemoveAll("/a"), errACLDenied)
+	require.FileExists(t, filepath.Join(root, "a", "secret", "file.txt"))
+
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "plain", "sub"), 0755))
+	require.NoError(t, fs.RemoveAll("/plain"))
+	require.NoDirExists(t, filepath.Join(root, "plain"))
+}

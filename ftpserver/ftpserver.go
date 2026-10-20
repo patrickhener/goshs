@@ -329,6 +329,11 @@ func (fs *aclFs) RemoveAll(name string) error {
 	if err := fs.check(name); err != nil {
 		return err
 	}
+	// check only covers name itself; a recursive delete must not destroy a
+	// protected subtree below it (GHSA-rf62-vgq5-ggq5).
+	if !fs.acl.SubtreeAllowed(fs.abs(name)) {
+		return &os.PathError{Op: "acl", Path: name, Err: errACLDenied}
+	}
 	return fs.Fs.RemoveAll(name)
 }
 

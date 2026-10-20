@@ -520,3 +520,52 @@ func TestProtocolACL_Allowed_Aliases(t *testing.T) {
 	require.False(t, p.Allowed(filepath.Join(dir, "LONGSE~1.TXT")), "8.3 short-name alias")
 	require.False(t, p.Allowed(filepath.Join(dir, ".goshs.")), "trailing-dot alias of .goshs")
 }
+
+// Regression for GHSA-5q79-f559-j56x: the multipart upload staged into the fixed
+// path finalPath+"~" via os.Create (O_TRUNC) and then renamed it away. The
+// --no-delete guard only checked finalPath, so an unrelated pre-existing
+// "<name>~" file (e.g. an editor backup) was truncated and consumed.
+func TestUpload_NoDelete_PreservesExistingTildeFile(t *testing.T) {
+	webroot := t.TempDir()
+	fs, cleanup := newTestFileServer(t, webroot)
+	defer cleanup()
+	fs.NoDelete = true
+	backup := filepath.Join(webroot, "report.txt~")
+	require.NoError(t, os.WriteFile(backup, []byte("BACKUP"), 0644))
+
+	body, ctype := multipartUpload(t, "report.txt", "NEW")
+	r := httptest.NewRequest(http.MethodPost, "/upload", body)
+	r.Header.Set("Content-Type", ctype)
+	r.Header.Set("X-CSRF-Token", "test-csrf")
+	w := httptest.NewRecorder()
+
+	fs.upload(w, r)
+
+	got, err := os.ReadFile(backup)
+	require.NoError(t, err, "existing ~ file must not be consumed by the upload")
+	require.Equal(t, "BACKUP", string(got), "existing ~ file must not be truncated")
+	got, err = os.ReadFile(filepath.Join(webroot, "report.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "NEW", string(got))
+
+	// No staging file may be left behind.
+	entries, err := os.ReadDir(webroot)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+}
+
+// The no-clobber finalize must refuse a target that appeared after the
+// pre-stream Stat check (TOCTOU / concurrent upload).
+func TestFinalizeNoClobber_RefusesExistingTarget(t *testing.T) {
+	dir := t.TempDir()
+	tmp := filepath.Join(dir, "tmp")
+	final := filepath.Join(dir, "final")
+	require.NoError(t, os.WriteFile(tmp, []byte("NEW"), 0644))
+	require.NoError(t, os.WriteFile(final, []byte("OLD"), 0644))
+
+	require.Error(t, finalizeNoClobber(tmp, final))
+	got, err := os.ReadFile(final)
+	require.NoError(t, err)
+	require.Equal(t, "OLD", string(got))
+	require.NoFileExists(t, tmp)
+}
