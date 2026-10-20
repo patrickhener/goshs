@@ -219,3 +219,66 @@ func (p *ProtocolACL) visible(dir string, acl configFile, name string, isDir boo
 	}
 	return true
 }
+
+// SubtreeAllowed reports whether a recursive removal of absPath is permitted
+// for a credential-less protocol client (SFTP Rmdir, FTP RemoveAll). Allowed
+// only checks the addressed path; see subtreeRemovable for why that is not
+// enough for a downward delete (GHSA-rf62-vgq5-ggq5).
+func (p *ProtocolACL) SubtreeAllowed(absPath string) bool {
+	return p.fs.subtreeRemovable(absPath, func(acl configFile) bool { return acl.Auth == "" })
+}
+
+// subtreeRemovable reports whether everything a recursive delete of absPath
+// would destroy is accessible. findEffectiveACL only walks *up* towards the
+// webroot, so checking the addressed path (or its parent) never sees a .goshs
+// below it, and os.RemoveAll of an unprotected directory took every
+// auth-protected or block-listed subtree with it (GHSA-rf62-vgq5-ggq5).
+//
+// It fails closed: the webroot itself is never removable; every directory in
+// the subtree must have a readable effective ACL that satisfied accepts; and no
+// entry may be block-listed by its directory (a hidden name must not be
+// destroyable either). The walk does not follow symlinks, matching RemoveAll,
+// which unlinks a symlink rather than descending into it. A non-directory (or
+// missing) absPath has nothing below it and is left to the caller's own check.
+func (fs *FileServer) subtreeRemovable(absPath string, satisfied func(configFile) bool) bool {
+	root := filepath.Clean(absPath)
+	if root == filepath.Clean(fs.Webroot) {
+		return false
+	}
+	info, err := os.Lstat(root)
+	if err != nil || !info.IsDir() {
+		return true
+	}
+	// The directory itself, as an entry of its parent ("name/" convention).
+	if parentACL, aclErr := fs.findEffectiveACL(filepath.Dir(root)); aclErr != nil ||
+		blockListed(parentACL.Block, canonicalBaseName(root)+"/") {
+		return false
+	}
+	ok := true
+	walkErr := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		acl, aclErr := fs.findEffectiveACL(p)
+		if aclErr != nil || !satisfied(acl) {
+			ok = false
+			return filepath.SkipAll
+		}
+		entries, readErr := os.ReadDir(p)
+		if readErr != nil {
+			return readErr
+		}
+		for _, e := range entries {
+			name := e.Name()
+			if blockListed(acl.Block, name) || (e.IsDir() && blockListed(acl.Block, name+"/")) {
+				ok = false
+				return filepath.SkipAll
+			}
+		}
+		return nil
+	})
+	return ok && walkErr == nil
+}

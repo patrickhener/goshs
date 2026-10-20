@@ -333,6 +333,14 @@ func cmdFile(root string, r *sftp.Request, ip string, sftpServer *SFTPServer) er
 			return err
 		}
 	case "Rmdir":
+		// Rmdir removes recursively; the ACL check above only covered fullPath
+		// itself, so refuse if a protected subtree lies below it
+		// (GHSA-rf62-vgq5-ggq5).
+		if !sftpServer.protocolACL().SubtreeAllowed(fullPath) {
+			logger.LogSFTPRequestBlocked(r, ip, errACLDenied)
+			sftpServer.HandleWebhookSend("sftp", r, ip, true)
+			return errACLDenied
+		}
 		err := os.RemoveAll(fullPath)
 		if err != nil {
 			logger.LogSFTPRequestBlocked(r, ip, err)

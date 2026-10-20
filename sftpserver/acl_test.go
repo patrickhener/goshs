@@ -150,3 +150,17 @@ func listerNames(t *testing.T, lister sftp.ListerAt) []string {
 	}
 	return names
 }
+
+// GHSA-rf62-vgq5-ggq5: Rmdir is recursive, so removing an unprotected ancestor
+// must not destroy an auth-protected subtree below it.
+func TestSFTP_ACL_RmdirAncestorOfProtectedDenied(t *testing.T) {
+	dir := t.TempDir()
+	src := newProtectedRoot(t)
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "a"), 0o755))
+	require.NoError(t, os.Rename(filepath.Join(src, "protected"), filepath.Join(dir, "a", "protected")))
+	h := &DefaultHandler{Root: dir, ClientIP: "1.2.3.4", SFTPServer: testSFTPServer(dir)}
+
+	err := h.Filecmd(&sftp.Request{Method: "Rmdir", Filepath: "/a"})
+	require.ErrorIs(t, err, errACLDenied)
+	require.FileExists(t, filepath.Join(dir, "a", "protected", "secret.txt"))
+}

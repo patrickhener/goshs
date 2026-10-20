@@ -249,6 +249,13 @@ func (a webdavACLFileSystem) RemoveAll(ctx context.Context, name string) error {
 	if err := a.aclError(ctx, name); err != nil {
 		return err
 	}
+	// aclError only sees the addressed resource; a recursive delete must not
+	// destroy a protected subtree below it (GHSA-rf62-vgq5-ggq5).
+	req := reqFromContext(ctx)
+	satisfied := func(acl configFile) bool { return acl.Auth == "" || (req != nil && aclSatisfied(req, acl)) }
+	if abs, err := sanitizePath(a.srv.Webroot, name); err != nil || !a.srv.subtreeRemovable(abs, satisfied) {
+		return os.ErrPermission
+	}
 	return a.root.RemoveAll(ctx, name)
 }
 
